@@ -1,0 +1,37 @@
+{
+  "layer": "Blind Hunter",
+  "freshContext": true,
+  "contentBytes": 13984,
+  "findingFloor": 4,
+  "configuredLayersSkipped": false,
+  "findings": [
+    {
+      "id": "budget-1",
+      "classification": "medium",
+      "finding": "Recibos contraditórios aceitos",
+      "resolution": "patched",
+      "evidence": "Contrato relaciona estado/custo real/máximo; regressões rejeitam4combinações incompatíveis."
+    },
+    {
+      "id": "budget-2",
+      "classification": "medium",
+      "finding": "Overrun não tem reconciliação verificável",
+      "resolution": "patched",
+      "evidence": "reconcile() exige autorização, evidência HTTPS, lista exata de overruns e ausência de reservas pendentes; não apaga gasto."
+    },
+    {
+      "id": "budget-3",
+      "classification": "low",
+      "finding": "Replay exige relógio novo válido",
+      "resolution": "patched",
+      "evidence": "Replay resolvido antes de consultar relógio; teste com clock inválido retorna recibo original."
+    },
+    {
+      "id": "budget-4",
+      "classification": "high",
+      "finding": "Preço→reserva→tentativa não comprovado",
+      "resolution": "patched",
+      "evidence": "conservativeCallBound calcula máximo exato arredondado acima; simulatedBudgetCall reserva antes. Preço/limite desconhecido e recusa executam zero tentativas; reasoning não limitado é recusado."
+    }
+  ]
+}
