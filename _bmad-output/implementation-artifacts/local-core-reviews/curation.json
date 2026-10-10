@@ -1,0 +1,37 @@
+{
+  "layer": "Blind Hunter",
+  "freshContext": true,
+  "contentBytes": 13426,
+  "findingFloor": 4,
+  "configuredLayersSkipped": false,
+  "findings": [
+    {
+      "id": "curation-1",
+      "classification": "high",
+      "finding": "Aprovação substitui versão revisada por atual",
+      "resolution": "patched",
+      "evidence": "targetVersion capturada na proposta é preservada; proposta antiga fica staged com target-version-changed."
+    },
+    {
+      "id": "curation-2",
+      "classification": "high",
+      "finding": "factKey arbitrário reabre rejeição sem fato",
+      "resolution": "patched",
+      "evidence": "Dedup deriva identidade de Fonte/URL, ignora factKey e horários; mesma evidência retorna rejeitada, novasURLs mesmaFonte não reabrem."
+    },
+    {
+      "id": "curation-3",
+      "classification": "medium",
+      "finding": "Dedup descarta conteúdo divergente",
+      "resolution": "patched",
+      "evidence": "semanticPayload exclui fetch/observed mas conserva fato; colisão lança PROPOSAL_FACT_CONFLICT."
+    },
+    {
+      "id": "curation-4",
+      "classification": "medium",
+      "finding": "Receipt de preparePublish interpretado como slice override",
+      "resolution": "patched",
+      "evidence": "Publisher distingue retorno com três campos models/news/lastSuccessAt. Teste e demo usam diretamente callback curation.preparePublish."
+    }
+  ]
+}
