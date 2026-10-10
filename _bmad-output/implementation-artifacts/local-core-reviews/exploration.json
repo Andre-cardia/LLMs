@@ -1,0 +1,44 @@
+{
+  "layer": "Blind Hunter",
+  "freshContext": true,
+  "contentBytes": 16248,
+  "findingFloor": 5,
+  "configuredLayersSkipped": false,
+  "findings": [
+    {
+      "id": "exploration-1",
+      "classification": "high",
+      "finding": "URL diverge seleção e Terminal",
+      "resolution": "patched",
+      "evidence": "Hidratação reconcilia Terminal e seleção atomicamente; invalidocompanylimpaambos."
+    },
+    {
+      "id": "exploration-2",
+      "classification": "medium",
+      "finding": "Ação independente invalida digitação ativa",
+      "resolution": "patched",
+      "evidence": "Tokens por operação terminal/reader; preferência/abrirLeitor não vence callbackTerminal, trocaEmpresa ainda vence."
+    },
+    {
+      "id": "exploration-3",
+      "classification": "medium",
+      "finding": "Leitor flutuante sofre exclusividade lateral",
+      "resolution": "patched",
+      "evidence": "readerNewsId separado da ocupação sidePanel; floatingcoexistequeue/markets; newsforçalateralsemgravarpref."
+    },
+    {
+      "id": "exploration-4",
+      "classification": "medium",
+      "finding": "Destino de Modelo perde identidade",
+      "resolution": "patched",
+      "evidence": "selectedModel conserva family/variant/company e avança/limpa na reconciliação."
+    },
+    {
+      "id": "exploration-5",
+      "classification": "medium",
+      "finding": "Primeira visita ignora modo do sistema",
+      "resolution": "patched",
+      "evidence": "systemModeinjetado resolve defaults somente quando preferências ausentes; escolha salva prevalece."
+    }
+  ]
+}
