@@ -1,0 +1,51 @@
+{
+  "layer": "Blind Hunter",
+  "freshContext": true,
+  "contentBytes": 11060,
+  "findingFloor": 4,
+  "configuredLayersSkipped": false,
+  "findings": [
+    {
+      "id": "news-1",
+      "classification": "high",
+      "finding": "Fluxo/NOTÍCIAS sem Company excede cinco por Empresa",
+      "resolution": "patched",
+      "evidence": "Cap por Empresa antes de limite global14; teste trêsEmpresas resulta14Fluxo/15Notícias."
+    },
+    {
+      "id": "news-2",
+      "classification": "medium",
+      "finding": "LABS3 aplicado ao conjunto inteiro",
+      "resolution": "patched",
+      "evidence": "Cap3porLaboratório; teste doisLabs retorna seis."
+    },
+    {
+      "id": "news-3",
+      "classification": "high",
+      "finding": "Dedup perde associações de relevância/citação",
+      "resolution": "patched",
+      "evidence": "Union dessas listas separadas, preservando refs e identidade."
+    },
+    {
+      "id": "news-4",
+      "classification": "medium",
+      "finding": "Replay de feedback depende de relevância mutável",
+      "resolution": "patched",
+      "evidence": "Recibo confirmado consultado antes das condições mutáveis; payload diferente permanece conflito."
+    },
+    {
+      "id": "news-5",
+      "classification": "medium",
+      "finding": "Alias não chega ao Leitor canônico",
+      "resolution": "patched",
+      "evidence": "LocalNewsView normaliza alias via índice antes de projeção/navegação; testealias visívelabreNewsIdoriginal."
+    },
+    {
+      "id": "news-6",
+      "classification": "high",
+      "finding": "Snapshot sem feedback reexibe oculto",
+      "resolution": "patched",
+      "evidence": "LocalNewsView compõe snapshot+feedback autenticados com par dataRevision/feedbackRevision; teste apósrefreshoculta5superfícies e contexto/navegação."
+    }
+  ]
+}

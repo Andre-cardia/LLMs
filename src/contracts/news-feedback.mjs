@@ -1,0 +1,2 @@
+import { object,string,boolean,integer,oneOf } from './primitives.mjs';
+export function assertNewsFeedback(v){object(v,['schemaVersion','newsId','companyId','expectedFeedbackRevision','irrelevant','confirmed','idempotencyKey'],'NewsFeedback');oneOf(v.schemaVersion,[1],'schemaVersion');for(const k of ['newsId','companyId','idempotencyKey'])string(v[k],k);integer(v.expectedFeedbackRevision,'expectedFeedbackRevision');boolean(v.irrelevant,'irrelevant');boolean(v.confirmed,'confirmed');return v;}
