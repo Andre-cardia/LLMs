@@ -1,0 +1,44 @@
+{
+  "layer": "Blind Hunter",
+  "freshContext": true,
+  "contentBytes": 12127,
+  "findingFloor": 4,
+  "configuredLayersSkipped": false,
+  "findings": [
+    {
+      "id": "model-queries-1",
+      "classification": "medium",
+      "finding": "Linha omite conteúdo de FR-9",
+      "resolution": "patched",
+      "evidence": "Projeção inclui releaseDates, modalidades, pesos, licença, reasoning e benchmarks."
+    },
+    {
+      "id": "model-queries-2",
+      "classification": "high",
+      "finding": "Preço/custo perde proveniência",
+      "resolution": "patched",
+      "evidence": "Objeto pricing completo e releaseSourceRefs preservados, independente de variant.sourceRefs."
+    },
+    {
+      "id": "model-queries-3",
+      "classification": "medium",
+      "finding": "pricing:null muda shape de standardCost",
+      "resolution": "patched",
+      "evidence": "Fallback uniforme com currency/task/missingPrices; regressão verifica fronteira."
+    },
+    {
+      "id": "model-queries-4",
+      "classification": "medium",
+      "finding": "Navigation lê getter antes de validar",
+      "resolution": "patched",
+      "evidence": "Descritor type validado antes do discriminador; getter não executa."
+    },
+    {
+      "id": "model-queries-5",
+      "classification": "medium",
+      "finding": "Último lançamento elegível por Lab não resolvido",
+      "resolution": "patched",
+      "evidence": "latestLabReleases exclui futuro/inválido, escolhedata maisrecente porLab; fixturecomfuturoselecionaoutroModelo."
+    }
+  ]
+}
