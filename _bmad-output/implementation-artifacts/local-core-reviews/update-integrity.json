@@ -1,0 +1,79 @@
+{
+  "layer": "Blind Hunter",
+  "freshContext": true,
+  "contentBytes": 72887,
+  "findingFloor": 9,
+  "configuredLayersSkipped": false,
+  "findings": [
+    {
+      "id": "update-integrity-1",
+      "classification": "high",
+      "finding": "Baseline único perdido ao alternar Fontes",
+      "resolution": "patched",
+      "evidence": "modelCollections agora usa chave Fonte/escopo/schema; teste A4→B1→A1 rejeita A1."
+    },
+    {
+      "id": "update-integrity-2",
+      "classification": "high",
+      "finding": "Referência inválida de Modelos bloqueia Notícias válidas",
+      "resolution": "patched",
+      "evidence": "Validação referencial por slice após preparar curadoria; Modelo inválido conserva última slice, Notícias válidas publicam."
+    },
+    {
+      "id": "update-integrity-3",
+      "classification": "medium",
+      "finding": "Fetch que nunca resolve impede Update",
+      "resolution": "patched",
+      "evidence": "Prazo por tentativa limitado a30s, AbortSignal e falha local conservam slice; teste20ms nunca-resolve publica Notícias."
+    },
+    {
+      "id": "update-integrity-4",
+      "classification": "high",
+      "finding": "Callback async publica metade da curadoria",
+      "resolution": "patched",
+      "evidence": "Publisher e LocalUpdate recusam Promise antes de confirmar; regressão conserva catálogo e ponteiro."
+    },
+    {
+      "id": "update-integrity-5",
+      "classification": "high",
+      "finding": "Recibo em transação separada quebra replay",
+      "resolution": "patched",
+      "evidence": "completedUpdates agora participa da mesma transação do manifesto; repetição não coleta novamente."
+    },
+    {
+      "id": "update-integrity-6",
+      "classification": "high",
+      "finding": "Lease pode vencer dentro da preparação",
+      "resolution": "patched",
+      "evidence": "Expiração revalidada imediatamente antes da confirmação; avanço do relógio no callback reverte publicação."
+    },
+    {
+      "id": "update-integrity-7",
+      "classification": "high",
+      "finding": "Fechamento admite cotação de outra sessão",
+      "resolution": "patched",
+      "evidence": "observedAt precisa alcançar fechamento esperado descontado apenas atraso declarado; cotação2020 não ficaLIVE."
+    },
+    {
+      "id": "update-integrity-8",
+      "classification": "medium",
+      "finding": "Strings UTC equivalentes discordam",
+      "resolution": "patched",
+      "evidence": "Fechamentos comparados por utc() e teste Z/.000Z."
+    },
+    {
+      "id": "update-integrity-9",
+      "classification": "medium",
+      "finding": "Timestamp futuro antecede falha repetida",
+      "resolution": "patched",
+      "evidence": "OFFLINE por3falhas/>2cadências agora precede invalidação temporal."
+    },
+    {
+      "id": "update-integrity-10",
+      "classification": "high",
+      "finding": "Modelo pode pertencer a Empresa que não é Lab",
+      "resolution": "patched",
+      "evidence": "Contrato cruzado exige isLab:true; fixture company-3 rejeitada."
+    }
+  ]
+}
