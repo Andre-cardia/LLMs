@@ -1,0 +1,336 @@
+{
+  "status": "local-defined-scope-complete",
+  "fullProductReady": false,
+  "productionAuthorized": false,
+  "stories": [
+    {
+      "id": "1.1",
+      "title": "Preservar uma revisão completa em Atualizações locais",
+      "fr": [
+        24,
+        25
+      ],
+      "gate": "local",
+      "status": "done-local"
+    },
+    {
+      "id": "1.2",
+      "title": "Controlar orçamento e tentativas em simulação",
+      "fr": [
+        24,
+        25
+      ],
+      "gate": "local",
+      "status": "done-local"
+    },
+    {
+      "id": "1.3",
+      "title": "Servir assets/dados privados e autenticar comandos",
+      "fr": [
+        30
+      ],
+      "gate": "Q2",
+      "status": "blocked-integration"
+    },
+    {
+      "id": "1.4",
+      "title": "Agendar e recuperar Atualizações no repositório durável",
+      "fr": [
+        24,
+        25
+      ],
+      "gate": "Q2",
+      "status": "blocked-integration"
+    },
+    {
+      "id": "2.1",
+      "title": "Revisar Empresas/Relações sem publicar antes da Atualização",
+      "fr": [
+        23,
+        31,
+        22
+      ],
+      "gate": "local",
+      "status": "done-local"
+    },
+    {
+      "id": "2.2",
+      "title": "Conferir seed e logos antes da primeira publicação",
+      "fr": [
+        20,
+        21
+      ],
+      "gate": "curadoria/Q2",
+      "status": "blocked-integration"
+    },
+    {
+      "id": "2.3",
+      "title": "Operar a Fila com prévias e resolução de pares/logos",
+      "fr": [
+        23,
+        31
+      ],
+      "gate": "Q2/Q3",
+      "status": "blocked-integration"
+    },
+    {
+      "id": "2.4",
+      "title": "Desfazer dados já publicados com compensação auditável",
+      "fr": [
+        23
+      ],
+      "gate": "Q2/aceite AD-4",
+      "status": "blocked-integration"
+    },
+    {
+      "id": "3.1",
+      "title": "Calcular custo por tarefa com preços ausentes/zero",
+      "fr": [
+        11
+      ],
+      "gate": "done-local",
+      "status": "done-local"
+    },
+    {
+      "id": "3.2",
+      "title": "Resolver datas e perceber Lançamentos únicos",
+      "fr": [
+        26,
+        13
+      ],
+      "gate": "local",
+      "status": "done-local"
+    },
+    {
+      "id": "3.3",
+      "title": "Consultar a comparação com filtros combinados",
+      "fr": [
+        9,
+        10,
+        12
+      ],
+      "gate": "local",
+      "status": "done-local"
+    },
+    {
+      "id": "3.4",
+      "title": "Normalizar APIs estruturadas e identidade por Fonte",
+      "fr": [
+        9,
+        12,
+        13,
+        26
+      ],
+      "gate": "acesso/API/Q2",
+      "status": "blocked-integration"
+    },
+    {
+      "id": "3.5",
+      "title": "Apresentar HÍBRIDO/TERMINAL/ANALÍTICO e linha expandida",
+      "fr": [
+        9,
+        10,
+        11,
+        12
+      ],
+      "gate": "Q3/browser",
+      "status": "blocked-integration"
+    },
+    {
+      "id": "4.1",
+      "title": "Manter estado semântico e preferências coerentes",
+      "fr": [
+        2,
+        5,
+        6,
+        7,
+        8,
+        27,
+        32
+      ],
+      "gate": "local",
+      "status": "done-local"
+    },
+    {
+      "id": "4.2",
+      "title": "Mostrar Empresas/identidades/último Pulso nas Vistas",
+      "fr": [
+        1,
+        2,
+        3,
+        4,
+        32
+      ],
+      "gate": "Q3/renderer",
+      "status": "blocked-integration"
+    },
+    {
+      "id": "4.3",
+      "title": "Interagir com Terminal e som pelo teclado/toque",
+      "fr": [
+        5,
+        6,
+        7,
+        8
+      ],
+      "gate": "Q3/browser",
+      "status": "blocked-integration"
+    },
+    {
+      "id": "4.4",
+      "title": "Aplicar os seis temas e acesso completo no celular",
+      "fr": [
+        27,
+        29
+      ],
+      "gate": "Q3/browser",
+      "status": "blocked-integration"
+    },
+    {
+      "id": "5.1",
+      "title": "Projetar e ocultar Notícias nas cinco superfícies",
+      "fr": [
+        14,
+        15,
+        33,
+        34
+      ],
+      "gate": "local",
+      "status": "done-local"
+    },
+    {
+      "id": "5.2",
+      "title": "Validar resumo/relevância sem dar ferramentas ao Agente",
+      "fr": [
+        15,
+        16,
+        17
+      ],
+      "gate": "Q1/Q7/fontes",
+      "status": "blocked-integration"
+    },
+    {
+      "id": "5.3",
+      "title": "Operar Fluxo/LABS/NOTÍCIAS e Leitor com contexto",
+      "fr": [
+        33,
+        34
+      ],
+      "gate": "Q3/browser",
+      "status": "blocked-integration"
+    },
+    {
+      "id": "5.4",
+      "title": "Manter atribuição em todas as projeções",
+      "fr": [
+        28,
+        16
+      ],
+      "gate": "fontes/licenças/browser",
+      "status": "blocked-integration"
+    },
+    {
+      "id": "6.1",
+      "title": "Confirmar instrumentos/cobertura/calendários e fallback",
+      "fr": [
+        18,
+        19,
+        36
+      ],
+      "gate": "Q5",
+      "status": "blocked-integration"
+    },
+    {
+      "id": "6.2",
+      "title": "Atualizar cotações com atrasos e sessões corretos",
+      "fr": [
+        18,
+        19
+      ],
+      "gate": "Q5/Q2",
+      "status": "blocked-integration"
+    },
+    {
+      "id": "6.3",
+      "title": "Explorar Faixa e Painel MERCADOS",
+      "fr": [
+        18,
+        19,
+        36
+      ],
+      "gate": "Q3/Q5/browser",
+      "status": "blocked-integration"
+    },
+    {
+      "id": "7.1",
+      "title": "Buscar entidades locais e restaurar contexto da URL",
+      "fr": [
+        37,
+        38
+      ],
+      "gate": "local",
+      "status": "done-local"
+    },
+    {
+      "id": "7.2",
+      "title": "Pesquisar com ações/citações versionadas e orçamento",
+      "fr": [
+        35
+      ],
+      "gate": "Q1/Q7/Q2",
+      "status": "blocked-integration"
+    },
+    {
+      "id": "7.3",
+      "title": "Retomar e excluir Histórico privado",
+      "fr": [
+        35
+      ],
+      "gate": "Q7/Q2",
+      "status": "blocked-integration"
+    },
+    {
+      "id": "8.1",
+      "title": "Validar fonte/licença e explorar BACKBONES",
+      "fr": [
+        39
+      ],
+      "gate": "Q4/Q3",
+      "status": "blocked-integration"
+    },
+    {
+      "id": "8.2",
+      "title": "Trocar satélite/OSM com cache e fallback",
+      "fr": [
+        40
+      ],
+      "gate": "Q6/Q3",
+      "status": "blocked-integration"
+    }
+  ],
+  "localOrder": [
+    "1.1",
+    "1.2",
+    "2.1",
+    "3.2",
+    "3.3",
+    "4.1",
+    "5.1",
+    "7.1"
+  ],
+  "executionNotes": "Continuação local expressamente autorizada; sem perguntas redundantes. Gates de integração não foram aceitos por inferência.",
+  "pendingLocalStories": [],
+  "completedLocallyNotFullFR": [
+    "1.1",
+    "1.2",
+    "2.1",
+    "3.2",
+    "3.3",
+    "4.1",
+    "5.1",
+    "7.1",
+    "3.1"
+  ],
+  "blockedIntegrationCount": 20,
+  "verification": "local-core-verification.json"
+}

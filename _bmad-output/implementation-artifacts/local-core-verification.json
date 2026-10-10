@@ -1,0 +1,103 @@
+{
+  "status": "verified-local",
+  "project": "/Users/andrecardia/Github/LLMs",
+  "localStories": [
+    "1.1",
+    "1.2",
+    "2.1",
+    "3.2",
+    "3.3",
+    "4.1",
+    "5.1",
+    "7.1"
+  ],
+  "previousDoneStory": "3.1",
+  "fullProductReady": false,
+  "productionAuthorized": false,
+  "reviewLayers": "Blind Hunter fresh-context per six increments plus integration",
+  "reviewRuns": 7,
+  "findingCount": 45,
+  "allFindingsPatched": true,
+  "testsStaging": {
+    "passed": 77,
+    "failed": 0,
+    "skipped": 0
+  },
+  "syntaxStaging": {
+    "passed": true,
+    "modules": 50,
+    "node": "v25.9.0"
+  },
+  "externalCalls": 0,
+  "notRun": [
+    "Node24LTS",
+    "browser/DOM/WebGL/mobile/accessibility",
+    "real providers/calendars",
+    "JWT/CSRF/private hosting",
+    "durable multi-process CAS/recovery",
+    "live seven-day SM2/SM3",
+    "publish/deploy"
+  ],
+  "checkedAt": "2026-10-10T18:45:32.929472+00:00",
+  "testsProject": {
+    "passed": 78,
+    "failed": 0,
+    "skipped": 0,
+    "command": "npm test"
+  },
+  "syntaxProject": {
+    "status": "passed",
+    "checkedModules": 50,
+    "node": "v25.9.0"
+  },
+  "demoProject": {
+    "passed": true,
+    "command": "npm run demo:local",
+    "externalCalls": 0,
+    "positiveSurfaces": 5,
+    "hiddenSurfaces": 5,
+    "admittedSimulatedAttempts": 1,
+    "deniedAttempts": 0,
+    "URLPersistenceEffects": 0
+  },
+  "existingBaseline": {
+    "files": 775,
+    "preservedUnchanged": 774,
+    "authorizedModified": [
+      "package.json"
+    ]
+  },
+  "blockedIntegrationStories": 20,
+  "sourceCommits": [
+    {
+      "increment": "update",
+      "commit": "4e782788a953bbd6feab81bafa88988f050e7059",
+      "files": 24
+    },
+    {
+      "increment": "budget",
+      "commit": "8618492a299503c951aabf48c346fa583fefd36b",
+      "files": 8
+    },
+    {
+      "increment": "curation",
+      "commit": "fc11e8ce6bd888a993d1a3ad5acf08e636e06893",
+      "files": 5
+    },
+    {
+      "increment": "models",
+      "commit": "05e3061a859f4d3955a2a689e737a498c61212e3",
+      "files": 5
+    },
+    {
+      "increment": "news",
+      "commit": "81a171887ce28533b3cbdb2608b8b1c15e9236b1",
+      "files": 6
+    },
+    {
+      "increment": "exploration",
+      "commit": "e8f2ba92d8ea2592d4edd04643a66f7ff917d6ba",
+      "files": 6
+    }
+  ]
+}

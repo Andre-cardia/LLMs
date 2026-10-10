@@ -1,0 +1,86 @@
+{
+  "layer": "Blind Hunter",
+  "freshContext": true,
+  "contentBytes": 127949,
+  "findingFloor": 10,
+  "configuredLayersSkipped": false,
+  "findings": [
+    {
+      "id": "integration-1",
+      "classification": "high",
+      "finding": "Retorno inválido de reconcileNews bloqueia Modelos",
+      "resolution": "patched",
+      "evidence": "Candidato validado antes de atribuir; catch conserva notícia anterior. integration-regressions verifica Modelos válidos publicados."
+    },
+    {
+      "id": "integration-2",
+      "classification": "high",
+      "finding": "Reconciliação que lança confirma índice parcial",
+      "resolution": "patched",
+      "evidence": "Draft da slice isolado; newsIndex incorporado somente após validação completa. Teste ingest+throw mantém índice e snapshot."
+    },
+    {
+      "id": "integration-3",
+      "classification": "high",
+      "finding": "Merge reaparece em snapshot conservado",
+      "resolution": "patched",
+      "evidence": "Supressão contém todos os aliases de NewsId dos grupos ocultos; teste snapshot anterior não revela distinct após merge."
+    },
+    {
+      "id": "integration-4",
+      "classification": "high",
+      "finding": "Feedback async perde supressão",
+      "resolution": "patched",
+      "evidence": "LocalNewsView await/valida feedbackRevision/items/hiddenNewsIds; fixture async respeita supressão e retorno{} rejeita."
+    },
+    {
+      "id": "integration-5",
+      "classification": "high",
+      "finding": "Leitura revogada retorna último cache",
+      "resolution": "patched",
+      "evidence": "AccessDeniedError compartilhado distingue negação; reader limpa cache, NewsView recusa composição semsnapshot."
+    },
+    {
+      "id": "integration-6",
+      "classification": "medium",
+      "finding": "Busca sexta Notícia mas Leitor vazio",
+      "resolution": "patched",
+      "evidence": "Leitor seleciona qualquer matéria elegível antes dos limites de listagens; teste busca/navegação/reader n5 com seis itens."
+    },
+    {
+      "id": "integration-7",
+      "classification": "high",
+      "finding": "Baseline por Fonte não conserva dados das Fontes",
+      "resolution": "patched",
+      "evidence": "Coleções normalizadas por Fonte/escopo são unidas; IDs iguais só coalescem conteúdo idêntico, divergente conserva publicado com conflito; A4→B1→A inválida permanece4visíveis."
+    },
+    {
+      "id": "integration-8",
+      "classification": "high",
+      "finding": "Promise async recusada gera unhandled rejection",
+      "resolution": "patched",
+      "evidence": "requireSynchronous consome rejeição mantendo veto; subprocesso com promises rejeitadas termina0, ponteiro/cache não confirmados."
+    },
+    {
+      "id": "integration-9",
+      "classification": "medium",
+      "finding": "attempt:null compromete reserva",
+      "resolution": "patched",
+      "evidence": "Porta de tentativa validada antes da reserva; regressão mantém reservado0."
+    },
+    {
+      "id": "integration-10",
+      "classification": "medium",
+      "finding": "Limites de tokens não atravessam tentativa",
+      "resolution": "patched",
+      "evidence": "Porta recebe envelope/limites congelados com máximo vinculado; fixture executa dentro dos limites e prova reserva prévia."
+    },
+    {
+      "id": "integration-11",
+      "classification": "medium",
+      "finding": "Demo vazio permite falso positivo e não tenta budget",
+      "resolution": "patched",
+      "evidence": "Controles positivos5superfícies antesdeocultar e negativosbusca/navegação/contextoapós; tetozeronega0tentativas, ledgerfundadoexclusivamentefixtureadmite1simulada."
+    }
+  ]
+}
