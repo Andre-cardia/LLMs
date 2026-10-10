@@ -1,0 +1,12 @@
+{
+  "name": "llms-local-foundation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Base local de contratos e custo por tarefa do Monitor Global de Labs de LLM",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check": "node --check src/contracts/model-pricing.mjs && node --check src/domain/model-cost.mjs && node --check scripts/demo-model-cost.mjs",
+    "demo": "node scripts/demo-model-cost.mjs"
+  }
+}

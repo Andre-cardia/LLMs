@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "modelId": "modelo-ficticio-invalido",
+  "variantId": "variante-ficticia-invalida",
+  "inputUsdPerMillion": 2,
+  "outputUsdPerMillion": "6",
+  "reasoning": false,
+  "source": "Fixture inválida — preço numérico em vez de string",
+  "sourceRecordId": "fixture-invalid",
+  "sourceUrl": "https://example.invalid/precos/invalid",
+  "fetchedAt": "2026-10-10T00:00:00Z",
+  "observedAt": null
+}

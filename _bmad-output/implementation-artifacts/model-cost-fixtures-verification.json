@@ -1,0 +1,83 @@
+{
+  "project": "LLMs — Monitor Global de Labs de LLM",
+  "projectPath": "/Users/andrecardia/Github/LLMs",
+  "checked": "2026-10-10",
+  "workflow": "bmad-build",
+  "route": "oneshot",
+  "status": "local-slice-complete",
+  "architectureStatus": "final-documental",
+  "fullProductComplete": false,
+  "scope": "Contrato v1 de preços, cálculo puro do FR-11 e demo com fixtures; sem Tabela de modelos integrada",
+  "humanDecisionsRequiredNow": [],
+  "laterGates": {
+    "Q2": "Hospedagem/autenticação/custo e provas de atomicidade antes da infraestrutura real",
+    "Q1/Q7": "Orçamento/provedor de chat e busca e retenção do Histórico antes dessas integrações",
+    "Q4/Q6": "Fontes/licença/custo de mapas e BACKBONES antes de habilitar esses dados",
+    "Q3/Q5": "Questões específicas da UX e pesquisa de fontes/calendários de MERCADOS nas stories afetadas"
+  },
+  "runtimeTested": "Node.js 25.9.0 instalado no Mac",
+  "dependenciesInstalled": [],
+  "stagingVerification": {
+    "npmTest": {
+      "exitCode": 0,
+      "passed": 17,
+      "failed": 0,
+      "skipped": 0
+    },
+    "npmRunCheck": {
+      "exitCode": 0,
+      "kind": "syntax-check-only"
+    },
+    "demoSubprocess": {
+      "passed": true,
+      "simulated": true,
+      "costsUsd": [
+        "0.01",
+        "0",
+        null,
+        "0.00225"
+      ]
+    },
+    "coverage": {
+      "linesPercent": 100,
+      "branchesPercent": 98.53,
+      "functionsPercent": 100,
+      "scope": "Somente os módulos e demo desta fatia"
+    }
+  },
+  "review": {
+    "layer": "blind-hunter",
+    "contextFree": true,
+    "findings": 5,
+    "patched": 5,
+    "deferred": 0
+  },
+  "installationVerification": {
+    "status": "passed",
+    "baselineFiles": 760,
+    "originalBaselineFiles": 730,
+    "newFiles": 13,
+    "sourceMatches": true,
+    "lockRemoved": true,
+    "actualProjectTests": {
+      "npmTestExitCode": 0,
+      "passed": 17,
+      "failed": 0,
+      "skipped": 0,
+      "npmRunCheckExitCode": 0
+    }
+  },
+  "notExecuted": [
+    "Node 24 LTS",
+    "UI/browser",
+    "build de interface",
+    "auth/APIs/fontes reais",
+    "orçamento concorrente",
+    "performance",
+    "deploy"
+  ],
+  "productionAuthorized": false,
+  "externalCallsMade": false,
+  "secretsRead": false,
+  "gitCommitCreated": true
+}

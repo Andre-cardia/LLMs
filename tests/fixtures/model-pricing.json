@@ -1,0 +1,54 @@
+[
+  {
+    "schemaVersion": 1,
+    "modelId": "modelo-ficticio-a",
+    "variantId": "variante-ficticia-a",
+    "inputUsdPerMillion": "2",
+    "outputUsdPerMillion": "6",
+    "reasoning": false,
+    "source": "Fixture sintética — não é cotação comercial",
+    "sourceRecordId": "fixture-a",
+    "sourceUrl": "https://example.invalid/precos/a",
+    "fetchedAt": "2026-10-10T00:00:00Z",
+    "observedAt": "2026-10-09T00:00:00Z"
+  },
+  {
+    "schemaVersion": 1,
+    "modelId": "modelo-ficticio-b",
+    "variantId": "variante-ficticia-b",
+    "inputUsdPerMillion": "0",
+    "outputUsdPerMillion": "0.00",
+    "reasoning": false,
+    "source": "Fixture sintética — não é cotação comercial",
+    "sourceRecordId": "fixture-b",
+    "sourceUrl": "https://example.invalid/precos/b",
+    "fetchedAt": "2026-10-10T00:00:00Z",
+    "observedAt": null
+  },
+  {
+    "schemaVersion": 1,
+    "modelId": "modelo-ficticio-c",
+    "variantId": "variante-ficticia-c",
+    "inputUsdPerMillion": null,
+    "outputUsdPerMillion": "1.5",
+    "reasoning": false,
+    "source": "Fixture sintética — não é cotação comercial",
+    "sourceRecordId": "fixture-c",
+    "sourceUrl": "https://example.invalid/precos/c",
+    "fetchedAt": "2026-10-10T00:00:00Z",
+    "observedAt": null
+  },
+  {
+    "schemaVersion": 1,
+    "modelId": "modelo-ficticio-d",
+    "variantId": "variante-ficticia-d",
+    "inputUsdPerMillion": "0.25",
+    "outputUsdPerMillion": "1.75",
+    "reasoning": true,
+    "source": "Fixture sintética — não é cotação comercial",
+    "sourceRecordId": "fixture-d",
+    "sourceUrl": "https://example.invalid/precos/d",
+    "fetchedAt": "2026-10-10T00:00:00Z",
+    "observedAt": null
+  }
+]
