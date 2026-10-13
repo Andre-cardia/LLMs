@@ -3,11 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Base local de contratos e custo por tarefa do Monitor Global de Labs de LLM",
+  "description": "IRIS Global — núcleo local de contratos, exploração, modelos, notícias e custos de LLMs, com preview estático da interface",
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "scripts": {
-    "test": "node --test tests/*.test.mjs",
+    "build": "npm run build:ui",
+    "build:ui": "node scripts/build-ui-preview.mjs",
+    "build:ui:local": "node --env-file=.env.production.local scripts/build-ui-preview.mjs",
+    "test": "node --test \"tests/*.test.mjs\"",
+    "test:watch": "node --test --watch \"tests/*.test.mjs\"",
+    "test:coverage": "node --test --experimental-test-coverage \"tests/*.test.mjs\"",
     "check": "node scripts/check-local.mjs",
+    "validate": "npm run check && npm test",
     "demo": "node scripts/demo-model-cost.mjs",
+    "demo:cost": "node scripts/demo-model-cost.mjs",
     "demo:local": "node scripts/demo-local-core.mjs"
   }
 }
