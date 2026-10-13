@@ -4,6 +4,59 @@ const cases=JSON.parse(readFileSync(new URL('./fixtures/exploration-contract.jso
 const start=(extra={})=>createExploration({data:fixture,revision:'one',now:fixture.now,config:cases.config,...extra});
 const explorationReducer=(s,i)=>dispatch(s,{schemaVersion:2,...i});const reduce=(s,i)=>explorationReducer(s,i).state;
 
+test('7.1 CR-08: company= limpa sessão povoada; ausência de company remove só o override', () => {
+ const session=reduce(start(),{type:'company',companyId:'company-1'}), preferences=clone(session.preferences);
+ const empty=explorationReducer(session,{type:'hydrateUrl',url:'?company='});
+ assert.equal(empty.state.effectiveState.companyId,null); assert.equal(empty.state.sessionState.companyId,'company-1');
+ assert.deepEqual(empty.state.sessionOverrides,{companyId:null}); assert.equal(empty.state.terminal,null);
+ assert.deepEqual(empty.effects,[]); assert.deepEqual(empty.state.preferences,preferences);
+ const query=explorationQuery(empty.state), params=new URLSearchParams(query);
+ assert.equal(params.has('company'),true); assert.equal(params.get('company'),'');
+ const other=reduce(start(),{type:'company',companyId:'company-2'});
+ assert.equal(reduce(other,{type:'hydrateUrl',url:query}).effectiveState.companyId,null);
+ const restored=explorationReducer(empty.state,{type:'hydrateUrl',url:''});
+ assert.equal(restored.state.effectiveState.companyId,'company-1'); assert.equal(restored.state.terminal.companyId,'company-1');
+ assert.deepEqual(restored.effects,[]); assert.deepEqual(restored.state.preferences,preferences);
+ for(const url of ['?company=missing','?company=company-1&company=company-2','?company=&company=company-1']) {
+  const result=explorationReducer(session,{type:'hydrateUrl',url});
+  assert.equal(result.state.effectiveState.companyId,null); assert.equal(result.state.sessionState.companyId,'company-1');
+  assert.deepEqual(result.effects,[]);
+ }
+});
+test('7.1 CR-02: snapshot conserva separação sessão A/link B, remaps independentes e override nulo', () => {
+ const linked=reduce(reduce(start(),{type:'company',companyId:'company-1'}),{type:'hydrateUrl',url:'?company=company-2&base=SAT&layers=cloud'});
+ const rename=(data,from,to) => {
+  for(const c of data.catalog.companies)if(c.id===from)c.id=to;
+  for(const r of data.catalog.relations){if(r.fromCompanyId===from)r.fromCompanyId=to;if(r.toCompanyId===from)r.toCompanyId=to;}
+  for(const m of data.models)if(m.companyId===from)m.companyId=to;
+  for(const n of data.news)for(const k of ['relevantCompanyIds','citedCompanyIds'])n[k]=n[k].map(id=>id===from?to:id);
+ };
+ for(const mapping of [[],[['company-1','new-a']],[['company-2','new-b']],[['company-1','new-a'],['company-2','new-b']]]) {
+  const data=clone(fixture); for(const [from,to] of mapping)rename(data,from,to);
+  const result=explorationReducer(linked,{type:'advanceSnapshot',data,revision:'next',now:fixture.now,hiddenNewsIds:[],companyRemaps:mapping.map(([fromCompanyId,toCompanyId])=>({fromCompanyId,toCompanyId}))});
+  const expectedA=new Map(mapping).get('company-1')??'company-1',expectedB=new Map(mapping).get('company-2')??'company-2';
+  assert.equal(result.state.sessionState.companyId,expectedA); assert.equal(result.state.sessionOverrides.companyId,expectedB);
+  assert.equal(result.state.effectiveState.companyId,expectedB); assert.equal(result.state.terminal.companyId,expectedB);
+  assert.equal(result.state.effectiveState.base,'SAT'); assert.deepEqual(result.state.effectiveState.layers,['cloud']);
+  assert.deepEqual(result.effects,[]); assert.deepEqual(result.state.preferences,linked.preferences);
+  assert.equal(reduce(result.state,{type:'hydrateUrl',url:''}).effectiveState.companyId,expectedA);
+ }
+ for(const removed of ['company-1','company-2']) {
+  const data=clone(fixture); rename(data,removed,'homonym');
+  // Mesmo nome não é evidência: nenhuma correspondência explícita foi enviada.
+  const result=explorationReducer(linked,{type:'advanceSnapshot',data,revision:'removed',now:fixture.now,hiddenNewsIds:[],companyRemaps:[]});
+  assert.equal(result.state.sessionState.companyId,removed==='company-1'?null:'company-1');
+  assert.equal(result.state.sessionOverrides.companyId,removed==='company-2'?null:'company-2');
+  assert.equal(result.state.effectiveState.companyId,result.state.sessionOverrides.companyId);
+  assert.equal(reduce(result.state,{type:'hydrateUrl',url:''}).effectiveState.companyId,result.state.sessionState.companyId);
+  if(removed==='company-2'){assert.equal(result.state.terminal,null);assert.equal(result.state.warning,'company-unavailable');}
+ }
+ let cleared=reduce(linked,{type:'hydrateUrl',url:'?company='});
+ cleared=reduce(cleared,{type:'advanceSnapshot',data:fixture,revision:'next',now:fixture.now,hiddenNewsIds:[],companyRemaps:[]});
+ assert.equal(cleared.sessionState.companyId,'company-1'); assert.deepEqual(cleared.sessionOverrides,{companyId:null});
+ assert.equal(cleared.effectiveState.companyId,null); assert.equal(cleared.terminal,null);
+});
+
 test('review: query vazia é válida no parser e na hidratação', () => {
  const state=start();
  assert.deepEqual(parseExplorationUrl('',{companyIds:state.index.companyIds,config:cases.config}),{});
@@ -172,7 +225,9 @@ test('AC4: limpar Empresa limpa Modelo dependente; seleção de sessão encobert
   data.catalog.relations = data.catalog.relations.filter(r => r.fromCompanyId !== 'company-1' && r.toCompanyId !== 'company-1');
   data.models = data.models.filter(m => m.companyId !== 'company-1'); data.news = [];
   hidden = reduce(hidden,{type:'advanceSnapshot',data,revision:'two',now:fixture.now,hiddenNewsIds:[],companyRemaps:[]});
-  assert.equal(hidden.sessionState.companyId,'company-2'); assert.equal(hidden.effectiveState.companyId,'company-2');
+  // CR-02: a Empresa do link não é promovida à sessão cuja seleção foi removida.
+  assert.equal(hidden.sessionState.companyId,null); assert.equal(hidden.effectiveState.companyId,'company-2');
+  assert.equal(hidden.sessionOverrides.companyId,'company-2');
   assert.doesNotThrow(() => explorationQuery(hidden));
 });
 test('AC1 ampliado: duas bases preservam Modelo, Leitor lateral/flutuante, Fila/MERCADOS e todos os tokens', () => {

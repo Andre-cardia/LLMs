@@ -2,7 +2,9 @@
 title: '4.1 — Estado, bases e preferências no store compartilhado'
 type: 'feature'
 created: '2026-10-12'
-status: 'in-progress'
+status: 'done'
+completion_scope: 'accepted-local-contract-store-url-v2'
+human_acceptance: 'acceptance-4-1-local.md'
 baseline_commit: '50ba405ea82a0d39d2df946fed74af5fc745b8ed'
 route: 'dispatch'
 review_loop_iteration: 1
@@ -61,6 +63,10 @@ context:
 - **AC4:** Dado novo snapshot/operação, quando reconciliar ou receber callbacks, então remapeamento explícito é atômico, remoção limpa seleção/Terminal com aviso e callbacks vencidos de câmera/digitação não alteram contexto.
 - **AC5:** Dadas ações de painel/aba, quando abrir Fila/Leitor lateral/MERCADOS ou sair de GLOBO, então laterais são exclusivas entre si e preservam Terminal no Globo; sair de GLOBO fecha Terminal. Leitor flutuante e preferências mantêm regras existentes.
 - **AC6:** Dado payload inválido, quando chamar a fronteira, então erro explícito preserva o contexto válido, sem executar JS, URL ou patch arbitrário.
+
+### Aceite humano do escopo local — registrado em 2026-10-12
+
+Andre aceitou explicitamente a entrega local após walkthrough e demonstrações, incluindo CR-01 e mantendo todos os diferidos. O [registro de aceite](acceptance-4-1-local.md) delimita a evidência e as exclusões. O status atual é `done` **somente no escopo local aceito**; as notas históricas abaixo sobre aceite pendente descrevem a situação anterior e foram preservadas. Não conclui 7.1, Épico 4, UI/Cesium ou produção. Próximo passo autorizado: planejar o incremento local de 7.1 e obter aprovação antes de implementar.
 
 ### Review Findings
 

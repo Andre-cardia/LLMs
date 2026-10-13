@@ -1,0 +1,24 @@
+{
+  "context": {"dataRevision":"snapshot-fixture-7-1","feedbackRevision":3},
+  "results": [
+    {"label":"Laboratório fictício A","target":{"schemaVersion":1,"type":"company","companyId":"company-1"}},
+    {"label":"Modelo fictício 0 Variante fictícia 0","target":{"schemaVersion":1,"type":"model","companyId":"company-1","modelId":"modelo-ficticio-a","variantId":"variante-ficticia-a"}},
+    {"label":"FAKE Chip fictício C","target":{"schemaVersion":1,"type":"ticker","companyId":"company-3","symbol":"FAKE","exchange":"SIMULATED"}},
+    {"label":"Notícia fictícia 1","target":{"schemaVersion":1,"type":"news","companyId":"company-1","newsId":"news-1"}}
+  ],
+  "empty": {"schemaVersion":1,"query":"  NÃO existe  ","status":"empty","context":{"dataRevision":"snapshot-fixture-7-1","feedbackRevision":3},"results":[]},
+  "invalidContexts": [
+    {"dataRevision":"","feedbackRevision":0},
+    {"dataRevision":"one","feedbackRevision":-1},
+    {"dataRevision":"one","feedbackRevision":0.5},
+    {"dataRevision":"one"},
+    {"dataRevision":"one","feedbackRevision":0,"secret":"não permitido"}
+  ],
+  "invalidResults": [
+    {"label":"Sem destino","target":{"schemaVersion":2,"type":"company","companyId":"company-1"}},
+    {"label":"Ticker incompleto","target":{"schemaVersion":1,"type":"ticker","companyId":"company-3","symbol":"FAKE"}},
+    {"label":"ID vazio","target":{"schemaVersion":1,"type":"company","companyId":""}},
+    {"label":"Ativo inventado","target":{"schemaVersion":1,"type":"asset","companyId":"company-3"}},
+    {"label":"Campo extra","target":{"schemaVersion":1,"type":"company","companyId":"company-1"},"secret":"não permitido"}
+  ]
+}

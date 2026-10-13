@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-12-2026 20:32
-last_updated: 10-12-2026 22:06
+last_updated: 10-13-2026 12:13
 project: LLMs
 project_key: NOKEY
 tracking_system: file-system
@@ -62,9 +62,9 @@ development_status:
 
   epic-4: in-progress
   # 4.1 CR-01 corrigido: 38 testes direcionados com demo, 108 totais; revisão focada sem achados.
-  # In-progress conserva os achados médios diferidos ainda abertos e o aceite humano pendente; patch local concluído.
-  # Prova somente local: não conclui 7.1/épico 4 nem fecha gates de integração/produção.
-  4-1-manter-estado-bases-e-preferências-no-store-compartilhado: in-progress
+  # Aceite humano explícito após walkthrough/demos: done somente no escopo local; ver acceptance-4-1-local.md.
+  # Diferidos continuam abertos: não conclui 7.1/épico 4 nem fecha gates de integração/produção.
+  4-1-manter-estado-bases-e-preferências-no-store-compartilhado: done
   4-2-integrar-o-renderer-cesium-ao-globo-principal: backlog
   4-3-compor-terreno-edifícios-e-detalhe-automático-de-mapa-sat: backlog
   4-4-mostrar-e-selecionar-empresas-e-lançamentos-no-globo: backlog
@@ -87,8 +87,11 @@ development_status:
   6-4-mostrar-finanças-em-notícias-e-a-demonstração-do-especialist: backlog
   epic-6-retrospective: optional
 
-  epic-7: backlog
-  7-1-buscar-entidades-e-restaurar-o-contexto-da-url: backlog
+  epic-7: in-progress
+  # Incremento local 7.1 implementado: contrato/frame/coordenador Busca + CR-02/CR-08.
+  # Provas finais: 66 direcionados, 132 totais, 55 módulos; três camadas de revisão e patches verificados.
+  # Fatia local aceita: acceptance-7-1-local.md. Story integral/UI/acesso e dois diferidos continuam abertos.
+  7-1-buscar-entidades-e-restaurar-o-contexto-da-url: in-progress
   7-2-pesquisar-com-fontes-navegação-tipada-e-orçamento-separado: backlog
   7-3-retomar-e-excluir-o-histórico-privado: backlog
   epic-7-retrospective: optional
@@ -99,7 +102,10 @@ development_status:
 
 planning_gate: CONCERNS
 full_product_ready: false
+# Produto completo continua gated; publicação do preview estático foi autorizada separadamente.
 production_authorized: false
+preview_deployment_authorized: true
+preview_deployment_authorization: acceptance-7-1-local.md
 completion_scope: approved-local-contracts-only
 approval_record: ../planning-artifacts/approvals/story-approvals-reconciled-2026-10-12.json
 readiness_report: ../planning-artifacts/reviews/sprint-readiness-2026-10-12.md
@@ -117,12 +123,17 @@ open_integration_gate_groups:
   - Q8
   - Q9
   - Q11-implementação
+story_4_1_acceptance: acceptance-4-1-local.md
+local_increment_7_1:
+  status: accepted
+  acceptance_record: acceptance-7-1-local.md
+  full_story_complete: false
 next_recommended_story:
-  id: '4.1'
-  key: 4-1-manter-estado-bases-e-preferências-no-store-compartilhado
-  skill: bmad-walkthrough
-  scope: Revisão humana do contrato/store/URL v2 implementado e testado localmente
-  completion_requires: Aceite humano da entrega 4.1; depois incremento local 7.1
+  id: '7.1'
+  key: 7-1-buscar-entidades-e-restaurar-o-contexto-da-url
+  skill: bmad-sprint-planning
+  scope: Avaliar a continuidade da Story 7.1 após aceite local; integração UI/acesso e diferidos ainda pendentes
+  completion_requires: Resolver gates aplicáveis antes da integração; não repetir o aceite local já registrado
 followup_local_story:
   id: '7.1'
   after: '4.1'

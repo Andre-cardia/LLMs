@@ -112,9 +112,18 @@ export function explorationReducer(previous, intent) {
       for (const [from,to] of remaps) {
         if (!s.index.companyIds.includes(from) || from === to || next.companyIds.includes(from) || !next.companyIds.includes(to)) throw new Error('INVALID_REMAP');
       }
-      // Reconciliar também a seleção de sessão encoberta por um override URL.
-      const oldId = s.effectiveState.companyId, id = remaps.get(oldId) ?? oldId;
-      setSession(s, 'companyId', id);
+      // Cada origem é reconciliada separadamente; o link nunca vira preferência/sessão.
+      const reconcile = id => {
+        const mapped = remaps.get(id) ?? id;
+        return next.companyIds.includes(mapped) ? mapped : null;
+      };
+      const oldId = s.effectiveState.companyId;
+      s.sessionState.companyId = reconcile(s.sessionState.companyId);
+      if (Object.hasOwn(s.sessionOverrides, 'companyId')) {
+        s.sessionOverrides.companyId = reconcile(s.sessionOverrides.companyId);
+      }
+      const id = Object.hasOwn(s.sessionOverrides, 'companyId') ? s.sessionOverrides.companyId : s.sessionState.companyId;
+      if (oldId !== null && id === null) s.warning = 'company-unavailable';
       if (s.terminal && id !== null) { s.terminal.companyId = id; s.terminal.token = s.intentToken; }
       if (s.readerNewsId !== null) s.readerToken = s.intentToken;
       s.cameraOperation = null; s.index = next; s.snapshotRevision = intent.revision;

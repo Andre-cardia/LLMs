@@ -22,6 +22,6 @@ export function explorationQuery(state) {
   assertExplorationState(state);
   const s = state.effectiveState, params = new URLSearchParams();
   params.set('layers', s.layers.join(',')); params.set('base', s.base); params.set('tab', s.tab);
-  if (s.companyId !== null) params.set('company', s.companyId);
+  params.set('company', s.companyId ?? '');
   return `?${params}`;
 }

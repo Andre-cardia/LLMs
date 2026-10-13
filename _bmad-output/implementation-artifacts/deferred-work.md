@@ -36,3 +36,25 @@ Origem: [Review Findings da Story 4.1](spec-4-1-store-bases-preferencias.md#revi
 - **CR-07 — maybe-false; impacto potencial medium não verificado:** callback local de câmera só conclui sucesso e recusa campo extra de falha, conforme o contrato atual. Não existe caller de erro/renderer que demonstre operação travada. Exercitar falha/aborto real na integração e definir o outcome apropriado com evidência; isso não é requisito local faltante já comprovado. Local: [exploration-state.mjs:52–62](../../src/domain/exploration-state.mjs#L52-L62).
 - **CR-08 — medium, preexistente, reconfirmado:** roundtrip da URL sem Empresa mantém seleção da sessão de destino. Semântica já explicitamente diferida para 7.1; não adotar novo sentinel sem reconciliar intenção dos links. Local: [exploration-url.mjs:18–25](../../src/domain/exploration-url.mjs#L18-L25).
 - **CR-09 — medium, preexistente, reconfirmado:** após remoção da Empresa, troca de base apaga `company-unavailable` por reset geral de warning. Reconciliar duração/dismiss com a apresentação. Local: [exploration-state.mjs:70](../../src/domain/exploration-state.mjs#L70).
+
+## Encaminhamento no incremento local 7.1
+
+- source_spec: [spec-7-1-busca-url-local.md](spec-7-1-busca-url-local.md)
+  summary: CR-02 e CR-08 implementados e verificados somente no escopo local, conforme decisões humanas 1A + 2A.
+  evidence: [Testes de exploração](../../tests/exploration.test.mjs) provam reconciliação separada sessão/override, remaps explícitos/remoções e company= em sessão povoada sem persistência. Os registros históricos acima ficam preservados; não são pendências semânticas restantes desta fatia.
+
+- source_spec: [spec-7-1-busca-url-local.md](spec-7-1-busca-url-local.md)
+  summary: Integrar Busca/URL ao consumidor real e verificar UI, foco, teclado/toque, navegador e autenticação/revogação efetivas na continuação 7.1.
+  evidence: [LocalSearch](../../src/application/local-search.mjs) prova somente coordenação por portas locais síncronas; [testes](../../tests/search.test.mjs) usam promises controladas e autorização simulada. Nenhum DOM, Cesium, serviço real, deploy ou gate foi alterado.
+
+- source_spec: [spec-7-1-busca-url-local.md](spec-7-1-busca-url-local.md)
+  summary: Provar entrega ordenada e isolamento/disposal entre instâncias e serviços no adapter futuro; preservar CR-04/CR-05 como integração pendente.
+  evidence: Geração local mais intentToken impedem retorno atrasado de enviar snapshot/navegação ao store atual e verificam reentrância. Não ordenam revisões opacas nem implementam atomicidade distribuída; o adapter deve cancelar trabalho ao trocar instância/permissão. CR-03/CR-06/CR-07 seguem apresentação/renderer (4.2 e consumidores), favoritos e avisos seguem seus registros existentes.
+
+- source_spec: `spec-7-1-busca-url-local.md`
+  summary: BH3 — preservar porta de dispatch síncrona; qualquer adapter futuro assíncrono exige protocolo transacional próprio, não apenas requireSynchronous.
+  evidence: Medium; comportamento preexistente do guard compartilhado. Probe injeta deliberadamente dispatch assíncrono incompatível: a Promise é recusada, mas o corpo do adapter pode mutar o store depois de cancel(). Não há esse adapter entre consumidores suportados; proibir async no contrato não constitui isolamento de callback arbitrário nem rollback. Não reabrir como patch do coordenador sem definir a integração.
+
+- source_spec: `spec-7-1-busca-url-local.md`
+  summary: BH5 — verificar transporte e ordenação de evidências de remap de Empresa junto aos snapshots no controlador futuro.
+  evidence: Maybe-false, impacto potencial medium não verificado. Probe envia remoção sem remap e depois um remap cuja origem já foi removida; INVALID_REMAP está conforme o reducer. Falta caller/fonte integrada que comprove entrega legítima nesse fluxo. O coordenador não inventa correspondências e não transporta mapas ausentes do frame; provar que o proprietário dos remaps os aplica antes de outro consumidor consolidar remoções.

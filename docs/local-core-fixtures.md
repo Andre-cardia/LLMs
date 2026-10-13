@@ -1,6 +1,6 @@
 # Fundações locais do Monitor Global de Labs de LLM
 
-Os fundamentos históricos cobrem fatias locais de snapshots, orçamento, curadoria, Modelos, Notícias, exploração e busca; não comprovam conclusão integral das stories atuais. A Story 4.1 recebeu contrato/store/URL v2 e provas locais descritas abaixo, com revisão automatizada concluída e revisão humana pendente. A Story 7.1 e o épico 4 não são declarados concluídos. Apresentação, Fontes reais e infraestrutura conservam os gates do planejamento.
+Os fundamentos históricos cobrem fatias locais de snapshots, orçamento, curadoria, Modelos, Notícias, exploração e busca; não comprovam conclusão integral das stories atuais. A Story 4.1 recebeu contrato/store/URL v2 e provas locais descritas abaixo, com revisão automatizada concluída e [aceite humano do escopo local](../_bmad-output/implementation-artifacts/acceptance-4-1-local.md) após walkthrough e demonstrações; os itens diferidos permanecem abertos. A Story 7.1 e o épico 4 não são declarados concluídos. Apresentação, Fontes reais e infraestrutura conservam os gates do planejamento.
 
 ## Executar
 
@@ -42,14 +42,34 @@ O reducer é a única transição semântica; URL não emite persistência, e a�
 
 Verificação após a correção CR-01: **37 testes de exploração/contrato, 38 incluindo demo, 108 totais, nenhum ignorado**; **52 módulos** passam na verificação de sintaxe em Node 25.9.0. Cinco testes adicionais cobrem referências compartilhadas no contrato/reducer, profundidade em diferentes caminhos/ordens, ciclos e isolamento do cache entre chamadas. Os dois testes de custo falharam antes da correção: 15.017 inspeções de chaves para 13 objetos distintos; depois, 20 inspeções, sem depender de um limite de tempo de máquina. O demo emite `externalCalls: 0`, projeção `3D`, base `SAT`, URL `?layers=cloud&base=SAT&tab=models&company=company-2` e `persistEffects: []`.
 
-Dois comportamentos preexistentes ficam explicitamente para histórias consumidoras, sem alteração nesta fatia:
+Dois comportamentos preexistentes foram registrados ao encerrar a fatia 4.1:
 
-1. URL sem `company` mantém a seleção de sessão; roundtrip para limpar uma sessão já selecionada requer decisão posterior em 7.1.
+1. URL sem `company` mantém a seleção de sessão. O roundtrip para limpar seleção foi posteriormente resolvido **no incremento local 7.1 abaixo**, pela decisão humana `company=` (CR-08).
 2. O store ainda representa digitação abstrata no tema Artificial Analysis. Conteúdo imediato e handshake de apresentação dependem da integração de UI, não deste protocolo local.
 
 Tokens pertencem à instância de store: o adapter futuro deve descartar callbacks/subscriptions ao substituí-la, sem encaminhá-los à nova instância. Entrega ordenada de snapshots, favoritos e duração dos avisos também estão registrados no [trabalho diferido](../_bmad-output/implementation-artifacts/deferred-work.md). A string de query vazia é aceita como ausência de overrides.
 
 Câmera física, integração Cesium, serviços externos, desempenho real, produção e gates Q3/Q6/Q8/Q9 permanecem fora da prova; protótipos não foram alterados.
+
+## Story 7.1 — incremento local de Busca/URL
+
+[Entrega local aceita por Andre](../_bmad-output/implementation-artifacts/acceptance-7-1-local.md) após walkthrough e demonstrações. A aprovação não conclui a Story integral nem conecta estes módulos ao frontend; os diferidos permanecem abertos.
+
+- [Contrato de Busca v1](../src/contracts/search.mjs) e [fixtures independentes](../tests/fixtures/search-contract.json): `SearchResult` reutiliza `NavigationTarget` v1; o contexto identifica `(dataRevision, feedbackRevision)`. A resposta conserva `query` original, estados `idle|loading|results|empty|unavailable` e resultados vazios/contexto nulo fora de uma leitura válida. Títulos válidos de até 4096 caracteres não são truncados.
+- [LocalNewsView](../src/application/local-news-view.mjs) mantém `project/search/navigate/context` e expõe `frame(target?)`. Resolve alias antes de capturar snapshot/feedback, clona o snapshot antes de outra espera e congela o frame com `data`, `now`, `hiddenNewsIds`, revisões e `navigation`. Usa a supressão owner-wide do ledger existente, inclusive aliases, sem criar política paralela ou substituir Notícias publicadas por itens não publicados do feedback.
+- [LocalSearch](../src/application/local-search.mjs) recebe `{view, store}`. `store.getState()` e `store.dispatch(intent)` são portas **síncronas**, vinculadas à mesma instância do reducer v2. `search(query)` apenas consulta; `select(result)` revalida no frame atual, envia `advanceSnapshot` e, quando disponível, `navigate`; `cancel()` invalida trabalho pendente. `current` contém somente a consulta transitória, nunca seleção/painéis semânticos paralelos. A configuração inicial continua pertencendo ao store injetado.
+- Geração local e `intentToken` descartam sucesso/falha atrasados, inclusive após intenção externa ou reentrância síncrona no dispatch. Retornos vencidos contêm somente `status: 'superseded'`; se não houver consulta mais nova, encerram o loading em `idle`. `getState` assíncrono ou contador inválido é recusado antes de iniciar leitura/dispatch. Iniciar busca/seleção limpa resultados anteriores; erro de acesso/leitura deixa `unavailable`, sem dados privados nem erro bruto. Nenhuma falha de leitura navega. Supressão válida reconcilia o índice e fecha Leitor obsoleto antes de recusar o destino.
+- Matching e ordem permanecem os de `globalSearch`: substring sem acentos/caixa, até 256 caracteres, sem ranking novo. Ticker continua ligado ao Cadastro, Empresa, símbolo e bolsa, sem seleção automática ou novos instrumentos. IDs eliminados/homônimos não são remapeados por nome. Alias de Notícia exige evidência do resolvedor existente; remaps de Empresa continuam sendo explícitos no intent do reducer, nunca inferidos pela busca.
+- **CR-08:** a [URL](../src/domain/exploration-url.mjs) sempre serializa Empresa; seleção efetiva nula vira `company=`. Hidratar esse valor cria override nulo sem alterar sessão/preferências; ausência de `company` não cria override e retorna à seleção da sessão. `base`, aliases Q11, projeção 3D e allowlist privada permanecem iguais.
+- **CR-02:** o [reducer](../src/domain/exploration-state.mjs) reconcilia sessão e override separadamente em refresh, remap explícito ou remoção. Empresa de link nunca é promovida à sessão; remoção do destino do link mantém override explícito `null`, impedindo fallback acidental para outra Empresa. Remover o override retorna à sessão reconciliada.
+
+### Evidências locais 7.1
+
+[Testes de Busca](../tests/search.test.mjs) e [store/URL](../tests/exploration.test.mjs), junto das regressões de contrato/Notícias: **66 testes direcionados, 132 totais, zero falhas/skips**. `npm run check`: **55 módulos ESM**, Node **v25.9.0**. `npm run demo:local`: `externalCalls: 0`, `projection: '3D'`, `base: 'SAT'`, `persistEffects: []`. `git diff --check` sem erros. O demo histórico não foi convertido em UI nem prova consumidor real.
+
+A matriz cobre os quatro destinos/revisões, vazio/texto original, sobreposição por promises controladas, supressão/remoção/relevância/negação, homônimos e alias explícito, URL duplicada/inválida e ambas as decisões humanas. A revisão acrescentou provas de supressão durante espera de alias, cancelamento no dispatch de navegação, retorno malformado das portas e merge de grupos distintos com snapshot pré-merge. Congelamento privado do frame percorre cada identidade compartilhada uma vez por chamada, evitando amplificação sem refatorar primitives. A regressão CR-01 permanece intacta. A expectativa histórica que promovia B à sessão foi substituída pela decisão CR-02, não por conveniência da implementação.
+
+**Limites:** isto não conclui a Story 7.1 integralmente, não altera produção nem fecha gates. O consumidor real deverá ligar revogação/disposal ao cancelamento, entregar snapshots ordenados à instância correta e validar UI/DOM/foco/browser e autenticação reais. As revisões são opacas, sem ordenação lexicográfica; esta prova controla as operações locais e intents observáveis do store, não fornece transação distribuída entre serviços. Favoritos, avisos e apresentação/renderer permanecem nos [diferidos](../_bmad-output/implementation-artifacts/deferred-work.md).
 
 ## Próximas decisões documentadas
 
