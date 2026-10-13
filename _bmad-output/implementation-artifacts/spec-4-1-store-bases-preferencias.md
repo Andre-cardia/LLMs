@@ -139,6 +139,7 @@ Sem intent_gap/bad_spec nesta rodada. Patches são correções locais ou novas a
 ### Fechamento da revisão
 
 - Patches da rodada 2 aplicados pelo Lead (handoff síncrono não devolveu endereço reutilizável do implementador): query vazia aceita; profundidade limitada a 128; Set para referências; fixture literal independente; lote misto/merge; teste negativo de câmera; assertions de integração da demo. Duas falhas reproduzidas antes dos patches, depois 33/33 testes direcionados incluindo demo e 103/103 totais.
+- Encerramento Git: Andre escolheu explicitamente **Manter sem commit** no checkpoint final. Nenhum commit, push ou deploy realizado por este fluxo. Na checagem final foi observado HEAD externo `8de2490a28e17518af712d8396fef9ae4877fda5` (precedido por `a099be99729d8b0ab59853937f399a835b0e82aa`), incorporando código e artefatos; histórico e alterações concorrentes preservados. Spec done representa Build concluído; sprint permanece review para aceite humano.
 - Seis itens de integração/preexistentes registrados em [trabalho diferido](deferred-work.md); nenhum achado confirmado desta implementação ficou sem correção. Resultado potencial entre instâncias/favoritos explicitamente não verificado, não reivindicado como prova.
 - Auditoria da matriz: configuração/aliases/precedência em AC3; segurança em AC6 e testes de getters/profundidade; concorrência em AC4 e invalidação URL/navegação/aba. Todos executados, zero skips. AC1 com estados povoados; AC2 patches unitários; AC5 coexistência/saída confirmados.
 
