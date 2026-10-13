@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-12-2026 20:32
-last_updated: 10-12-2026 21:25
+last_updated: 10-12-2026 22:06
 project: LLMs
 project_key: NOKEY
 tracking_system: file-system
@@ -61,9 +61,10 @@ development_status:
   epic-3-retrospective: optional
 
   epic-4: in-progress
-  # 4.1 Build concluído: 33 testes direcionados com demo, 103 totais; revisão automática concluída, humana pendente.
+  # 4.1 CR-01 corrigido: 38 testes direcionados com demo, 108 totais; revisão focada sem achados.
+  # In-progress conserva os achados médios diferidos ainda abertos e o aceite humano pendente; patch local concluído.
   # Prova somente local: não conclui 7.1/épico 4 nem fecha gates de integração/produção.
-  4-1-manter-estado-bases-e-preferências-no-store-compartilhado: review
+  4-1-manter-estado-bases-e-preferências-no-store-compartilhado: in-progress
   4-2-integrar-o-renderer-cesium-ao-globo-principal: backlog
   4-3-compor-terreno-edifícios-e-detalhe-automático-de-mapa-sat: backlog
   4-4-mostrar-e-selecionar-empresas-e-lançamentos-no-globo: backlog

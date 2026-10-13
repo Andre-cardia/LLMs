@@ -11,21 +11,39 @@ export const PREFERENCE_KEYS = Object.freeze(['theme','mode','readerLayout','tab
 // Fronteira JSON local: recusa comportamento herdado ANTES de percorrer arrays.
 // Não constitui isolamento de Proxy hostil nem de um ambiente global adulterado.
 export function assertExplorationData(value, field = 'payload', seen = new Set()) {
-  if (value === null || ['string', 'boolean'].includes(typeof value)) return value;
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (!value || typeof value !== 'object' || seen.has(value)) fail(field, 'dados simples exigidos');
-  if (seen.size >= 128) fail(field, 'profundidade excessiva');
-  seen.add(value);
-  if (Array.isArray(value)) {
-    if (Object.getPrototypeOf(value) !== Array.prototype) fail(field, 'protótipo de array incompatível');
-    list(value, (item, name) => assertExplorationData(item, name, seen), field);
-  } else {
-    const keys = Reflect.ownKeys(value);
-    if (keys.some(key => typeof key !== 'string')) fail(field, 'campos incompatíveis');
-    object(value, keys, field);
-    for (const key of keys) assertExplorationData(value[key], `${field}.${key}`, seen);
+  // Cache por chamada: altura máxima do subgrafo já validado, nunca o caminho ativo.
+  const heights = new WeakMap();
+  function visit(item, name) {
+    if (item === null || ['string', 'boolean'].includes(typeof item)) return 0;
+    if (typeof item === 'number' && Number.isFinite(item)) return 0;
+    if (!item || typeof item !== 'object' || seen.has(item)) fail(name, 'dados simples exigidos');
+    const cachedHeight = heights.get(item);
+    if (cachedHeight !== undefined) {
+      // Uma referência vista perto da raiz pode reaparecer num caminho mais profundo.
+      if (seen.size + cachedHeight > 128) fail(name, 'profundidade excessiva');
+      return cachedHeight;
+    }
+    if (seen.size >= 128) fail(name, 'profundidade excessiva');
+    seen.add(item);
+    let height = 1;
+    const child = (value, field) => { height = Math.max(height, 1 + visit(value, field)); };
+    try {
+      if (Array.isArray(item)) {
+        if (Object.getPrototypeOf(item) !== Array.prototype) fail(name, 'protótipo de array incompatível');
+        list(item, child, name);
+      } else {
+        const keys = Reflect.ownKeys(item);
+        if (keys.some(key => typeof key !== 'string')) fail(name, 'campos incompatíveis');
+        object(item, keys, name);
+        for (const key of keys) child(item[key], `${name}.${key}`);
+      }
+      heights.set(item, height);
+      return height;
+    } finally {
+      seen.delete(item);
+    }
   }
-  seen.delete(value);
+  visit(value, field);
   return value;
 }
 export function assertPreference(field, value) {
