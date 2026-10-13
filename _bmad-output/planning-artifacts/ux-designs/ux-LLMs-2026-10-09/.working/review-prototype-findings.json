@@ -1,0 +1,652 @@
+[
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:449",
+  "trigger_condition": "tokenize() entra em loop infinito quando o HTML tem '<' sem '>' ou '&' sem ';' (indexOf retorna -1, então i volta a 0).",
+  "guard_snippet": "const j=html.indexOf('>',i); if(j<0){out.push({ch:'&lt;'});i++;continue}  /* idem para '&': if(j<0||j-i>10){out.push({ch:'&amp;'});i++;continue} */ — melhor ainda: tokenizar a partir de uma árvore DOM/nós de texto já escapados, e não de string HTML crua.",
+  "potential_consequence": "Um título com 'S&P 500', 'AT&T' ou '<3' (comum em notícias reais) trava a aba inteira ao abrir o Terminal ou o Leitor; se esse tokenizador servir de base para a implementação, o painel congela em produção."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:423, 448, 482, 499, 509, 468",
+  "trigger_condition": "Todo conteúdo (nome, cidade, contato, títulos PT/EN de notícias, resumo do agente, nomes de modelo) é interpolado em template strings e injetado via innerHTML, sem escape.",
+  "guard_snippet": "const esc=s=>String(s).replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[c])); usar ${esc(n[1])} em todos os pontos; ou montar nós com textContent. Registrar na arquitetura que dados de notícia nunca entram como HTML.",
+  "potential_consequence": "O PRD (FR-17) trata matérias como entrada não confiável; um título ou resumo com <img onerror=...> vira XSS no painel. O protótipo normaliza um padrão inseguro que tende a ser copiado pela implementação real."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:461, 490",
+  "trigger_condition": "Esc ou clique dentro do Leitor durante a digitação só para o intervalo (clearInterval) e não mostra o conteúdo completo; bind() dos chips de empresa nunca roda.",
+  "guard_snippet": "Guardar html/bind em escopo e criar skipReader(){clearInterval(readerTyping);readerTyping=null;$('#readerBody').innerHTML=readerFullHTML;readerBind()}; usar skipReader() nas linhas 461 e 490, como skip() faz no Terminal.",
+  "potential_consequence": "O Leitor fica com texto cortado no meio (às vezes com tag aberta), sem 'Empresas citadas' clicáveis e sem o link da matéria original; o comportamento de 'pular a animação' validado no Terminal (FR-7) não vale para o Leitor."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:462",
+  "trigger_condition": "Qualquer 'click' fora do Terminal o fecha, inclusive o click sintetizado no fim de um arrasto para girar o globo (pointerdown→move→pointerup no canvas).",
+  "guard_snippet": "let down=null; el.addEventListener('pointerdown',e=>down={x:e.clientX,y:e.clientY}); no handler de click: if(down&&Math.hypot(e.clientX-down.x,e.clientY-down.y)>5)return; (aplicar também ao fechamento do Leitor).",
+  "potential_consequence": "O usuário não consegue girar o globo para ver as Relações destacadas sem perder o Terminal Fixado e o Leitor; a validação de UX do 'clique fora fecha' (FR-6) fica contaminada por fechamentos involuntários."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:462",
+  "trigger_condition": "A regra de clique fora tem exceções (.rail, .pop, #views, #ticker, #reader, #feed) que contradizem o PRD ('Um clique fora do Terminal sempre o fecha'), e a flag 'opening' é inútil porque o listener em captura roda antes do onclick do alvo.",
+  "guard_snippet": "Documentar as exceções como decisão de UX (e atualizar o FR-6) ou removê-las; apagar a flag 'opening' ou trocá-la por e.target.closest('.pt,[data-id]') para não fechar e reabrir ao clicar em outro Ponto.",
+  "potential_consequence": "A arquitetura herda uma regra de dispensa implícita que diverge do requisito escrito; testes de aceitação baseados no PRD vão falhar ou a regra vai ser reimplementada de forma inconsistente."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:501-502, 516-517",
+  "trigger_condition": "goTo() e o clique no Fluxo de notícias agendam openTerm (1150 ms) e openReader (1500 ms) com setTimeout sem guardar nem cancelar os timers.",
+  "guard_snippet": "let goT=[]; function goTo(c,ni){goT.forEach(clearTimeout);goT=[setTimeout(()=>openTerm(c),1150)]; if(ni!=null)goT.push(setTimeout(()=>openReader(c,ni),1500))}; limpar goT em closeTerm/closeReader/Esc.",
+  "potential_consequence": "Clicar em dois itens do fluxo em sequência, ou apertar Esc logo depois, faz Terminal e Leitor reabrirem com a empresa errada ou depois de dispensados; a interação parece instável na validação."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:499, 505, 509",
+  "trigger_condition": "Itens 'frescos' (FRESH) não têm 'ni'; feedItem e renderNews usam n.ni||0, então o clique abre o Leitor com a notícia de índice 0 da empresa, não a manchete clicada.",
+  "guard_snippet": "Dar a cada notícia um id próprio (ex.: n.id='fresh-'+feedIdx) e usar data-rd=n.id e um mapa NEWS_BY_ID, em vez de 'empresa|índice'.",
+  "potential_consequence": "O usuário clica em 'TSMC antecipa produção de 2 nm' e lê outra matéria; isso esconde a necessidade arquitetural de um identificador estável por notícia (dedupe FR-14, 'marcar como irrelevante' FR-15)."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:505-510",
+  "trigger_condition": "A cada 9 s o intervalo do fluxo chama renderNews(), que recria via innerHTML a lista inteira e os filtros (incluindo o <select> de empresas) enquanto a aba Notícias está aberta.",
+  "guard_snippet": "No intervalo, só inserir o novo .nitem no topo (insertAdjacentHTML) e atualizar #newsCount; não chamar renderNewsFilters() fora de mudança de filtro; preservar scrollTop/âncora.",
+  "potential_consequence": "O <select> aberto fecha sozinho, o foco do teclado se perde e a lista pula enquanto o usuário lê; ALL.unshift também cresce sem limite durante sessões longas."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:414",
+  "trigger_condition": "Clicar numa ação da Faixa de cotações chama openTerm direto: não troca para a aba Globo nem gira o globo até a empresa.",
+  "guard_snippet": "t.onclick=()=>goTo(byId[t.dataset.id]) (goTo já faz setTab('globo') e pointOfView); em openTerm, se o ponto estiver no hemisfério oculto, girar antes de calcular getScreenCoords.",
+  "potential_consequence": "Na aba Modelos/Notícias a faixa continua visível (z-index 25 > .view 22): o Terminal abre por cima da tabela, ancorado num globo invisível; na aba Globo ele aparece ancorado num ponto do outro lado da Terra (FR-18 'abre o Terminal Fixado da Empresa')."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:468, 411",
+  "trigger_condition": "fmt() chama n.toLocaleString sem tratar null; renderTable passa iq, ttft, tps e ctx direto para fmt.",
+  "guard_snippet": "function fmt(n,d=2){return n==null||!isFinite(n)?'—':n.toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d})}; tratar tps/ctx com o mesmo guarda.",
+  "potential_consequence": "Com dados reais, um modelo sem TTFT ou índice de inteligência (comum em modelos novos) lança TypeError e a tabela inteira some, em vez de mostrar '—' (FR-9)."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:468",
+  "trigger_condition": "A linha da tabela liga ao Cadastro por nome (C.find(c=>c.name===m.lab)); 'Google' não bate com 'Google (Alphabet)'.",
+  "guard_snippet": "Adicionar labId nos MODELS ('google') e usar byId[m.labId]; nunca juntar entidades por nome de exibição.",
+  "potential_consequence": "O Gemini 3.5 Pro já sai com monograma cinza (--mu) em vez da cor da Camada; na implementação, juntar por nome quebra a cada renomeação e contraria o FR-13 (ligação estável entre Fontes)."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:349-351, 385, 477-478, 516",
+  "trigger_condition": "Parâmetros de URL (?theme, ?mode, ?reader, ?tstyle) são gravados no localStorage, e ?reader / mg-reader não são validados (readerLay='foo' vira className do Leitor).",
+  "guard_snippet": "Validar com listas fechadas (if(!['float','side'].includes(readerLay))readerLay='side'); tratar parâmetros de URL como override de sessão e não chamar localStorage.setItem quando vierem da URL.",
+  "potential_consequence": "Um link de captura de tela (?theme=ambar&reader=x) muda permanentemente a preferência salva; um valor inválido deixa o Leitor sem layout (sem largura nem posição) em todas as visitas seguintes."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:510, 483, 478",
+  "trigger_condition": "Abrir uma notícia pela aba Notícias força readerLay='side' e setLay() grava isso no localStorage.",
+  "guard_snippet": "Passar o layout como argumento temporário: openReader(c,ni,{lay:'side'}) e aplicar a classe sem persistir; persistir só quando o usuário clica em FLUTUANTE/LATERAL.",
+  "potential_consequence": "A preferência 'flutuante' escolhida pelo usuário é sobrescrita em silêncio a cada leitura pela aba Notícias, o que invalida a validação do recurso 'layout salvo'."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:349-351, 385, 478, 512",
+  "trigger_condition": "localStorage.getItem/setItem é chamado sem try/catch, e no init (applyTheme, setTStyle).",
+  "guard_snippet": "const store={get:k=>{try{return localStorage.getItem(k)}catch{return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch{}}};",
+  "potential_consequence": "Com armazenamento bloqueado (cookies de terceiros desligados, alguns modos privados, cota cheia), a exceção interrompe o script no applyTheme() inicial: globo sem textura e nenhum handler ligado."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:350",
+  "trigger_condition": "O modo padrão é sempre 'escuro'; prefers-color-scheme não é consultado na primeira visita.",
+  "guard_snippet": "let mode=params.get('mode')||store.get('mg-mode')||(matchMedia('(prefers-color-scheme: light)').matches?'claro':'escuro');",
+  "potential_consequence": "Contraria o FR-27 ('Na primeira visita, vale a preferência do sistema operacional'), e o protótipo não valida a primeira impressão do tema claro."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:344, 396, 399-400, 434-437",
+  "trigger_condition": "Filtros por Camada, tipos de Relação e as preferências de som (digitação/ambiente e volumes) não são persistidos.",
+  "guard_snippet": "Serializar state.layers/relTypes/rel/sound/amb/vol em store.set('mg-prefs',JSON.stringify(...)) ao mudar e restaurar no init. Para o som, restaurar como 'armado' e só criar o AudioContext no primeiro gesto (política de autoplay).",
+  "potential_consequence": "FR-2 e FR-8 exigem persistência entre visitas; sem isso o protótipo esconde o conflito real entre 'som salvo como ligado' e a política de autoplay dos navegadores, que a arquitetura precisa resolver."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:244, 435",
+  "trigger_condition": "O botão 🔇/🔊 só abre um popover; ligar o som exige dois cliques (botão e depois toggle ON).",
+  "guard_snippet": "Clique simples no botão alterna o som de digitação (state.sound=!state.sound;ensureAC();syncSoundBtn()); volumes e ambiente ficam num clique longo/secundário ou em uma seta ao lado do botão.",
+  "potential_consequence": "Diverge do FR-8 ('Um botão 🔊 visível liga e desliga'); se a validação aprovar o popover, o PRD precisa ser atualizado, senão a implementação vai seguir um dos dois de forma arbitrária."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:433, 437",
+  "trigger_condition": "amb.stop() usa linearRampToValueAtTime sem setValueAtTime de âncora, e desligar/religar rápido cria grafos sobrepostos (o anterior só para depois de 1,4 s).",
+  "guard_snippet": "stop:()=>{const t=AC.currentTime;out.gain.cancelScheduledValues(t);out.gain.setValueAtTime(out.gain.value,t);out.gain.linearRampToValueAtTime(0,t+1.2);...}; antes de startAmb, se amb existir, chamar amb.stop() e esperar.",
+  "potential_consequence": "O volume salta (clique audível) ao desligar depois de mexer no slider, e ligar/desligar rápido soma drones, chegando a volume e uso de CPU acima do esperado."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:219, 179-181, 37-45, 28",
+  "trigger_condition": "No celular (≤760 px): rails ocultos (sem tema, som, Camadas, Relações nem Fila de revisão), Leitor flutuante fixo em 440 px sem max-width, Leitor lateral com 235 px (100vw-140px) a 375 px, barra superior nowrap transbordando e #stage com 100vh/min-height 620px.",
+  "guard_snippet": "@media (max-width:760px){#reader.float,#reader.side{left:0!important;right:0!important;top:auto!important;bottom:34px;width:100%;max-height:80dvh;border-radius:14px 14px 0 0}#stage{height:100dvh;min-height:0}.rail{display:flex;flex-direction:row;...barra inferior}} e um menu compacto para os controles ocultos; abas viram ícones.",
+  "potential_consequence": "FR-29 ('totalmente responsiva') e a forma de painel deslizante de baixo para cima não são validados; no iPhone o Leitor sai da tela e funções centrais ficam inacessíveis, então a arquitetura de layout chega sem ter sido testada."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:369-370, 95-96",
+  "trigger_condition": "A Prévia e o Terminal dependem de mouseenter/onclick num ponto de 9 px; em toque, o mouseenter emulado ainda dispara o timer de Prévia, e o alvo fica bem abaixo dos 44 px recomendados.",
+  "guard_snippet": "Usar pointer events: if(e.pointerType==='touch'){openTerm(c);return} e não agendar hoverOn; aumentar a área de toque com ::before{content:'';position:absolute;inset:-16px} em (pointer:coarse).",
+  "potential_consequence": "O FR-29 ('Sem mouse, não existe Prévia: tocar abre direto o Terminal') não é atendido, e tocar em pontos vizinhos erra o alvo com frequência."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:284-318, 368-370",
+  "trigger_condition": "Sedes muito próximas (OpenAI/Anthropic a ~0,02°; NVIDIA, AMD, Arista e Oklo em Santa Clara) desenham pontos de 9 px sobrepostos, sem agrupamento nem espalhamento.",
+  "guard_snippet": "Prototipar o [ASSUMPTION] do FR-1: agrupar por distância em pixels no zoom afastado (bolha com contagem, que expande ao clicar) ou deslocar levemente (spiderfy) os pontos que colidem.",
+  "potential_consequence": "No zoom padrão, metade dos laboratórios da Baía de São Francisco não pode ser selecionada individualmente; essa é justamente a decisão de UX em aberto que o protótipo deveria validar."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:371-373, 218, 114, 142, 181",
+  "trigger_condition": "Com prefers-reduced-motion, os anéis de Pulso continuam se propagando, e o cursor piscando, o flash do fluxo e o slidein do Leitor continuam animados; só a faixa e o LIVE são desativados.",
+  "guard_snippet": "const RM=matchMedia('(prefers-reduced-motion: reduce)').matches; if(RM) G.ringPropagationSpeed(0).ringRepeatPeriod(0) ou trocar por anel estático; na @media reduce: #term .cur,.prompt .cur{animation:none}.fi.new{animation:none}#reader.side{animation:none}.",
+  "potential_consequence": "Contraria o FR-3 (o Pulso vira destaque estático) e o NFR de acessibilidade; o protótipo dá a impressão de que a redução de movimento já está resolvida."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:369-370, 402-403, 499, 506, 514, 413",
+  "trigger_condition": "Pontos (.pt), temas (.th), chips (.chip), itens do fluxo (.fi) e cotações (.tk) são div/span sem tabindex, role nem handler de teclado; Terminal e Leitor (role=dialog) não recebem foco nem o devolvem ao fechar; Esc não fecha popovers.",
+  "guard_snippet": "Usar <button> ou role=button + tabindex=0 + Enter/Espaço; em openTerm/openReader: dialog.focus() e guardar document.activeElement para restaurar no close; no keydown Esc, fechar .pop.show antes dos diálogos.",
+  "potential_consequence": "Escolher o tema, filtrar notícias ou abrir uma empresa fica impossível sem mouse; a arquitetura não recebe um padrão de gestão de foco para diálogos."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:495",
+  "trigger_condition": "Os atalhos 1/2/3 ignoram só INPUT e SELECT; disparam com Cmd/Ctrl/Alt (Cmd+1 do navegador), em TEXTAREA/contenteditable e com o Leitor aberto (que fica por cima da nova aba).",
+  "guard_snippet": "if(e.metaKey||e.ctrlKey||e.altKey||e.repeat)return; if(e.target.closest('input,select,textarea,[contenteditable]'))return; em setTab, fechar ou reposicionar o Leitor quando ele não pertence à aba de destino.",
+  "potential_consequence": "Cmd+1 para trocar de aba do navegador também troca a aba do painel; quando houver busca (⌕) ou edição na Fila de revisão, digitar '2' vai mudar de tela."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:128-129, 493",
+  "trigger_condition": "Nas abas Modelos/Notícias o globo só recebe visibility:hidden; o loop WebGL, o autoRotate, os anéis e os arcos animados continuam renderizando a 60 fps.",
+  "guard_snippet": "Em setTab: t==='globo'?G.resumeAnimation():G.pauseAnimation(); fazer o mesmo em document.visibilitychange.",
+  "potential_consequence": "GPU e bateria em uso contínuo enquanto o usuário lê tabelas; em notebook ou celular aquece e drena a bateria, e esconde um requisito de arquitetura (suspender a renderização fora da vista)."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:347-348, 387, 408",
+  "trigger_condition": "Texturas de 8192×4096 (earth-night-8k, earth-night-amber-8k) e 5400×2700, trocadas a cada mudança de tema/vista e sem fallback por capacidade do dispositivo.",
+  "guard_snippet": "Escolher a resolução por G.renderer().capabilities.maxTextureSize e pelo devicePixelRatio/tela (2k/4k para celular); fazer cache das texturas já carregadas; liberar a anterior com texture.dispose().",
+  "potential_consequence": "Cada textura 8k ocupa ~170 MB de GPU com mipmaps; o Safari no iOS pode reiniciar a aba, e GPUs limitadas a 4096 sofrem redimensionamento com engasgo. A arquitetura herda um orçamento de assets inviável no celular."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:364, 390",
+  "trigger_condition": "tune() tenta de novo a cada 300 ms para sempre se a textura não carregar, e só ajusta a primeira textura (trocas de tema perdem a anisotropia); emissiveIntensity=0.2 não tem efeito (emissive é preto) e nunca é revertido.",
+  "guard_snippet": "Limitar as tentativas (ex.: 20) ou usar o callback de carregamento; reaplicar a anisotropia após cada globeImageUrl; remover o ajuste de emissive ou definir m.emissive e reverter para os outros temas.",
+  "potential_consequence": "Sem rede ou com o asset ausente, o polling fica eterno; o realce do tema 'noturna' que a validação pretende avaliar simplesmente não existe."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:369, 450, 458",
+  "trigger_condition": "Cada abrir ou fechar do Terminal chama renderPoints(), que recria todos os elementos HTML dos pontos e reinicia ringsData.",
+  "guard_snippet": "Manter um Map id→elemento criado uma vez e só alternar classList.toggle('sel', c===state.sel); chamar ringsData só quando os dados de lançamento ou de Camada mudarem.",
+  "potential_consequence": "Os anéis de Pulso reiniciam a cada seleção (o que falseia a percepção de 'enfraquece de forma contínua', FR-3), a Prévia pode ficar presa num nó removido, e o custo cresce com o Cadastro."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:446, 412-413",
+  "trigger_condition": "A moeda é inferida pelo valor (price>9999 ? '₩' : '$') e a precisão também (p>9999 ? 0 casas : 2).",
+  "guard_snippet": "Adicionar currency/exchange ao Cadastro (ex.: {ticker:'000660',exchange:'KRX',currency:'KRW'}) e formatar com Intl.NumberFormat('pt-BR',{style:'currency',currency}).",
+  "potential_consequence": "Uma ação em USD acima de 9.999 vira won, e uma ação coreana abaixo de 9.999 vira dólar; o FR-18 exige bolsas fora dos EUA, e a heurística vai parar no modelo de dados se não for corrigida aqui."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:448, 509, 482",
+  "trigger_condition": "'marcar como irrelevante' e '↗ matéria original' no Terminal e na aba Notícias são spans/links mortos (onclick='return false'); o FR-15 exige que a notícia suma, e o FR-6 que todos os links funcionem.",
+  "guard_snippet": "Prototipar: ao clicar em .irr, remover a linha com animação curta + toast 'Desfazer'; usar links reais (href da matéria, target=_blank rel=noopener) ou sinalizar visualmente 'link simulado'.",
+  "potential_consequence": "O fluxo de curadoria (marcar e desfazer), que influencia o desenho do estado de notícias por usuário, chega à arquitetura sem ter sido validado."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:261-270, 467-469",
+  "trigger_condition": "A Tabela de modelos não tem índices de programação/matemática, cache de escrita, pesos abertos/licença, expansão de linha com benchmarks, filtros por Laboratório/saída/pesos, indicador de ordenação nem layout de celular (FR-9, FR-10, FR-29).",
+  "guard_snippet": "Acrescentar ao menos uma linha expansível com benchmarks, filtros de Laboratório e de pesos, seta ▲▼ e aria-sort no th ativo, e no celular mostrar só Modelo/Inteligência/Custo, com expansão por toque.",
+  "potential_consequence": "A comparação de três estilos visuais valida aparência, mas não a densidade real de colunas e interações; a decisão de estilo pode não sobreviver à tabela completa."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:252, 386, 408",
+  "trigger_condition": "O botão SAT não muda nada (state.view='sat' usa a mesma textura do 3D); MAPA só troca para a textura noturna; 2D é 'em breve'. O handler tem a expressão morta '&&false'.",
+  "guard_snippet": "Desabilitar visualmente (aria-disabled + data-soon) as vistas não implementadas ou mapear SAT para uma textura distinta; remover a expressão '(x.dataset.v==='3d'&&...&&false)'.",
+  "potential_consequence": "Na sessão de validação, o usuário clica em SAT, nada muda e ele conclui que há um bug, ou aprova uma vista que não existe."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:255, 86-88",
+  "trigger_condition": "A Faixa de cotações fica na base (decisão do protótipo), mas o PRD (§4.5/FR-18) diz 'Barra rolante no topo', e falta o horário da última cotação (FR-19).",
+  "guard_snippet": "Registrar a decisão no EXPERIENCE.md/PRD (posição na base), e no .note da faixa mostrar 'COTAÇÕES 13:25 ET · DADOS COM ATRASO · APENAS INFORMATIVO'.",
+  "potential_consequence": "A implementação vai seguir o protótipo ou o PRD de forma inconsistente, e o aviso de frescor obrigatório some do layout validado."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:285, 332, 328, 423, 448",
+  "trigger_condition": "Os dados simulados se contradizem: Anthropic launch=5 dias marca 'Claude Opus 5.5 (lançado há 5 dias)', mas MODELS dá 2026-09-22 ao Opus e a notícia de 04/10 fala do Haiku 5.5; com launch=0, o texto vira 'HÁ 0 DIA'.",
+  "guard_snippet": "Derivar o pulso e o rótulo do modelo mais recente por data (max(date) em MODELS por labId), em vez de assumir o índice 0; tratar launch===0 como 'HOJE' e launch===1 como 'ONTEM'.",
+  "potential_consequence": "Quem valida vê informação errada e perde confiança no conceito; a regra 'vale o Lançamento mais recente' (FR-3, FR-6) não é exercitada."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:455-456, 486",
+  "trigger_condition": "A digitação refaz body.innerHTML com o buffer inteiro a cada tick de 16 ms (custo O(n²)), mostra o '[[SPARK]]' parcial ('[[SPA') como texto e força scrollTop=0 no Leitor a cada tick; em aba em segundo plano, o setInterval é limitado a 1 s.",
+  "guard_snippet": "Usar requestAnimationFrame com base no tempo decorrido (progresso = t/2000) e anexar só o delta (append de nós de texto); trocar o placeholder por um nó já inserido; não forçar o scroll depois de interação do usuário.",
+  "potential_consequence": "O requisito 'no máximo ~2 s' (FR-7) não é garantido em máquinas lentas nem com conteúdo maior (5 notícias + relações); o usuário não consegue rolar o Leitor enquanto ele digita."
+ },
+ {
+  "lens": "adversarial",
+  "location": "prototype-globe.html:497-498",
+  "trigger_condition": "A ordenação de notícias usa 'dd/mm' sem ano (sort=mm*100+dd+h/100) e as horas são sintéticas.",
+  "guard_snippet": "Modelar datas como ISO 8601 com fuso (publishedAt) e ordenar por Date.parse; formatar 'dd/mm HH:mm' só na exibição.",
+  "potential_consequence": "Na virada de ano (dez→jan), as notícias de janeiro vão para o fim; se o formato de string virar contrato de dados, o problema chega à implementação."
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:449",
+  "trigger_condition": "Texto com '&' sem ';' depois dele (ex.: 'S&P', 'AT&T') ou '<' literal sem '>' depois dele",
+  "guard_snippet": "const j=html.indexOf(html[i]==='<'?'>':';',i); if(j<0){out.push({ch:html[i]});i++;continue} /* e escapar os dados com esc() antes de interpolar */",
+  "potential_consequence": "indexOf retorna -1 e i volta a 0: laço infinito trava a aba, ou trecho é engolido"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:461,490",
+  "trigger_condition": "Esc ou clique no Leitor durante a digitação do Leitor",
+  "guard_snippet": "function skipReader(){if(readerTyping){clearInterval(readerTyping);readerTyping=null;$('#readerBody').innerHTML=readerHTML;bind()}} — guardar html/bind em escopo acessível e chamar skipReader() nos dois pontos",
+  "potential_consequence": "Texto fica parcial para sempre e os chips 'Empresas citadas' nunca recebem onclick"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:408,252",
+  "trigger_condition": "Clique no botão 2D, cujo atributo data-soon não tem valor",
+  "guard_snippet": "if('soon' in b.dataset)return; // dataset.soon === '' é falsy",
+  "potential_consequence": "O 2D 'em breve' fica selecionado e state.view='2d'; a guarda nunca dispara"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:386-388,408",
+  "trigger_condition": "Vista SAT selecionada (state.view==='sat')",
+  "guard_snippet": "const VIEW_TEX={'3d':TEX[theme][mode],mapa:TEX_ALT[theme],sat:TEX_SAT[theme]}; G.globeImageUrl('assets/'+(VIEW_TEX[state.view]||TEX[theme][mode]))",
+  "potential_consequence": "SAT aparece selecionado, mas fica idêntico ao 3D (ramo implícito sem tratamento)"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:390",
+  "trigger_condition": "Sair de noturna/escuro para outro tema ou modo",
+  "guard_snippet": "m.emissiveIntensity=(theme==='noturna'&&mode==='escuro')?0.2:0; // incluir o else",
+  "potential_consequence": "O brilho emissivo de 0.2 continua nos outros temas e o globo fica lavado"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:433,439",
+  "trigger_condition": "Desligar o ambiente depois de muito tempo ligado, ou mexer no volume durante o fade-in",
+  "guard_snippet": "const t=AC.currentTime;out.gain.cancelScheduledValues(t);out.gain.setValueAtTime(out.gain.value,t);out.gain.linearRampToValueAtTime(0,t+1.2) (fazer o mesmo no oninput do volAmb)",
+  "potential_consequence": "A rampa parte do último evento antigo: corte abrupto (estalo) sem fade, e o volume novo é ignorado"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:462",
+  "trigger_condition": "Arrastar o globo para girá-lo com o Terminal ou o Leitor abertos",
+  "guard_snippet": "let down;el.addEventListener('pointerdown',e=>down={x:e.clientX,y:e.clientY});/* no click: */ if(down&&Math.hypot(e.clientX-down.x,e.clientY-down.y)>5)return;",
+  "potential_consequence": "Todo giro do globo dispara um click e fecha o Terminal ou o Leitor sem querer"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:461",
+  "trigger_condition": "Esc com popover (Relações/Tema/Som) aberto e sem Terminal ou Leitor",
+  "guard_snippet": "const open=document.querySelector('.pop.show');if(open){open.classList.remove('show');return}",
+  "potential_consequence": "Esc não fecha os popovers; só o clique fora funciona"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:510,478",
+  "trigger_condition": "Abrir uma notícia pela aba NOTÍCIAS com a preferência 'float' salva",
+  "guard_snippet": "openReader(c,ni,{lay:'side',persist:false}) // setLay(l,persist) só grava no localStorage quando o usuário escolhe explicitamente",
+  "potential_consequence": "readerLay='side' é gravado no localStorage e sobrescreve a escolha do usuário"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:477,516",
+  "trigger_condition": "'mg-reader' no localStorage ou ?reader= com valor diferente de float/side",
+  "guard_snippet": "const lay=v=>['float','side'].includes(v)?v:'side'; readerLay=lay(params.get('reader')||localStorage.getItem('mg-reader'))",
+  "potential_consequence": "O Leitor fica sem classe válida (sem largura nem altura máxima), e o layout quebrado é salvo"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:516",
+  "trigger_condition": "?reader=... com ?select= de id inexistente",
+  "guard_snippet": "const c=byId[params.get('select')]||byId.alibaba; setTimeout(()=>openReader(c,0),1800)",
+  "potential_consequence": "byId fica undefined, c.id lança TypeError dentro do setTimeout e o Leitor não abre"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:349-351,493,512,516",
+  "trigger_condition": "?theme=constructor, ?tab=xyz, ?tstyle=xyz ou valor inválido no localStorage",
+  "guard_snippet": "if(!Object.hasOwn(TEX,theme))theme='osiris'; if(!['globo','models','news'].includes(t))t='globo'; if(!['hib','term','ana'].includes(st))st='hib'",
+  "potential_consequence": "TEX[...] herdado do prototype passa na checagem e SW[theme][mode] lança; abas e estilo ficam sem seleção e o valor inválido é salvo"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:349-350,385,477,512",
+  "trigger_condition": "localStorage indisponível ou bloqueado (cookies desativados, política do navegador)",
+  "guard_snippet": "const LS={get:k=>{try{return localStorage.getItem(k)}catch{return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch{}}}",
+  "potential_consequence": "Um SecurityError na linha 349 aborta o script inteiro e a página fica sem globo"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:356",
+  "trigger_condition": "assets/globe.gl.min.js não carrega ou WebGL está indisponível",
+  "guard_snippet": "if(typeof Globe!=='function'||!window.WebGLRenderingContext){showFallback('Globo indisponível');} else try{...}catch(e){showFallback(e)}",
+  "potential_consequence": "A segunda chamada Globe(...) lança fora do try: o script morre e abas e tabela ficam inertes"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:364",
+  "trigger_condition": "A textura do globo nunca carrega (404, rede)",
+  "guard_snippet": "let tries=0;const tune=()=>{if(m.map){...}else if(++tries<20)setTimeout(tune,300)}",
+  "potential_consequence": "Polling infinito a cada 300 ms, sem limite e sem aviso de falha"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:501,502,517",
+  "trigger_condition": "Usuário troca de aba ou fecha algo antes de os timeouts de 1150/1500 ms dispararem",
+  "guard_snippet": "let navT=[];function goTo(c){navT.forEach(clearTimeout);navT=[setTimeout(()=>{if(state.tab==='globo')openTerm(c)},1150)]} // fazer o mesmo para openReader",
+  "potential_consequence": "Terminal ou Leitor abrem sobre MODELOS ou depois de fechados; cliques repetidos empilham aberturas"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:414,450-452",
+  "trigger_condition": "Clique numa cotação da Faixa com MODELOS/NOTÍCIAS ativa ou com a empresa no verso do globo",
+  "guard_snippet": "t.onclick=()=>goTo(byId[t.dataset.id]) // muda para a aba globo e gira até a empresa antes do openTerm",
+  "potential_consequence": "O Terminal abre sobre a tabela ou preso a um ponto escondido atrás da Terra"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:363,453,479",
+  "trigger_condition": "Redimensionar a janela ou girar o celular com o Terminal ou o Leitor abertos",
+  "guard_snippet": "window.addEventListener('resize',()=>{sizeGlobe();if(term.style.display==='block')repositionTerm();if($('#reader').style.display==='block')placeReader()})",
+  "potential_consequence": "As janelas saem da área visível ou ficam com um max-height desatualizado"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:453,219",
+  "trigger_condition": "Viewport ≤760px: o CSS força bottom:40px/top:auto, mas o JS calcula o maxHeight pelo y",
+  "guard_snippet": "if(matchMedia('(max-width:760px)').matches){term.style.maxHeight='calc(100vh - 110px)'}else{...cálculo atual}",
+  "potential_consequence": "No celular o Terminal fica minúsculo (ponto baixo na tela) ou passa do topo"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:180,219,479",
+  "trigger_condition": "Leitor flutuante em viewport com menos de ~520px de largura",
+  "guard_snippet": "#reader.float{width:min(440px,calc(100vw - 12px))}; em @media(max-width:760px) forçar o layout side em largura total; placeReader usar r.offsetWidth",
+  "potential_consequence": "O Leitor de 440px a partir de left:60px vaza na horizontal e viola o FR-29"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:219",
+  "trigger_condition": "Viewport ≤760px esconde .rail e #feed sem oferecer alternativa",
+  "guard_snippet": "@media(max-width:760px){#right{display:flex;flex-direction:row;top:auto;bottom:44px}} ou um menu ☰ com Tema/Som/Relações/Camadas",
+  "potential_consequence": "No celular não há como trocar tema, som, camadas ou relações (FR-29)"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:453",
+  "trigger_condition": "Abrir o Terminal (pelo chip do Leitor ou por goTo) com o Leitor no layout flutuante",
+  "guard_snippet": "const rr=rd.getBoundingClientRect(); if(rd.style.display==='block'&&readerLay==='float'&&overlaps(x,y,w,rr))x=rr.left-w-14",
+  "potential_consequence": "O Terminal (z-index 36) fica escondido atrás do Leitor flutuante (z-index 37)"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:420-423",
+  "trigger_condition": "Prévia aberta com o cursor perto da borda direita ou de baixo",
+  "guard_snippet": "const pw=p.offsetWidth,ph=p.offsetHeight;p.style.left=Math.min(mouse.x+16,innerWidth-pw-8)+'px';p.style.top=Math.min(mouse.y+12,innerHeight-ph-8)+'px'",
+  "potential_consequence": "A Prévia é cortada e sai da tela"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:422-423,493,495",
+  "trigger_condition": "Teclas 1/2/3 trocam a aba com o cursor sobre um ponto (timer de 300 ms ativo)",
+  "guard_snippet": "function setTab(t){hoverOff();...} // e no hoverT checar state.tab==='globo' antes de mostrar",
+  "potential_consequence": "A Prévia aparece sobre a tabela ou as notícias e não fecha sem um mouseleave"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:495",
+  "trigger_condition": "Cmd/Ctrl/Alt+1..3, ou foco em TEXTAREA/contentEditable",
+  "guard_snippet": "if(e.metaKey||e.ctrlKey||e.altKey||e.target.isContentEditable||/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;",
+  "potential_consequence": "O atalho do navegador também troca a aba do painel; digitar num campo troca a aba"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:423,448",
+  "trigger_condition": "Lançamento no mesmo dia (launch=0)",
+  "guard_snippet": "const ago=d=>d===0?'HOJE':`HÁ ${d} DIA${d>1?'S':''}`",
+  "potential_consequence": "Aparece 'LANÇAMENTO HÁ 0 DIA'"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:423,448,371",
+  "trigger_condition": "launch maior que 7 dias (fora da janela do Pulso)",
+  "guard_snippet": "c.launch!=null&&c.launch<=7?`...LANÇAMENTO...`:''",
+  "potential_consequence": "Prévia e Terminal anunciam um lançamento que o Pulso já não mostra; incoerente com o FR-3"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:371-373,360",
+  "trigger_condition": "prefers-reduced-motion ativo",
+  "guard_snippet": "if(reduced)G.ringPropagationSpeed(0).ringRepeatPeriod(0) /* ou anel estático via htmlElement com borda acc */",
+  "potential_consequence": "O Pulso continua animado, contra o FR-3 (destaque estático com redução de movimento)"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:448",
+  "trigger_condition": "Laboratório cujo lançamento recente não é models[0] (ex.: Anthropic/Haiku 5.5)",
+  "guard_snippet": "guardar models como [{name,launchDays}] ordenados por data e anotar quando m.launchDays<=7, em vez de i===0",
+  "potential_consequence": "O rótulo 'lançado há N dias' vai para o modelo errado"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:446,412-413",
+  "trigger_condition": "Ação na KRX abaixo de 9999, ação em USD acima de 9999, ou índice acima de 9999",
+  "guard_snippet": "usar um campo currency explícito por ticker: fmtPrice(c.price,c.currency), com casas decimais por moeda",
+  "potential_consequence": "A moeda (₩/$) e as casas decimais, deduzidas pela magnitude, saem erradas"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:468",
+  "trigger_condition": "Modelo com iq, ttft, tps, ctx ou date nulos (comum no Artificial Analysis)",
+  "guard_snippet": "const f=(v,d)=>v==null?'—':fmt(v,d); ${f(m.ttft,1)}; ${m.tps??'—'}; ctx==null?'—':...; m.date?m.date.split('-').reverse().join('/'):'—'",
+  "potential_consequence": "fmt(null) lança TypeError e a tabela inteira não aparece; tps mostra 'null'"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:468",
+  "trigger_condition": "Contexto que não é múltiplo exato de 1M ou 1k (ex.: 1.500.000, 131.072)",
+  "guard_snippet": "m.ctx>=1e6?fmt(m.ctx/1e6,m.ctx%1e6?1:0)+'M':fmt(m.ctx/1e3,0)+'k'",
+  "potential_consequence": "1,5M aparece como '2M' e o arredondamento distorce a comparação"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:467",
+  "trigger_condition": "Ordenação comparando dois valores nulos",
+  "guard_snippet": "if(va==null&&vb==null)return 0;if(va==null)return 1;if(vb==null)return -1;",
+  "potential_consequence": "O comparador é inconsistente (retorna 1 nos dois sentidos) e a ordem entre nulos fica instável"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:467-468,508-509",
+  "trigger_condition": "Filtros de entrada, camada ou empresa sem nenhum resultado",
+  "guard_snippet": "if(!rows.length)tbody.innerHTML='<tr><td colspan=12>Nenhum modelo para os filtros</td></tr>' (fazer o mesmo no newsList)",
+  "potential_consequence": "Tabela e lista ficam vazias, sem estado vazio e sem um jeito claro de voltar"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:499,505,509",
+  "trigger_condition": "Abrir no Leitor um item FRESH (sem o campo ni) pelo Fluxo ou pela aba NOTÍCIAS",
+  "guard_snippet": "passar o próprio item: openReader(c,n) com n={date,pt,en,...}; ou registrar o FRESH em NEWS[c.id] e usar o índice real",
+  "potential_consequence": "Com data-ni=0, o Leitor mostra outra notícia da empresa, não a clicada"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:505",
+  "trigger_condition": "Aba NOTÍCIAS aberta enquanto o intervalo de 9 s insere um item",
+  "guard_snippet": "no intervalo: if(state.tab==='news')prependNewsItem(n) // sem recriar #nFilters/<select>; preservar scrollTop somando a altura do item novo",
+  "potential_consequence": "Um <select> aberto é destruído a cada 9 s e a lista tira o usuário do ponto de leitura"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:505",
+  "trigger_condition": "Página aberta por horas (intervalo de 9 s sem limite)",
+  "guard_snippet": "ALL.unshift(n);if(ALL.length>500)ALL.length=500;",
+  "potential_consequence": "ALL cresce sem limite e o renderNews fica cada vez mais pesado"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:497-498",
+  "trigger_condition": "Notícias que cruzam a virada do ano (dezembro → janeiro)",
+  "guard_snippet": "usar timestamp completo: n.ts=Date.parse(`${year}-${mm}-${dd}T${h}Z`); ALL.sort((a,b)=>b.ts-a.ts)",
+  "potential_consequence": "A chave mm*100+dd, sem ano, coloca dezembro como mais recente que janeiro"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:482,448",
+  "trigger_condition": "'Empresas citadas' com id fora do Cadastro, ou títulos com aspas/HTML",
+  "guard_snippet": "L.cos.filter(id=>byId[id]).map(...); interpolar os textos via esc(s)=s.replace(/[&<>\"]/g,ch=>'&#'+ch.charCodeAt(0)+';')",
+  "potential_consequence": "byId[id].layer lança TypeError e o Leitor não abre; o markup quebra"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:384-391,442,482",
+  "trigger_condition": "Trocar tema ou modo com o Terminal ou o Leitor abertos",
+  "guard_snippet": "no fim do applyTheme: if(term.style.display==='block'&&state.sel)body.innerHTML=termHTMLFull(state.sel); if(leitor aberto)rerenderReader()",
+  "potential_consequence": "O minigráfico e as cores inline (lidas por css() na abertura) ficam com as cores do tema anterior"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:455-456",
+  "trigger_condition": "A digitação passa caractere a caractere pelo placeholder [[SPARK]]",
+  "guard_snippet": "no tokenize, tratar '[[SPARK]]' como token atômico: if(html.startsWith('[[SPARK]]',i)){out.push({tag:'[[SPARK]]'});i+=9;continue}",
+  "potential_consequence": "O usuário vê '[[SPA' piscando antes de o minigráfico aparecer"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:396,365,369",
+  "trigger_condition": "Desligar a Camada principal de uma empresa que tem Etiqueta numa camada ativa",
+  "guard_snippet": "cor do ponto = primeira camada visível: const vis=[c.layer,...c.tags].find(l=>state.layers.has(l)); d.style.setProperty('--pc',layerColor(vis))",
+  "potential_consequence": "O ponto continua visível na cor de uma camada desligada"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:396,450,458",
+  "trigger_condition": "Desligar a camada da empresa com o Terminal aberto",
+  "guard_snippet": "no onclick do rail: if(state.sel&&!visible(state.sel))closeTerm();",
+  "potential_consequence": "O Terminal e o destaque dos arcos continuam para uma empresa cujo ponto sumiu"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:344,396,436-437",
+  "trigger_condition": "Recarregar a página depois de ajustar Camadas ou Som",
+  "guard_snippet": "salvar state.layers e state.sound/amb/vol no localStorage a cada toggle e restaurar no init (FR-2, FR-8)",
+  "potential_consequence": "Filtros e preferência de som se perdem entre visitas"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:368-370",
+  "trigger_condition": "Sedes muito próximas (NVIDIA, AMD, Arista e Oklo em Santa Clara)",
+  "guard_snippet": "agrupar pontos a uma distância menor que um limiar e espalhá-los levemente (offset radial) com zoom afastado",
+  "potential_consequence": "Os pontos se sobrepõem e não dá para selecionar cada empresa (FR-1)"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:321-325,378",
+  "trigger_condition": "Mais de uma relação entre o mesmo par (microsoft→openai, infra e inv)",
+  "guard_snippet": "agrupar por par e variar a altitude: arcAltitude(r=>base*(1+0.25*r.dupIndex))",
+  "potential_consequence": "Os arcos ficam idênticos e sobrepostos; só a cor de um tipo aparece"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:248-250,51-52",
+  "trigger_condition": "Viewport alto ou baixo: o rail direito é centralizado, mas os popovers têm top fixo",
+  "guard_snippet": "no togglePop: const br=btn.getBoundingClientRect();pop.style.top=Math.min(br.top,innerHeight-pop.offsetHeight-40)+'px'",
+  "potential_consequence": "Os popovers se afastam do botão ou saem da tela"
+ },
+ {
+  "lens": "edge-case-hunter",
+  "location": "prototype-globe.html:369-370,258-259",
+  "trigger_condition": "Uso só pelo teclado (Tab) para abrir Ponto, Terminal ou Leitor",
+  "guard_snippet": "d.tabIndex=0;d.setAttribute('role','button');d.onkeydown=e=>{if(e.key==='Enter')openTerm(c)}; ao abrir term/reader: $('#termX').focus(); ao fechar, devolver o foco",
+  "potential_consequence": "Os pontos não recebem foco e os diálogos não controlam o foco; o fluxo fica inacessível pelo teclado"
+ },
+ {
+  "lens": "verification-gap",
+  "location": "prototype-globe.html:453, :479 (desvio de sobreposição Terminal/Leitor lateral em openTerm e no requestAnimationFrame de placeReader)",
+  "trigger_condition": "Nada verifica de forma automática nem por captura de tela que os retângulos de #term e #reader.side não se cruzam depois do novo desvio.",
+  "guard_snippet": "Adicionar um cenário de verificação no mesmo formato de parâmetros de URL que o protótipo já usa (?select=alibaba&reader=side) com um check headless (ex.: Playwright): após ~2,5 s, const a=term.getBoundingClientRect(), b=reader.getBoundingClientRect(); expect(a.right).toBeLessThanOrEqual(b.left) em 1280 e 1440 px, cobrindo também o caminho do Fluxo (clicar em .fi → openTerm em 1150 ms → openReader em 1500 ms).",
+  "potential_consequence": "Se o branch `if(x+w>limit)x=limit-w` ou o bloco rAF que empurra o Terminal para a esquerda for removido ou invertido, o Terminal volta a ficar sob o Leitor lateral (z-index 37 > 36) e nada falha. As únicas capturas existentes (shots/v3-reader-side.png, v3-fix-*.png) são de antes da mudança, e não existe captura da versão atual.",
+  "gap_shape": "regression-gap",
+  "consumer": "Clique no Fluxo de notícias (bindFeed/goTo em prototype-globe.html:501-502: openTerm em 1150 ms e depois openReader em 1500 ms) e clique em manchete dentro do Terminal (prototype-globe.html:491)",
+  "evidence": "Busquei no repo inteiro por placeReader, readerLay, setTStyle, mg-reader, mg-tstyle, tbl-hib e prototype-globe. Só há ocorrências nos próprios HTMLs do protótipo (v2, v3, atual) e em .memlog.md. Os únicos testes do repo são scripts Python de skills BMAD (.claude/skills/*/scripts/tests/*.py), e nenhum deles toca no protótipo. Em .working/shots/ só há capturas v2-* e v3-*, nenhuma da versão atual."
+ },
+ {
+  "lens": "verification-gap",
+  "location": "prototype-globe.html:453 (openTerm calcula `limit` só quando readerLay==='side')",
+  "trigger_condition": "Com o Leitor no modo FLUTUANTE aberto, um Terminal aberto depois dele ignora o Leitor e pode cair por baixo dele.",
+  "guard_snippet": "Em openTerm, calcular o limite também para o modo float: `const rb=rd.style.display==='block'?rd.getBoundingClientRect():null; if(rb&&readerLay==='float'&&x<rb.right&&x+w>rb.left){x=rb.left-w-14; if(x<60)x=rb.right+14}`, ou chamar placeReader() no fim de openTerm para reposicionar o Leitor. Verificar com o mesmo check de interseção de retângulos usando ?reader=float.",
+  "potential_consequence": "Ao clicar numa Empresa citada no Leitor flutuante (chip [data-go], linha 484 → goTo → openTerm em 1150 ms), o Leitor fica aberto (o clique dentro de #reader não o fecha) e o novo Terminal é posicionado só contra innerWidth-70, cobrindo ou ficando coberto pelo Leitor. O desvio novo cobre só o modo lateral, e nenhum check apontaria essa omissão.",
+  "gap_shape": "missing-adoption-gap",
+  "consumer": "Chips 'Empresas citadas' do Leitor (bind em prototype-globe.html:484) → goTo (prototype-globe.html:502) → openTerm (prototype-globe.html:453) com readerLay==='float'",
+  "evidence": "A intenção da mudança (desvio de sobreposição Terminal/Leitor) é aplicada só quando readerLay==='side' (linha 453). placeReader no modo float (linha 479) posiciona o Leitor apenas no momento em que ele abre, e não é chamado de novo por openTerm. Nas mesmas buscas de símbolo não encontrei nenhum teste ou captura do modo float com Terminal aberto depois do Leitor."
+ },
+ {
+  "lens": "verification-gap",
+  "location": "prototype-globe.html:479 (rAF de placeReader mede o Leitor lateral) com :181-182 (animation slidein translateX(40px))",
+  "trigger_condition": "O rAF lê r.getBoundingClientRect().left enquanto a animação slidein ainda está no início. Como getBoundingClientRect inclui transform, o valor medido fica ~40px à direita da posição final.",
+  "guard_snippet": "Medir sem o transform ou depois da animação, por exemplo `r.addEventListener('animationend',fix,{once:true})`, ou calcular o limite pelo CSS: `const lim=innerWidth-62-r.offsetWidth-14` (offsetWidth ignora transform).",
+  "potential_consequence": "Toda abertura do Leitor reinicia o slidein (display none→block), então `lim` sai superestimado em até ~40px. O Terminal só é empurrado até ~26px sob a borda do Leitor (40 − margem de 14), e a sobreposição continua visível ao fim da animação.",
+  "gap_shape": "other"
+ },
+ {
+  "lens": "verification-gap",
+  "location": "prototype-globe.html:453, :479, :219 (desvio em viewports estreitos e ausência de reaplicação no resize)",
+  "trigger_condition": "Em viewports menores que ~1046px (60+430+14+480+62) o clamp `if(x<60)x=60` reintroduz a sobreposição. Em ≤760px a regra `#term{left:6px!important;...}` anula o `t.style.left` inline. Nenhum handler de resize reaplica o desvio (só sizeGlobe escuta resize, linha 363).",
+  "guard_snippet": "Quando `limit-w<60`, adotar uma alternativa explícita (reduzir a largura do Terminal para `limit-60`, ou empilhar/fechar um dos painéis) e, no media query de celular, definir o comportamento combinado (ex.: Leitor como sheet que substitui o Terminal). Registrar `window.addEventListener('resize',()=>{if($('#reader').style.display==='block')placeReader()})`.",
+  "potential_consequence": "Em tablet (FR-29 exige responsividade em celular/tablet/desktop) e em janelas de notebook redimensionadas, o Terminal fica parcialmente sob o Leitor lateral. No celular, o Leitor (z 37) cobre o sheet do Terminal sem nenhum desvio efetivo.",
+  "gap_shape": "other"
+ },
+ {
+  "lens": "verification-gap",
+  "location": "prototype-globe.html:181 (#reader.side right:62px; width:min(480px,calc(100vw - 140px))) vs :219 (media ≤760px esconde .rail)",
+  "trigger_condition": "No celular o .rail fica oculto, mas o Leitor lateral ainda reserva 62px à direita e perde 140px de largura.",
+  "guard_snippet": "Em `@media (max-width:760px)`, adicionar `#reader.side{right:0!important;left:0!important;width:auto}` ou usar sheet de baixo para cima, e capturar ?reader=side em 375px de largura.",
+  "potential_consequence": "Num celular de 375px o Leitor lateral passa de 345px (v3: min(520px,92vw), right:0) para 235px, com uma faixa vazia de 62px à direita. É uma regressão de legibilidade introduzida pela mudança, e nenhuma captura em largura de celular a detectaria (não existe nenhuma em shots/).",
+  "gap_shape": "other"
+ },
+ {
+  "lens": "verification-gap",
+  "location": "prototype-globe.html:477-478, :483, :512, :516 (persistência em localStorage de mg-reader e mg-tstyle)",
+  "trigger_condition": "O novo padrão 'side' não aparece para quem já usou a v3: lá openReader sempre chamava setLay(readerLay), que gravava mg-reader='float' na mesma origem. Além disso, os parâmetros de captura ?reader= e ?tstyle= também são gravados em localStorage.",
+  "guard_snippet": "Versionar as chaves (ex.: 'mg-reader-v4', 'mg-tstyle-v4') ou só persistir quando o usuário clica nos botões (mover localStorage.setItem para os onclick de .lay e .styleSw). Não persistir valores vindos de params, e validar contra a lista permitida: `if(!['hib','term','ana'].includes(st))st='hib'` e `if(!['side','float'].includes(l))l='side'`.",
+  "potential_consequence": "Na validação de UX o usuário vê o Leitor FLUTUANTE e julga que o novo padrão lateral não foi aplicado, ou valida o padrão errado. Uma URL de captura como ?tstyle=ana ou ?reader=float muda silenciosamente o padrão das cargas seguintes. Um valor inválido (ex.: ?tstyle=hibrido) também é persistido, aplica a classe 'tbl-term' sem nenhum botão selecionado e continua nas próximas cargas.",
+  "gap_shape": "other"
+ },
+ {
+  "lens": "verification-gap",
+  "location": "prototype-globe.html:344, :512, :516 (HÍBRIDO como padrão: className 'tbl-term tbl-hib' + CSS :167)",
+  "trigger_condition": "Nada observa que o padrão sem parâmetros renderiza o estilo HÍBRIDO (tabela terminal + barra de inteligência visível) com o botão HÍBRIDO selecionado.",
+  "guard_snippet": "Captura ou check headless em ?tab=models sem tstyle e com localStorage limpo: `expect(tbl.className).toBe('tbl-term tbl-hib')`, `expect(getComputedStyle(document.querySelector('#tbl .bar')).display).toBe('inline-block')`, `expect($('.styleSw .sel').dataset.st).toBe('hib')`, e repetir com ?tstyle=term para garantir a barra oculta.",
+  "potential_consequence": "Se o mapeamento de 'hib' perder 'tbl-hib' (ou a regra da linha 167 perder especificidade frente a `.tbl-term .bar{display:none}`), o HÍBRIDO fica visualmente idêntico ao TERMINAL e o usuário valida a decisão 'padrão = híbrido' (ainda marcada 'A confirmar' no .memlog.md) sem ver a barra. Nenhuma verificação falharia: em shots/ só existem v2-models-term.png e v2-models-ana.png, anteriores ao HÍBRIDO.",
+  "gap_shape": "regression-gap",
+  "consumer": "Aba MODELOS (#tbl/#tblWrap/#prompt, alternada por setTab em prototype-globe.html:493) inicializada por setTStyle em prototype-globe.html:516",
+  "evidence": "A busca por tbl-hib, setTStyle e mg-tstyle no repo só encontrou o HTML do protótipo (e as versões v2/v3 para setTStyle). Não há testes JS/E2E no repo (os únicos testes são Python das skills em .claude/skills/*/scripts/tests). .working/shots/ não contém captura do estilo HÍBRIDO."
+ }
+]

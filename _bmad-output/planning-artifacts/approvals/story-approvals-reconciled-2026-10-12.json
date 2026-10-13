@@ -1,0 +1,1436 @@
+{
+  "schemaVersion": 1,
+  "batchId": "LLMs-2026-10-12-reconciled-current",
+  "project": "/Users/andrecardia/Github/LLMs",
+  "approvedOn": "2026-10-12",
+  "approvalKind": "requirements-scope-and-acceptance-criteria",
+  "authorization": {
+    "kind": "direct-explicit-user-delegation",
+    "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+    "request": "bmad-help pode aprovar as demais Stories sem passar pela minha validação",
+    "manualUpdateApproval": {
+      "storyId": "3.5",
+      "response": "sim"
+    },
+    "scope": "Revisar e aprovar as stories restantes do planejamento atual de FR-1 a FR-40 nos oito épicos, com divisões necessárias para tamanho/ordem; não acrescentar capacidades ou decidir gates abertos.",
+    "perStoryValidationRequired": false,
+    "epicTransitionAndStoryReviewHandledUnderDelegation": true,
+    "futureProjectsOrBatchesApproved": false,
+    "laterScopeExpansionApproved": false,
+    "productionAuthorized": false
+  },
+  "initialRecord": {
+    "path": "story-approvals-2026-10-12.json",
+    "sha256": "d18da3c90b606647da05d9c6371c03efada73c99092e142df668cea4ec323d34",
+    "storyCount": 32
+  },
+  "scope": {
+    "storyCount": 35,
+    "epicCount": 8,
+    "functionalRequirements": 40,
+    "uxRequirements": 41,
+    "initialEpicsSha256": "99c1ee72b37cdb291162a5bf0b684425273b6eef7e132266c685c3baa0cfc4d8",
+    "approvedEpicsSha256": "3c8d1ace7d42bacc77a0d2ed4c7c0eafcd221fd9d9ee4f625708a5f52d9e745d",
+    "storyIds": [
+      "1.1",
+      "1.2",
+      "1.3",
+      "1.4",
+      "1.5",
+      "1.6",
+      "2.1",
+      "2.2",
+      "2.3",
+      "2.4",
+      "2.5",
+      "3.1",
+      "3.2",
+      "3.3",
+      "3.4",
+      "3.5",
+      "4.1",
+      "4.2",
+      "4.3",
+      "4.4",
+      "4.5",
+      "4.6",
+      "4.7",
+      "5.1",
+      "5.2",
+      "5.3",
+      "5.4",
+      "6.1",
+      "6.2",
+      "6.3",
+      "6.4",
+      "7.1",
+      "7.2",
+      "7.3",
+      "8.1"
+    ],
+    "newStoryIds": [
+      "4.5",
+      "4.6",
+      "4.7",
+      "6.4"
+    ],
+    "relocatedStoryIds": [
+      {
+        "oldId": "8.2",
+        "newId": "4.3",
+        "reason": "FR-40 pertence à composição MAPA/SAT do Epic 4."
+      }
+    ],
+    "roleMapping": [
+      {
+        "oldId": "4.2",
+        "newIds": [
+          "4.2",
+          "4.4",
+          "4.5"
+        ],
+        "reason": "Separar adapter, Empresas e renderização de Relações/prévias; completar FR-23/31 com fontes normativas."
+      },
+      {
+        "oldId": "4.3",
+        "newIds": [
+          "4.6"
+        ],
+        "reason": "Terminal e som após renderer/entidades/Relações."
+      },
+      {
+        "oldId": "4.4",
+        "newIds": [
+          "4.7"
+        ],
+        "reason": "Famílias/controles/acessibilidade após superfícies do Globo."
+      },
+      {
+        "oldId": "6.3",
+        "newIds": [
+          "6.3",
+          "6.4"
+        ],
+        "reason": "Separar MERCADOS da extensão financeira em NOTÍCIAS e sua demonstração própria."
+      }
+    ],
+    "capabilitiesAdded": false,
+    "requirementsRemoved": false,
+    "hashDefinition": "SHA-256 UTF-8 do bloco ### Story até o próximo ### Story ou ##; strip() mais LF final."
+  },
+  "validation": {
+    "coverage": "pass-documentary",
+    "structure": "pass-documentary",
+    "dependencyOrder": "pass-documentary",
+    "architecture": "pass-documentary",
+    "sizing": "bounded-planning-slices",
+    "readiness": "concerns",
+    "openGateGroupCount": 9,
+    "openGateGroups": [
+      {
+        "id": "Q1/Q7",
+        "reason": "Fornecedor LLM/busca, verba/tetos, retenção/exclusão e tamanho editorial antes das integrações afetadas."
+      },
+      {
+        "id": "Q2",
+        "reason": "Hospedagem/IdP/custo e prova de autorização, transações/CAS/fencing, jobs, recuperação e sete dias operacionais."
+      },
+      {
+        "id": "Q3",
+        "reason": "Acabamento, emblema, controles móveis/foco, contraste sobre texturas, leitores de tela e evidência de browser."
+      },
+      {
+        "id": "Q4",
+        "reason": "Origem/data/licença e associação cabo/estação para BACKBONES."
+      },
+      {
+        "id": "Q5",
+        "reason": "Matriz de instrumentos, símbolos/listagens/unidades, calendários, histórico e cobertura principal/reserva."
+      },
+      {
+        "id": "Q6",
+        "reason": "Base inicial, providers/cobertura/composição, credenciais, licença/custo/quota/cache/créditos e histerese."
+      },
+      {
+        "id": "Q8",
+        "reason": "Significado, precisão, evidência própria e classe visual/seleção/limite de câmera das localizações reais."
+      },
+      {
+        "id": "Q9",
+        "reason": "Estratégia Cesium CDN/npm/build, assets/workers/CSP/WebGL e matriz/desempenho/recuperação do renderer."
+      },
+      {
+        "id": "Q11-implementação",
+        "reason": "Publicar/adotar o contrato executável base/URL antes de consumidores. A decisão arquitetural está resolvida; src/contracts/exploration.mjs ainda exporta VIEWS legadas 3D/2D/MAPA/SAT."
+      }
+    ],
+    "workflowFinalized": false,
+    "stepsCompleted": [
+      "step-01-validate-prerequisites",
+      "step-02-design-epics",
+      "step-03-create-stories"
+    ],
+    "starterSelected": false,
+    "bigUpfrontEntityCreation": false,
+    "note": "A decisão Q11 está adotada na arquitetura; implementação/validação de seu contrato ainda é uma pré-condição. Q10 permanece resolvido."
+  },
+  "preservedState": {
+    "documentStatus": "draft",
+    "originalApprovalRecordPreserved": true,
+    "implementationAndExecutionTrackingChanged": false,
+    "localPlanChanged": false,
+    "sprintStatusChanged": false,
+    "protectedFiles": [
+      {
+        "path": "/Users/andrecardia/Github/LLMs/package.json",
+        "sha256": "93213d1c30c24f069dd93d17ba208f447c580a1cac5661218f021c4103adb013",
+        "preserved": true
+      },
+      {
+        "path": "/Users/andrecardia/Github/LLMs/src/contracts/exploration.mjs",
+        "sha256": "c3248c215b0c748858a5f50124bc6fd9acd763a48138d353f1c3a0bafbf1b71a",
+        "preserved": true
+      },
+      {
+        "path": "/Users/andrecardia/Github/LLMs/src/domain/exploration-state.mjs",
+        "sha256": "aabe3b43598d6f34eee49421699d593ff660a9fcecb0d29d36d367fb3ddcbc80",
+        "preserved": true
+      },
+      {
+        "path": "/Users/andrecardia/Github/LLMs/tests/exploration.test.mjs",
+        "sha256": "2b5076d79b0f69ff5d14fa6b047d02521469cf02f9df74863ba3a7adaae73683",
+        "preserved": true
+      },
+      {
+        "path": "/Users/andrecardia/Github/LLMs/_bmad-output/implementation-artifacts/local-plan.json",
+        "sha256": "29a7eba5f78a0bddf84d973aa6661230aa44837104fec761662b2eebe6397209",
+        "preserved": true
+      }
+    ],
+    "testsExecutedByThisRegistration": false,
+    "liveProvidersUsed": false,
+    "secretsRead": false,
+    "paidServicesAuthorized": false,
+    "securityChangesAuthorized": false,
+    "credentialsAuthorized": false,
+    "pushAuthorized": false,
+    "publishOrDeployAuthorized": false
+  },
+  "normativeSourceHashes": {
+    "_bmad-output/planning-artifacts/prds/prd-LLMs-2026-10-07/prd.md": "bf1e117e51a6180ce8e6b116a0e86b7204763a3be5d188355ac0955fb2d1c62d",
+    "_bmad-output/planning-artifacts/prds/prd-LLMs-2026-10-07/addendum.md": "6650288e61bb3a1439162ee7526d56956e7acf4004ff5b33fff1efe107048100",
+    "_bmad-output/planning-artifacts/architecture/architecture-LLMs-2026-10-10/ARCHITECTURE-SPINE.md": "71e0836138d5cf0b284ceb8f7002330558baaed7e5007d79b5d7f01cb90d3983",
+    "_bmad-output/planning-artifacts/architecture/architecture-LLMs-2026-10-10/contracts.md": "2c093e0a5b90232083a20c8541927972d656bccea3ee74b37d819026506c08d5",
+    "_bmad-output/planning-artifacts/architecture/architecture-LLMs-2026-10-10/cesium-integration.md": "fe7cb8758b0702eda55c175981d4fb0ad9064cb02b701805db8ce236ab17e47d",
+    "_bmad-output/planning-artifacts/architecture/architecture-LLMs-2026-10-10/implementation-readiness.md": "0c0b537958307796869bd7491517e33c8c87137f1ff6d072f78649da78010cba",
+    "_bmad-output/planning-artifacts/ux-designs/ux-LLMs-2026-10-09/DESIGN.md": "23543b44d7fa85a904ba8cae0fc39d057234c359d4a33c935d7706f07091fa00",
+    "_bmad-output/planning-artifacts/ux-designs/ux-LLMs-2026-10-09/EXPERIENCE.md": "a88c09a03c7e91cfd98ca79903143c689165eaf3659c6aaa4108267032fa9d81",
+    "_bmad-output/planning-artifacts/ux-designs/ux-LLMs-2026-10-09/variants/artificial-analysis-light/DESIGN.md": "74149b0b56fd783f02b4abdceb61bdadb2b6f7b09ca80d7315fa6d2bab848a33",
+    "_bmad-output/planning-artifacts/ux-designs/ux-LLMs-2026-10-09/variants/artificial-analysis-light/EXPERIENCE.md": "ca067603c1be0caeca6e2195662a55a5695f44e733456091ce4b464d024e84a3"
+  },
+  "historicalValidationNotes": "\n\n- Cobertura:40/40 FR,5 NFR e40 UX-DR referenciados nas stories;29 stories em8 épicos.\n- Starter: é proposta, não seleção vinculante; manter scaffold ESM existente e reservar Vite/host/lockfile à integração Q2, sem clonar/instalar provider agora.\n- Não criar banco/tabelas neste plano; adaptadores em memória só acrescentam entidades necessárias a cada fronteira. Compartilhar schemas não torna épicos técnicos.\n- `draft` é mantido:20 stories dependem de gates reais/UX/fontes/browser, inclusive a integração visual da story3.1. A estrutura não é aprovação desses pontos. Oito fundações locais têm regras definidas e podem avançar; o estado `done-local` não significa FR/épico completo.\n- Gates antes de produção: Q2(host/IdP/custo/prova durável),Q1/Q7(provider/budget/retencão/tamanho editorial),Q3(acabamento/controles/AA),Q4/Q6(licença/custo/tiles/Vistas),Q5(cobertura/calendários). Inferências AD-4/7 aguardam aceite antes da integração real; testes em fixtures mostram o comportamento proposto.\n",
+  "approvals": [
+    {
+      "storyId": "1.1",
+      "title": "Manter os dados publicados quando uma Fonte falha",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "initial-approval-preserved",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "86c0ab85442e291b45de4b257c06511e1a07403b07efa2deca045645227ea28e",
+      "previousStoryIds": [
+        "1.1"
+      ],
+      "previousVersions": [
+        {
+          "id": "1.1",
+          "title": "Manter os dados publicados quando uma Fonte falha",
+          "sha256": "86c0ab85442e291b45de4b257c06511e1a07403b07efa2deca045645227ea28e",
+          "readiness": null
+        }
+      ],
+      "declaredReadiness": null,
+      "referencedFRs": [
+        "FR-25"
+      ],
+      "referencedUXDRs": [],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "1.2",
+      "title": "Aplicar o orçamento das rotinas automáticas",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "initial-approval-preserved",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "dfd559a09fc4c6e40d188b0ec539e14135e32a962fe8b5280b984aeaf5f207e5",
+      "previousStoryIds": [
+        "1.2"
+      ],
+      "previousVersions": [
+        {
+          "id": "1.2",
+          "title": "Aplicar o orçamento das rotinas automáticas",
+          "sha256": "dfd559a09fc4c6e40d188b0ec539e14135e32a962fe8b5280b984aeaf5f207e5",
+          "readiness": null
+        }
+      ],
+      "declaredReadiness": null,
+      "referencedFRs": [
+        "FR-24",
+        "FR-25"
+      ],
+      "referencedUXDRs": [],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "1.3",
+      "title": "Mostrar o status e o horário de atualização por tipo de dado",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "initial-approval-preserved",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "ea033572fa6a6311954c957322413487d3b9b726890a184afdfdf349824cc73c",
+      "previousStoryIds": [
+        "1.3"
+      ],
+      "previousVersions": [
+        {
+          "id": "1.3",
+          "title": "Mostrar o status e o horário de atualização por tipo de dado",
+          "sha256": "ea033572fa6a6311954c957322413487d3b9b726890a184afdfdf349824cc73c",
+          "readiness": null
+        }
+      ],
+      "declaredReadiness": null,
+      "referencedFRs": [
+        "FR-25"
+      ],
+      "referencedUXDRs": [
+        "UX-DR1",
+        "UX-DR15"
+      ],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "1.4",
+      "title": "Restringir dados e comandos privados ao dono",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "initial-approval-preserved",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "b02fce682556ea3454ac99f7dddad6518ab62f2ae34186525f5dce3f9a8c3929",
+      "previousStoryIds": [
+        "1.4"
+      ],
+      "previousVersions": [
+        {
+          "id": "1.4",
+          "title": "Restringir dados e comandos privados ao dono",
+          "sha256": "b02fce682556ea3454ac99f7dddad6518ab62f2ae34186525f5dce3f9a8c3929",
+          "readiness": null
+        }
+      ],
+      "declaredReadiness": null,
+      "referencedFRs": [
+        "FR-30"
+      ],
+      "referencedUXDRs": [],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "1.5",
+      "title": "Agendar atualizações na cadência de cada dado",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "initial-approval-preserved",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "d3a51de43d27e55dded98b5c1dc9c2e3c6099a6b0e932aabc96b597d7b8072de",
+      "previousStoryIds": [
+        "1.5"
+      ],
+      "previousVersions": [
+        {
+          "id": "1.5",
+          "title": "Agendar atualizações na cadência de cada dado",
+          "sha256": "d3a51de43d27e55dded98b5c1dc9c2e3c6099a6b0e932aabc96b597d7b8072de",
+          "readiness": null
+        }
+      ],
+      "declaredReadiness": null,
+      "referencedFRs": [
+        "FR-19",
+        "FR-24"
+      ],
+      "referencedUXDRs": [],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "1.6",
+      "title": "Executar e recuperar Atualizações sem publicações duplicadas",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "initial-approval-preserved",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "d50e88f4d9d98ce1372cc32e07d282a5501555c8b3fa2510e3f236121bd65421",
+      "previousStoryIds": [
+        "1.6"
+      ],
+      "previousVersions": [
+        {
+          "id": "1.6",
+          "title": "Executar e recuperar Atualizações sem publicações duplicadas",
+          "sha256": "d50e88f4d9d98ce1372cc32e07d282a5501555c8b3fa2510e3f236121bd65421",
+          "readiness": null
+        }
+      ],
+      "declaredReadiness": null,
+      "referencedFRs": [
+        "FR-25"
+      ],
+      "referencedUXDRs": [],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "2.1",
+      "title": "Aprovar, editar e rejeitar propostas com revisão registrada",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "initial-approval-preserved",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "3ed86f37bdb700b4f3952dc30fd1cc221017d198394bddd35d83c2c9ea13a784",
+      "previousStoryIds": [
+        "2.1"
+      ],
+      "previousVersions": [
+        {
+          "id": "2.1",
+          "title": "Aprovar, editar e rejeitar propostas com revisão registrada",
+          "sha256": "3ed86f37bdb700b4f3952dc30fd1cc221017d198394bddd35d83c2c9ea13a784",
+          "readiness": null
+        }
+      ],
+      "declaredReadiness": null,
+      "referencedFRs": [
+        "FR-23",
+        "FR-31"
+      ],
+      "referencedUXDRs": [],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "2.2",
+      "title": "Receber propostas de descoberta com evidência e quota",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "initial-approval-preserved",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "3f2cdd4be31eed822c52084905a12707c08ece46eeacca3b9b0ad6776059b5ea",
+      "previousStoryIds": [
+        "2.2"
+      ],
+      "previousVersions": [
+        {
+          "id": "2.2",
+          "title": "Receber propostas de descoberta com evidência e quota",
+          "sha256": "3f2cdd4be31eed822c52084905a12707c08ece46eeacca3b9b0ad6776059b5ea",
+          "readiness": null
+        }
+      ],
+      "declaredReadiness": null,
+      "referencedFRs": [
+        "FR-20",
+        "FR-22",
+        "FR-23",
+        "FR-31"
+      ],
+      "referencedUXDRs": [],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "2.3",
+      "title": "Conferir o Cadastro inicial e os logos antes da primeira publicação",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "initial-approval-preserved",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "3e730a705d86f1bf853f92e1af546aa74e2c6a571abf4680642e3874b09b76a9",
+      "previousStoryIds": [
+        "2.3"
+      ],
+      "previousVersions": [
+        {
+          "id": "2.3",
+          "title": "Conferir o Cadastro inicial e os logos antes da primeira publicação",
+          "sha256": "3e730a705d86f1bf853f92e1af546aa74e2c6a571abf4680642e3874b09b76a9",
+          "readiness": null
+        }
+      ],
+      "declaredReadiness": null,
+      "referencedFRs": [
+        "FR-20",
+        "FR-21",
+        "FR-22",
+        "FR-23"
+      ],
+      "referencedUXDRs": [
+        "UX-DR38",
+        "UX-DR41"
+      ],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "2.4",
+      "title": "Operar a Fila de revisão com evidências, decisões e prévias",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "initial-approval-preserved",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "10a5d0cc531474d630cfb9d1a73bb328b48db017a2a76a8ebd8285542bc34fad",
+      "previousStoryIds": [
+        "2.4"
+      ],
+      "previousVersions": [
+        {
+          "id": "2.4",
+          "title": "Operar a Fila de revisão com evidências, decisões e prévias",
+          "sha256": "10a5d0cc531474d630cfb9d1a73bb328b48db017a2a76a8ebd8285542bc34fad",
+          "readiness": null
+        }
+      ],
+      "declaredReadiness": null,
+      "referencedFRs": [
+        "FR-13",
+        "FR-23",
+        "FR-31"
+      ],
+      "referencedUXDRs": [
+        "UX-DR1",
+        "UX-DR35",
+        "UX-DR36",
+        "UX-DR41"
+      ],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "2.5",
+      "title": "Desfazer alterações publicadas com compensação auditável",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "initial-approval-preserved",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "2d0dc2292bb13d22674f3779f97b6e6515153b56a38bbb2b269f5cab62483674",
+      "previousStoryIds": [
+        "2.5"
+      ],
+      "previousVersions": [
+        {
+          "id": "2.5",
+          "title": "Desfazer alterações publicadas com compensação auditável",
+          "sha256": "2d0dc2292bb13d22674f3779f97b6e6515153b56a38bbb2b269f5cab62483674",
+          "readiness": null
+        }
+      ],
+      "declaredReadiness": null,
+      "referencedFRs": [
+        "FR-23"
+      ],
+      "referencedUXDRs": [
+        "UX-DR35",
+        "UX-DR36",
+        "UX-DR41"
+      ],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "3.1",
+      "title": "Calcular custo por tarefa com preços ausentes/zero",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "initial-approval-preserved",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "39b31cc92669c02824192d5ccab96b816e0ecb4292be325f07112a05121dec3e",
+      "previousStoryIds": [
+        "3.1"
+      ],
+      "previousVersions": [
+        {
+          "id": "3.1",
+          "title": "Calcular custo por tarefa com preços ausentes/zero",
+          "sha256": "39b31cc92669c02824192d5ccab96b816e0ecb4292be325f07112a05121dec3e",
+          "readiness": "done-local; gate: `done-local`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico."
+        }
+      ],
+      "declaredReadiness": "done-local; gate: `done-local`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico.",
+      "referencedFRs": [
+        "FR-11"
+      ],
+      "referencedUXDRs": [
+        "UX-DR1",
+        "UX-DR40"
+      ],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "3.2",
+      "title": "Resolver datas e perceber Lançamentos únicos",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "initial-approval-preserved",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "0d6effa8f09163193cb13f0d412343860ba1e7c69a87d332f9ca5a38939457e4",
+      "previousStoryIds": [
+        "3.2"
+      ],
+      "previousVersions": [
+        {
+          "id": "3.2",
+          "title": "Resolver datas e perceber Lançamentos únicos",
+          "sha256": "0d6effa8f09163193cb13f0d412343860ba1e7c69a87d332f9ca5a38939457e4",
+          "readiness": "ready-local; gate: `local`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico."
+        }
+      ],
+      "declaredReadiness": "ready-local; gate: `local`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico.",
+      "referencedFRs": [
+        "FR-13",
+        "FR-26"
+      ],
+      "referencedUXDRs": [
+        "UX-DR1",
+        "UX-DR40"
+      ],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "3.3",
+      "title": "Consultar a comparação com filtros combinados",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "initial-approval-preserved",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "f82672e65dcff5fdf6227eab4bdfcff9b4fd539cc6bf5afb44089178199af601",
+      "previousStoryIds": [
+        "3.3"
+      ],
+      "previousVersions": [
+        {
+          "id": "3.3",
+          "title": "Consultar a comparação com filtros combinados",
+          "sha256": "f82672e65dcff5fdf6227eab4bdfcff9b4fd539cc6bf5afb44089178199af601",
+          "readiness": "ready-local; gate: `local`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico."
+        }
+      ],
+      "declaredReadiness": "ready-local; gate: `local`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico.",
+      "referencedFRs": [
+        "FR-9",
+        "FR-10",
+        "FR-12"
+      ],
+      "referencedUXDRs": [
+        "UX-DR1",
+        "UX-DR40"
+      ],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "3.4",
+      "title": "Normalizar APIs estruturadas e identidade por Fonte",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "initial-approval-preserved",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "2247ec04c5c873867ae999ea96fa373e13ec51d0d07f598ccbd8c417f1ea022e",
+      "previousStoryIds": [
+        "3.4"
+      ],
+      "previousVersions": [
+        {
+          "id": "3.4",
+          "title": "Normalizar APIs estruturadas e identidade por Fonte",
+          "sha256": "2247ec04c5c873867ae999ea96fa373e13ec51d0d07f598ccbd8c417f1ea022e",
+          "readiness": "blocked-integration; gate: `acesso/API/Q2`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico."
+        }
+      ],
+      "declaredReadiness": "blocked-integration; gate: `acesso/API/Q2`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico.",
+      "referencedFRs": [
+        "FR-9",
+        "FR-12",
+        "FR-13",
+        "FR-26"
+      ],
+      "referencedUXDRs": [
+        "UX-DR1",
+        "UX-DR40"
+      ],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "3.5",
+      "title": "Apresentar a comparação de Modelos no padrão Artificial Analysis e nos estilos existentes",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "explicit-user-approval-of-presented-update",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "848d6762a8572f804508ffd616d71cabb53e3f3a278e2f98d672bddf18945ffc",
+      "previousStoryIds": [
+        "3.5"
+      ],
+      "previousVersions": [
+        {
+          "id": "3.5",
+          "title": "Apresentar HÍBRIDO/TERMINAL/ANALÍTICO e linha expandida",
+          "sha256": "40f7ff78c5a38a0fc19eca70fd1f0e3615ce53281383f771edad81fd7434abf4",
+          "readiness": "blocked-integration; gate: `Q3/browser`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico."
+        }
+      ],
+      "declaredReadiness": null,
+      "referencedFRs": [
+        "FR-9",
+        "FR-10",
+        "FR-11",
+        "FR-12",
+        "FR-27"
+      ],
+      "referencedUXDRs": [
+        "UX-DR1",
+        "UX-DR2",
+        "UX-DR32",
+        "UX-DR39",
+        "UX-DR41"
+      ],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "4.1",
+      "title": "Manter estado, bases e preferências no store compartilhado",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "explicit-user-delegation-for-remaining-current-planning-stories",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "993ea91ebf4b896d6645b328f6de0c254832b28cce4f9ef55bbf67a275a07a4b",
+      "previousStoryIds": [
+        "4.1"
+      ],
+      "previousVersions": [
+        {
+          "id": "4.1",
+          "title": "Manter estado semântico e preferências coerentes",
+          "sha256": "81fa68ca2e83858cb18f7a1c31d9bf62c609e089e3e535b62fc67983ac4fb47b",
+          "readiness": "ready-local; gate: `local`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico."
+        }
+      ],
+      "declaredReadiness": "ready-local; gate: local para fixtures. A implementação do contrato Q11/AD-16 precede consumidores; a base inicial real permanece em Q6.",
+      "referencedFRs": [
+        "FR-2",
+        "FR-6",
+        "FR-27",
+        "FR-32",
+        "FR-38"
+      ],
+      "referencedUXDRs": [
+        "UX-DR2",
+        "UX-DR41"
+      ],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "4.2",
+      "title": "Integrar o renderer Cesium ao Globo principal",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "explicit-user-delegation-for-remaining-current-planning-stories",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "a2fa806f89cf591cdcf6468ebb9ecd534fa4d8ceee4d4ce196c5c257b2f7307b",
+      "previousStoryIds": [
+        "4.2"
+      ],
+      "previousVersions": [
+        {
+          "id": "4.2",
+          "title": "Mostrar Empresas/identidades/último Pulso nas Vistas",
+          "sha256": "3ec99c22cbdb3cd852d5ff7a89a9a4f34bff52ae3a33d9d2875543d73ab896d6",
+          "readiness": "blocked-integration; gate: `Q3/renderer`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico."
+        }
+      ],
+      "declaredReadiness": "blocked-integration; gates Q3/Q6/Q9 e contratos da Story 4.1. Esta story estabelece o adapter e a composição básica; as camadas de detalhe são acrescentadas na Story 4.3.",
+      "referencedFRs": [
+        "FR-28",
+        "FR-32",
+        "FR-40"
+      ],
+      "referencedUXDRs": [
+        "UX-DR3"
+      ],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "4.3",
+      "title": "Compor terreno, edifícios e detalhe automático de MAPA/SAT",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "explicit-user-delegation-for-remaining-current-planning-stories",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "5e66e9c4eeecec2f373b0d3b28bfa12188e0330681256b62eb3557d1ea5c76ca",
+      "previousStoryIds": [
+        "8.2"
+      ],
+      "previousVersions": [
+        {
+          "id": "8.2",
+          "title": "Trocar satélite/OSM com cache e fallback",
+          "sha256": "78cc9e17168779701b091ee3469a01247d724efcb523031e4f4b0b9efbf340d0",
+          "readiness": "blocked-integration; gate: `Q6/Q3`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico."
+        }
+      ],
+      "declaredReadiness": "blocked-integration; gates Q3/Q6/Q9. Depende apenas da composição básica da Story 4.2 e dos contratos anteriores.",
+      "referencedFRs": [
+        "FR-28",
+        "FR-32",
+        "FR-40"
+      ],
+      "referencedUXDRs": [
+        "UX-DR17",
+        "UX-DR29"
+      ],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "4.4",
+      "title": "Mostrar e selecionar Empresas e Lançamentos no Globo",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "explicit-user-delegation-for-remaining-current-planning-stories",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "f2a9968ead0e76bfb0dd561c6027f72e1ba8770f80903fb11c1b9f67e0ed4c73",
+      "previousStoryIds": [
+        "4.2"
+      ],
+      "previousVersions": [
+        {
+          "id": "4.2",
+          "title": "Mostrar Empresas/identidades/último Pulso nas Vistas",
+          "sha256": "3ec99c22cbdb3cd852d5ff7a89a9a4f34bff52ae3a33d9d2875543d73ab896d6",
+          "readiness": "blocked-integration; gate: `Q3/renderer`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico."
+        }
+      ],
+      "declaredReadiness": "blocked-integration; gates Q3/Q8 e renderer das Stories 4.2/4.3. Conserva a readiness da antiga Story 4.2.",
+      "referencedFRs": [
+        "FR-1",
+        "FR-2",
+        "FR-3",
+        "FR-4",
+        "FR-5",
+        "FR-26"
+      ],
+      "referencedUXDRs": [
+        "UX-DR2",
+        "UX-DR4",
+        "UX-DR5",
+        "UX-DR6",
+        "UX-DR7",
+        "UX-DR31",
+        "UX-DR38"
+      ],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "4.5",
+      "title": "Explorar Relações e prévias fantasmas sem publicar propostas",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "explicit-user-delegation-for-remaining-current-planning-stories",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "95674852c3f804aace832628f0306464eab94935c58117a7838f214c5deac460",
+      "previousStoryIds": [
+        "2.4",
+        "4.2"
+      ],
+      "previousVersions": [
+        {
+          "id": "2.4",
+          "title": "Operar a Fila de revisão com evidências, decisões e prévias",
+          "sha256": "10a5d0cc531474d630cfb9d1a73bb328b48db017a2a76a8ebd8285542bc34fad",
+          "readiness": null
+        },
+        {
+          "id": "4.2",
+          "title": "Mostrar Empresas/identidades/último Pulso nas Vistas",
+          "sha256": "3ec99c22cbdb3cd852d5ff7a89a9a4f34bff52ae3a33d9d2875543d73ab896d6",
+          "readiness": "blocked-integration; gate: `Q3/renderer`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico."
+        }
+      ],
+      "declaredReadiness": "blocked-integration; gates Q3/Q8 e compositor anterior. Consome Cadastro/Relações publicados e projeções temporárias da Story 2.4.",
+      "referencedFRs": [
+        "FR-23",
+        "FR-31"
+      ],
+      "referencedUXDRs": [
+        "UX-DR8"
+      ],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "4.6",
+      "title": "Operar Prévia, Terminal e som por teclado e toque",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "explicit-user-delegation-for-remaining-current-planning-stories",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "4a3eeda513863987abb5806e9bf117fa61beb6846891b8bb60985ad4ec8797a7",
+      "previousStoryIds": [
+        "4.3"
+      ],
+      "previousVersions": [
+        {
+          "id": "4.3",
+          "title": "Interagir com Terminal e som pelo teclado/toque",
+          "sha256": "d33e767ce509ee44bb859afd1656779fa72c3682658166762063d80c4965e3d7",
+          "readiness": "blocked-integration; gate: `Q3/browser`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico."
+        }
+      ],
+      "declaredReadiness": "blocked-integration; gate Q3/browser. Conserva a readiness da antiga Story 4.3; usa contratos de snapshot e intents anteriores, com fixtures para dados ainda sem integração.",
+      "referencedFRs": [
+        "FR-5",
+        "FR-6",
+        "FR-7",
+        "FR-8",
+        "FR-31"
+      ],
+      "referencedUXDRs": [
+        "UX-DR2",
+        "UX-DR9",
+        "UX-DR10",
+        "UX-DR26",
+        "UX-DR28",
+        "UX-DR41"
+      ],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "4.7",
+      "title": "Aplicar famílias visuais, navegação e acesso completo no celular",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "explicit-user-delegation-for-remaining-current-planning-stories",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "b90dffcced5ca53b84814ed1cbbc0857dd459fd2b683b1778f37523d8b6de849",
+      "previousStoryIds": [
+        "4.4"
+      ],
+      "previousVersions": [
+        {
+          "id": "4.4",
+          "title": "Aplicar os seis temas e acesso completo no celular",
+          "sha256": "3dcb04e95da0f25ac985214929dadc6bcd443e2d1f78249dd7c37252de34229d",
+          "readiness": "blocked-integration; gate: `Q3/browser`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico."
+        }
+      ],
+      "declaredReadiness": "blocked-integration; gates Q3/browser e matriz/performance Q9. Conserva a readiness da antiga Story 4.4; implementa tokens e primitivas que as superfícies posteriores herdam.",
+      "referencedFRs": [
+        "FR-27",
+        "FR-29",
+        "FR-32"
+      ],
+      "referencedUXDRs": [
+        "UX-DR1",
+        "UX-DR3",
+        "UX-DR14",
+        "UX-DR16",
+        "UX-DR18",
+        "UX-DR19",
+        "UX-DR20",
+        "UX-DR21",
+        "UX-DR22",
+        "UX-DR23",
+        "UX-DR25",
+        "UX-DR26",
+        "UX-DR28",
+        "UX-DR30",
+        "UX-DR31",
+        "UX-DR39",
+        "UX-DR41"
+      ],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "5.1",
+      "title": "Projetar e ocultar Notícias nas cinco superfícies",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "explicit-user-delegation-for-remaining-current-planning-stories",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "5afda041a5f3b12ba30b1a6ef9d38043bf0df050334236915d2580d2e41687d1",
+      "previousStoryIds": [
+        "5.1"
+      ],
+      "previousVersions": [
+        {
+          "id": "5.1",
+          "title": "Projetar e ocultar Notícias nas cinco superfícies",
+          "sha256": "f6e9d4b900d0a6e951ef2e0b9d7121f321484bf9092625385001f252616d71f4",
+          "readiness": "ready-local; gate: `local`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico."
+        }
+      ],
+      "declaredReadiness": "ready-local; regras e projeções em fixtures. Persistência e comandos reais continuam sob Q2; a interface consome estas projeções na Story 5.3.",
+      "referencedFRs": [
+        "FR-14",
+        "FR-15",
+        "FR-33",
+        "FR-34"
+      ],
+      "referencedUXDRs": [
+        "UX-DR40"
+      ],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "5.2",
+      "title": "Coletar e validar resumos sem dar autoridade de escrita ao Agente",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "explicit-user-delegation-for-remaining-current-planning-stories",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "9af17e8e70a93a4787b18fb63ad62e2624c6a4cb01d07e75ee1c5709313bcb78",
+      "previousStoryIds": [
+        "5.2"
+      ],
+      "previousVersions": [
+        {
+          "id": "5.2",
+          "title": "Validar resumo/relevância sem dar ferramentas ao Agente",
+          "sha256": "d0644d04f0440c171773b875269f9c86b34e4142edbc6963a1729a599cd784db",
+          "readiness": "blocked-integration; gate: `Q1/Q7/fontes`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico."
+        }
+      ],
+      "declaredReadiness": "blocked-integration; gates Q1/Q7/fontes e Q2 para execução durável. Fixtures permitem desenvolver os validadores; provider/teto/tamanho editorial precisam estar definidos antes da integração paga.",
+      "referencedFRs": [
+        "FR-14",
+        "FR-15",
+        "FR-16",
+        "FR-17",
+        "FR-34"
+      ],
+      "referencedUXDRs": [],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "5.3",
+      "title": "Operar FLUXO, LABS, NOTÍCIAS e Leitor com contexto",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "explicit-user-delegation-for-remaining-current-planning-stories",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "f73a542606cdc9e1963f8160e44902ce231c3be65ef62cb7c3c9f557ad139c0d",
+      "previousStoryIds": [
+        "5.3"
+      ],
+      "previousVersions": [
+        {
+          "id": "5.3",
+          "title": "Operar Fluxo/LABS/NOTÍCIAS e Leitor com contexto",
+          "sha256": "bb56e0085e7b6de11ae5c1f05aa909056096d5b23b87248066701f002bca54bf",
+          "readiness": "blocked-integration; gate: `Q3/browser`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico."
+        }
+      ],
+      "declaredReadiness": "blocked-integration; gate Q3/browser. Usa os contratos anteriores e fixtures para a interface; dados reais dependem das integrações anteriores.",
+      "referencedFRs": [
+        "FR-33",
+        "FR-34"
+      ],
+      "referencedUXDRs": [
+        "UX-DR1",
+        "UX-DR2",
+        "UX-DR11",
+        "UX-DR12",
+        "UX-DR13",
+        "UX-DR33",
+        "UX-DR37",
+        "UX-DR38",
+        "UX-DR39",
+        "UX-DR41"
+      ],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "5.4",
+      "title": "Manter origem e créditos nas projeções de dados",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "explicit-user-delegation-for-remaining-current-planning-stories",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "2c4bcbead8a53be76a8c73126840da00fac3e59fbb6b05ee405145b3c7f5bc24",
+      "previousStoryIds": [
+        "5.4"
+      ],
+      "previousVersions": [
+        {
+          "id": "5.4",
+          "title": "Manter atribuição em todas as projeções",
+          "sha256": "7b89fa96c3a1d810d4280906764c9624c220949a9f043bf6640635790788005d",
+          "readiness": "blocked-integration; gate: `fontes/licenças/browser`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico."
+        }
+      ],
+      "declaredReadiness": "blocked-integration; gates fontes/licenças/browser. A regra compartilhada de atribuição serve aos módulos posteriores sem exigir suas integrações antecipadas.",
+      "referencedFRs": [
+        "FR-16",
+        "FR-28",
+        "FR-34"
+      ],
+      "referencedUXDRs": [
+        "UX-DR15"
+      ],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "6.1",
+      "title": "Confirmar instrumentos, cobertura, calendários e fontes de reserva",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "explicit-user-delegation-for-remaining-current-planning-stories",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "fbd67792399bc69a1bedfe4c4b3d8f9eb3e0ff55bc411cda169699776a45584d",
+      "previousStoryIds": [
+        "6.1"
+      ],
+      "previousVersions": [
+        {
+          "id": "6.1",
+          "title": "Confirmar instrumentos/cobertura/calendários e fallback",
+          "sha256": "e6c51d3fd50a382e99f47d073937848d49b207f27591a343331c0f0f4f0c5ec9",
+          "readiness": "blocked-integration; gate: `Q5`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico."
+        }
+      ],
+      "declaredReadiness": "blocked-integration; gate Q5. A matriz e os contratos precedem coleta e interfaces das Stories 6.2 a 6.4.",
+      "referencedFRs": [
+        "FR-18",
+        "FR-19",
+        "FR-20",
+        "FR-36"
+      ],
+      "referencedUXDRs": [],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "6.2",
+      "title": "Atualizar cotações respeitando sessões, atraso e falha parcial",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "explicit-user-delegation-for-remaining-current-planning-stories",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "3a0f5ba4085c8797a7c2230c36f988fae817a68b97204c653bcaa4688f785e28",
+      "previousStoryIds": [
+        "6.2"
+      ],
+      "previousVersions": [
+        {
+          "id": "6.2",
+          "title": "Atualizar cotações com atrasos e sessões corretos",
+          "sha256": "3a4999ac7392e98b29d939897ecacef208ac630f926bae7b0eda3cb2917769af",
+          "readiness": "blocked-integration; gate: `Q5/Q2`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico."
+        }
+      ],
+      "declaredReadiness": "blocked-integration; gates Q5/Q2. Consome a matriz da Story 6.1 e a execução/publicação do Epic 1.",
+      "referencedFRs": [
+        "FR-19",
+        "FR-25"
+      ],
+      "referencedUXDRs": [],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "6.3",
+      "title": "Explorar a Faixa e o Painel MERCADOS",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "explicit-user-delegation-for-remaining-current-planning-stories",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "7f1e9bb80bd5d5196b5d2c3b68d0b9a6899bd65795857b2b085454f85d42d155",
+      "previousStoryIds": [
+        "6.3"
+      ],
+      "previousVersions": [
+        {
+          "id": "6.3",
+          "title": "Explorar Faixa e Painel MERCADOS",
+          "sha256": "eeff357bfe30b845bbb24455d87c8c63f440a5deee747bde1cb8ab61858da258",
+          "readiness": "blocked-integration; gate: `Q3/Q5/browser`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico."
+        }
+      ],
+      "declaredReadiness": "blocked-integration; gates Q3/Q5/browser. Fixtures permitem compor a interface com os contratos anteriores; Resumo usa uma porta de navegação e permanece indisponível enquanto o chat estiver gated.",
+      "referencedFRs": [
+        "FR-18",
+        "FR-19",
+        "FR-29",
+        "FR-36"
+      ],
+      "referencedUXDRs": [
+        "UX-DR1",
+        "UX-DR2",
+        "UX-DR14",
+        "UX-DR21",
+        "UX-DR22",
+        "UX-DR23",
+        "UX-DR24",
+        "UX-DR38",
+        "UX-DR41"
+      ],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "6.4",
+      "title": "Mostrar finanças em NOTÍCIAS e a demonstração do especialista em ações",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "explicit-user-delegation-for-remaining-current-planning-stories",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "061dd9c092eec67fdf11e3bddd8cba3370ae07ddb5fd3e78c12f35259713cd72",
+      "previousStoryIds": [
+        "6.3"
+      ],
+      "previousVersions": [
+        {
+          "id": "6.3",
+          "title": "Explorar Faixa e Painel MERCADOS",
+          "sha256": "eeff357bfe30b845bbb24455d87c8c63f440a5deee747bde1cb8ab61858da258",
+          "readiness": "blocked-integration; gate: `Q3/Q5/browser`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico."
+        }
+      ],
+      "declaredReadiness": "blocked-integration para dados reais, gates Q3/Q5/browser; o diálogo é somente demonstração local, sem provider financeiro/LLM. Deriva de FR-36 e do delta UX já aprovado; não adiciona análise financeira real.",
+      "referencedFRs": [
+        "FR-19",
+        "FR-36"
+      ],
+      "referencedUXDRs": [
+        "UX-DR1",
+        "UX-DR2",
+        "UX-DR41"
+      ],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "7.1",
+      "title": "Buscar entidades e restaurar o contexto da URL",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "explicit-user-delegation-for-remaining-current-planning-stories",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "832ac6872411fb43fe1f224957a7be2cb3ebd586933f48a5464daf2f091dd6f4",
+      "previousStoryIds": [
+        "7.1"
+      ],
+      "previousVersions": [
+        {
+          "id": "7.1",
+          "title": "Buscar entidades locais e restaurar contexto da URL",
+          "sha256": "de4b3fbcaf8c1ed362ead112fb0ed1333b620921f9c5ee9e7f508362fd55b5e4",
+          "readiness": "ready-local; gate: `local`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico."
+        }
+      ],
+      "declaredReadiness": "ready-local para busca/projeção/URL em fixtures; integração da interface continua sob Q3/browser. Usa os contratos Q11/AD-16 e consumidores dos Epics 2 a 6, sem dependência de chat ou Histórico.",
+      "referencedFRs": [
+        "FR-37",
+        "FR-38"
+      ],
+      "referencedUXDRs": [
+        "UX-DR27",
+        "UX-DR28",
+        "UX-DR39"
+      ],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "7.2",
+      "title": "Pesquisar com fontes, navegação tipada e orçamento separado",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "explicit-user-delegation-for-remaining-current-planning-stories",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "2234e8185441d90895e100104042e92a3afb8c497926481976b55cb3c29fa212",
+      "previousStoryIds": [
+        "7.2"
+      ],
+      "previousVersions": [
+        {
+          "id": "7.2",
+          "title": "Pesquisar com ações/citações versionadas e orçamento",
+          "sha256": "8ae8940ffa27c1fa1f7f74c084a6fca5c9e85741032096f2203b28abe5dbaba7",
+          "readiness": "blocked-integration; gate: `Q1/Q7/Q2`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico."
+        }
+      ],
+      "declaredReadiness": "blocked-integration; gates Q1/Q7/Q2 e acabamento Q3. Histórico navegável é uma extensão posterior; esta story cria apenas os registros mínimos de conversa/mensagem necessários ao chat, conforme política Q7 previamente definida.",
+      "referencedFRs": [
+        "FR-35",
+        "FR-36"
+      ],
+      "referencedUXDRs": [
+        "UX-DR2",
+        "UX-DR34",
+        "UX-DR41"
+      ],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "7.3",
+      "title": "Retomar e excluir o Histórico privado",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "explicit-user-delegation-for-remaining-current-planning-stories",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "d173dba9d6a3216c61fb3c40782c90f74343211523c48af310e154ce8ae8afc4",
+      "previousStoryIds": [
+        "7.3"
+      ],
+      "previousVersions": [
+        {
+          "id": "7.3",
+          "title": "Retomar e excluir Histórico privado",
+          "sha256": "43e9f9ef22ea61f872542cec7f2d1e51729c9abc852d1eed00ea860a5f4f7940",
+          "readiness": "blocked-integration; gate: `Q7/Q2`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico."
+        }
+      ],
+      "declaredReadiness": "blocked-integration; gates Q7/Q2 e interface Q3. Consome os registros e contratos privados da Story 7.2.",
+      "referencedFRs": [
+        "FR-35"
+      ],
+      "referencedUXDRs": [
+        "UX-DR34",
+        "UX-DR41"
+      ],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    },
+    {
+      "storyId": "8.1",
+      "title": "Validar a fonte e explorar BACKBONES com contexto",
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "approvedBy": "Andre",
+      "approvedOn": "2026-10-12",
+      "approvalBasis": "explicit-user-delegation-for-remaining-current-planning-stories",
+      "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+      "approvedSha256": "710e5020784251c6ec88cd96ca69372646ca02bb5e7230205c6b8280bdce119c",
+      "previousStoryIds": [
+        "8.1"
+      ],
+      "previousVersions": [
+        {
+          "id": "8.1",
+          "title": "Validar fonte/licença e explorar BACKBONES",
+          "sha256": "8c161b12f45023dfaaff154513fef0faf2d65631ac907ac9cba05902a575adc4",
+          "readiness": "blocked-integration; gate: `Q4/Q3`. Dependências: contrato partilhado AD-16 e stories anteriores relevantes; nenhuma depende de story futura no próprio épico."
+        }
+      ],
+      "declaredReadiness": "blocked-integration; gates Q4/Q3 e compositor do Epic 4. O antigo detalhe OSM da Story 8.2 foi realocado para a Story 4.3, mantendo FR-40.",
+      "referencedFRs": [
+        "FR-28",
+        "FR-31",
+        "FR-39",
+        "FR-40"
+      ],
+      "referencedUXDRs": [],
+      "technicalGatesClosedByApproval": false,
+      "implementationStatusChangedByApproval": false,
+      "productionAuthorized": false
+    }
+  ]
+}

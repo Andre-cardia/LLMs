@@ -1,0 +1,1820 @@
+{
+  "schemaVersion": 1,
+  "project": "LLMs",
+  "product": "Íris Global",
+  "checkedAt": "2026-10-12T20:32:02.356424-03:00",
+  "timezone": "America/Sao_Paulo",
+  "intent": "sprint-planning",
+  "result": "CONCERNS",
+  "trackingGenerated": true,
+  "fullProductReady": false,
+  "productionAuthorized": false,
+  "authorization": {
+    "sourceThreadId": "01a13163-92ba-7fe2-9be9-025ea401dcf4",
+    "request": "continue",
+    "context": "Continuação após recomendação de Sprint Planning para reconciliar IDs e planejar trabalho elegível com nove gates abertos.",
+    "storyApprovalDelegation": "A delegação cobre os requisitos/escopo/critérios das Stories atuais; não fecha gates técnicos/comerciais."
+  },
+  "canonicalSources": {
+    "epics": {
+      "path": "../planning-artifacts/epics.md",
+      "sha256": "3c8d1ace7d42bacc77a0d2ed4c7c0eafcd221fd9d9ee4f625708a5f52d9e745d"
+    },
+    "approval": {
+      "path": "../planning-artifacts/approvals/story-approvals-reconciled-2026-10-12.json",
+      "sha256": "9e4e62633e37baae1283dc8b4beab30b90f62cb45334a20f86bc64b35c40eb1b",
+      "count": 35
+    },
+    "statusFile": "sprint-status.yaml",
+    "executionPlan": "sprint-plan-2026-10-12.md",
+    "readinessReport": "../planning-artifacts/reviews/sprint-readiness-2026-10-12.md"
+  },
+  "legacyLocalPlan": {
+    "path": "local-plan.json",
+    "sha256": "29a7eba5f78a0bddf84d973aa6661230aa44837104fec761662b2eebe6397209",
+    "preserved": true,
+    "storyCount": 29,
+    "completedLocalCount": 9,
+    "blockedIntegrationCount": 20,
+    "interpretation": "Histórico de fatias locais de 10/10; seus IDs diferem do lote aprovado inicial de 32 e do lote reconciliado de 35. Consultar mapping por conteúdo."
+  },
+  "statusPolicy": {
+    "developmentStatusVocabulary": "BMAD standard",
+    "doneMeaning": "Conclusão do escopo local aprovado das Stories 3.1–3.3, sustentada por registros anteriores e leitura de código; não representa UI, providers ou produto completo.",
+    "otherStories": "backlog até abrir a implementação/revisão do escopo atual; fundamentos locais existentes preservados em legacyEvidence.",
+    "epic3": "in-progress porque três Stories locais já estão concluídas e as Stories de API/UI continuam pendentes.",
+    "otherEpics": "backlog no novo plano; componentes históricos parciais constam na reconciliação.",
+    "approvalsDoNotDetermineDevelopmentStatus": true,
+    "storyFilesUpgradedAutomatically": 0
+  },
+  "summary": {
+    "epics": 8,
+    "stories": 35,
+    "doneLocalScope": 3,
+    "backlog": 32,
+    "localWorkCandidates": 8,
+    "remainingIntegrationStories": 24,
+    "openGateGroups": 9
+  },
+  "mapping": [
+    {
+      "legacyId": "1.1",
+      "legacyTitle": "Preservar uma revisão completa em Atualizações locais",
+      "legacyStatus": "done-local",
+      "legacyGate": "local",
+      "currentIds": [
+        "1.1",
+        "1.3",
+        "1.6"
+      ],
+      "statusTransferred": false,
+      "disposition": "preserve-partial-local-evidence",
+      "historicalSpec": "spec-local-update-integrity.md"
+    },
+    {
+      "legacyId": "1.2",
+      "legacyTitle": "Controlar orçamento e tentativas em simulação",
+      "legacyStatus": "done-local",
+      "legacyGate": "local",
+      "currentIds": [
+        "1.2",
+        "1.5"
+      ],
+      "statusTransferred": false,
+      "disposition": "preserve-partial-local-evidence",
+      "historicalSpec": "spec-local-budget.md"
+    },
+    {
+      "legacyId": "1.3",
+      "legacyTitle": "Servir assets/dados privados e autenticar comandos",
+      "legacyStatus": "blocked-integration",
+      "legacyGate": "Q2",
+      "currentIds": [
+        "1.4"
+      ],
+      "statusTransferred": false,
+      "disposition": "keep-integration-pending",
+      "historicalSpec": null
+    },
+    {
+      "legacyId": "1.4",
+      "legacyTitle": "Agendar e recuperar Atualizações no repositório durável",
+      "legacyStatus": "blocked-integration",
+      "legacyGate": "Q2",
+      "currentIds": [
+        "1.5",
+        "1.6"
+      ],
+      "statusTransferred": false,
+      "disposition": "keep-integration-pending",
+      "historicalSpec": null
+    },
+    {
+      "legacyId": "2.1",
+      "legacyTitle": "Revisar Empresas/Relações sem publicar antes da Atualização",
+      "legacyStatus": "done-local",
+      "legacyGate": "local",
+      "currentIds": [
+        "2.1",
+        "2.2"
+      ],
+      "statusTransferred": false,
+      "disposition": "preserve-partial-local-evidence",
+      "historicalSpec": "spec-local-curation.md"
+    },
+    {
+      "legacyId": "2.2",
+      "legacyTitle": "Conferir seed e logos antes da primeira publicação",
+      "legacyStatus": "blocked-integration",
+      "legacyGate": "curadoria/Q2",
+      "currentIds": [
+        "2.3"
+      ],
+      "statusTransferred": false,
+      "disposition": "keep-integration-pending",
+      "historicalSpec": null
+    },
+    {
+      "legacyId": "2.3",
+      "legacyTitle": "Operar a Fila com prévias e resolução de pares/logos",
+      "legacyStatus": "blocked-integration",
+      "legacyGate": "Q2/Q3",
+      "currentIds": [
+        "2.4"
+      ],
+      "statusTransferred": false,
+      "disposition": "keep-integration-pending",
+      "historicalSpec": null
+    },
+    {
+      "legacyId": "2.4",
+      "legacyTitle": "Desfazer dados já publicados com compensação auditável",
+      "legacyStatus": "blocked-integration",
+      "legacyGate": "Q2/aceite AD-4",
+      "currentIds": [
+        "2.5"
+      ],
+      "statusTransferred": false,
+      "disposition": "keep-integration-pending",
+      "historicalSpec": null
+    },
+    {
+      "legacyId": "3.1",
+      "legacyTitle": "Calcular custo por tarefa com preços ausentes/zero",
+      "legacyStatus": "done-local",
+      "legacyGate": "done-local",
+      "currentIds": [
+        "3.1"
+      ],
+      "statusTransferred": true,
+      "disposition": "complete-equivalent-local-scope",
+      "historicalSpec": "spec-model-cost-fixtures.md"
+    },
+    {
+      "legacyId": "3.2",
+      "legacyTitle": "Resolver datas e perceber Lançamentos únicos",
+      "legacyStatus": "done-local",
+      "legacyGate": "local",
+      "currentIds": [
+        "3.2"
+      ],
+      "statusTransferred": true,
+      "disposition": "complete-equivalent-local-scope",
+      "historicalSpec": "spec-local-model-queries.md"
+    },
+    {
+      "legacyId": "3.3",
+      "legacyTitle": "Consultar a comparação com filtros combinados",
+      "legacyStatus": "done-local",
+      "legacyGate": "local",
+      "currentIds": [
+        "3.3"
+      ],
+      "statusTransferred": true,
+      "disposition": "complete-equivalent-local-scope",
+      "historicalSpec": "spec-local-model-queries.md"
+    },
+    {
+      "legacyId": "3.4",
+      "legacyTitle": "Normalizar APIs estruturadas e identidade por Fonte",
+      "legacyStatus": "blocked-integration",
+      "legacyGate": "acesso/API/Q2",
+      "currentIds": [
+        "3.4"
+      ],
+      "statusTransferred": false,
+      "disposition": "keep-integration-pending",
+      "historicalSpec": null
+    },
+    {
+      "legacyId": "3.5",
+      "legacyTitle": "Apresentar HÍBRIDO/TERMINAL/ANALÍTICO e linha expandida",
+      "legacyStatus": "blocked-integration",
+      "legacyGate": "Q3/browser",
+      "currentIds": [
+        "3.5"
+      ],
+      "statusTransferred": false,
+      "disposition": "keep-integration-pending",
+      "historicalSpec": null
+    },
+    {
+      "legacyId": "4.1",
+      "legacyTitle": "Manter estado semântico e preferências coerentes",
+      "legacyStatus": "done-local",
+      "legacyGate": "local",
+      "currentIds": [
+        "4.1"
+      ],
+      "statusTransferred": false,
+      "disposition": "preserve-partial-local-evidence",
+      "historicalSpec": "spec-local-exploration.md"
+    },
+    {
+      "legacyId": "4.2",
+      "legacyTitle": "Mostrar Empresas/identidades/último Pulso nas Vistas",
+      "legacyStatus": "blocked-integration",
+      "legacyGate": "Q3/renderer",
+      "currentIds": [
+        "4.2",
+        "4.4",
+        "4.5"
+      ],
+      "statusTransferred": false,
+      "disposition": "keep-integration-pending",
+      "historicalSpec": null
+    },
+    {
+      "legacyId": "4.3",
+      "legacyTitle": "Interagir com Terminal e som pelo teclado/toque",
+      "legacyStatus": "blocked-integration",
+      "legacyGate": "Q3/browser",
+      "currentIds": [
+        "4.6"
+      ],
+      "statusTransferred": false,
+      "disposition": "keep-integration-pending",
+      "historicalSpec": null
+    },
+    {
+      "legacyId": "4.4",
+      "legacyTitle": "Aplicar os seis temas e acesso completo no celular",
+      "legacyStatus": "blocked-integration",
+      "legacyGate": "Q3/browser",
+      "currentIds": [
+        "4.7"
+      ],
+      "statusTransferred": false,
+      "disposition": "keep-integration-pending",
+      "historicalSpec": null
+    },
+    {
+      "legacyId": "5.1",
+      "legacyTitle": "Projetar e ocultar Notícias nas cinco superfícies",
+      "legacyStatus": "done-local",
+      "legacyGate": "local",
+      "currentIds": [
+        "5.1"
+      ],
+      "statusTransferred": false,
+      "disposition": "preserve-partial-local-evidence",
+      "historicalSpec": "spec-local-news.md"
+    },
+    {
+      "legacyId": "5.2",
+      "legacyTitle": "Validar resumo/relevância sem dar ferramentas ao Agente",
+      "legacyStatus": "blocked-integration",
+      "legacyGate": "Q1/Q7/fontes",
+      "currentIds": [
+        "5.2"
+      ],
+      "statusTransferred": false,
+      "disposition": "keep-integration-pending",
+      "historicalSpec": null
+    },
+    {
+      "legacyId": "5.3",
+      "legacyTitle": "Operar Fluxo/LABS/NOTÍCIAS e Leitor com contexto",
+      "legacyStatus": "blocked-integration",
+      "legacyGate": "Q3/browser",
+      "currentIds": [
+        "5.3"
+      ],
+      "statusTransferred": false,
+      "disposition": "keep-integration-pending",
+      "historicalSpec": null
+    },
+    {
+      "legacyId": "5.4",
+      "legacyTitle": "Manter atribuição em todas as projeções",
+      "legacyStatus": "blocked-integration",
+      "legacyGate": "fontes/licenças/browser",
+      "currentIds": [
+        "5.4"
+      ],
+      "statusTransferred": false,
+      "disposition": "keep-integration-pending",
+      "historicalSpec": null
+    },
+    {
+      "legacyId": "6.1",
+      "legacyTitle": "Confirmar instrumentos/cobertura/calendários e fallback",
+      "legacyStatus": "blocked-integration",
+      "legacyGate": "Q5",
+      "currentIds": [
+        "6.1"
+      ],
+      "statusTransferred": false,
+      "disposition": "keep-integration-pending",
+      "historicalSpec": null
+    },
+    {
+      "legacyId": "6.2",
+      "legacyTitle": "Atualizar cotações com atrasos e sessões corretos",
+      "legacyStatus": "blocked-integration",
+      "legacyGate": "Q5/Q2",
+      "currentIds": [
+        "6.2"
+      ],
+      "statusTransferred": false,
+      "disposition": "keep-integration-pending",
+      "historicalSpec": null
+    },
+    {
+      "legacyId": "6.3",
+      "legacyTitle": "Explorar Faixa e Painel MERCADOS",
+      "legacyStatus": "blocked-integration",
+      "legacyGate": "Q3/Q5/browser",
+      "currentIds": [
+        "6.3",
+        "6.4"
+      ],
+      "statusTransferred": false,
+      "disposition": "keep-integration-pending",
+      "historicalSpec": null
+    },
+    {
+      "legacyId": "7.1",
+      "legacyTitle": "Buscar entidades locais e restaurar contexto da URL",
+      "legacyStatus": "done-local",
+      "legacyGate": "local",
+      "currentIds": [
+        "7.1"
+      ],
+      "statusTransferred": false,
+      "disposition": "preserve-partial-local-evidence",
+      "historicalSpec": "spec-local-exploration.md"
+    },
+    {
+      "legacyId": "7.2",
+      "legacyTitle": "Pesquisar com ações/citações versionadas e orçamento",
+      "legacyStatus": "blocked-integration",
+      "legacyGate": "Q1/Q7/Q2",
+      "currentIds": [
+        "7.2"
+      ],
+      "statusTransferred": false,
+      "disposition": "keep-integration-pending",
+      "historicalSpec": null
+    },
+    {
+      "legacyId": "7.3",
+      "legacyTitle": "Retomar e excluir Histórico privado",
+      "legacyStatus": "blocked-integration",
+      "legacyGate": "Q7/Q2",
+      "currentIds": [
+        "7.3"
+      ],
+      "statusTransferred": false,
+      "disposition": "keep-integration-pending",
+      "historicalSpec": null
+    },
+    {
+      "legacyId": "8.1",
+      "legacyTitle": "Validar fonte/licença e explorar BACKBONES",
+      "legacyStatus": "blocked-integration",
+      "legacyGate": "Q4/Q3",
+      "currentIds": [
+        "8.1"
+      ],
+      "statusTransferred": false,
+      "disposition": "keep-integration-pending",
+      "historicalSpec": null
+    },
+    {
+      "legacyId": "8.2",
+      "legacyTitle": "Trocar satélite/OSM com cache e fallback",
+      "legacyStatus": "blocked-integration",
+      "legacyGate": "Q6/Q3",
+      "currentIds": [
+        "4.3"
+      ],
+      "statusTransferred": false,
+      "disposition": "keep-integration-pending",
+      "historicalSpec": null
+    }
+  ],
+  "stories": [
+    {
+      "id": "1.1",
+      "title": "Manter os dados publicados quando uma Fonte falha",
+      "key": "1-1-manter-os-dados-publicados-quando-uma-fonte-falha",
+      "sha256": "86c0ab85442e291b45de4b257c06511e1a07403b07efa2deca045645227ea28e",
+      "frs": [
+        "FR-25"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "local-conformance",
+      "localWorkEligible": true,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q2"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "1.1",
+          "status": "done-local",
+          "title": "Preservar uma revisão completa em Atualizações locais"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Conferir regras/publicação last-good contra os quatro cenários atuais; reaproveitar collection-guard/local-update. Q2 governa prova durável."
+    },
+    {
+      "id": "1.2",
+      "title": "Aplicar o orçamento das rotinas automáticas",
+      "key": "1-2-aplicar-o-orçamento-das-rotinas-automáticas",
+      "sha256": "dfd559a09fc4c6e40d188b0ec539e14135e32a962fe8b5280b984aeaf5f207e5",
+      "frs": [
+        "FR-24",
+        "FR-25"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "local-conformance",
+      "localWorkEligible": true,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q1/Q7",
+        "Q2"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "1.2",
+          "status": "done-local",
+          "title": "Controlar orçamento e tentativas em simulação"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Conferir ledger UTC, microUSD, reservas e marcos 80%/100% atuais; manter simulações e limites reais fechados."
+    },
+    {
+      "id": "1.3",
+      "title": "Mostrar o status e o horário de atualização por tipo de dado",
+      "key": "1-3-mostrar-o-status-e-o-horário-de-atualização-por-tipo-de-dado",
+      "sha256": "ea033572fa6a6311954c957322413487d3b9b726890a184afdfdf349824cc73c",
+      "frs": [
+        "FR-25"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "blocked-integration",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q2",
+        "Q3"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "1.1",
+          "status": "done-local",
+          "title": "Preservar uma revisão completa em Atualizações locais"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Planejar a execução da parte afetada após os gates/contratos e consumidores anteriores; conservar fixtures e origem sem afirmar integração real."
+    },
+    {
+      "id": "1.4",
+      "title": "Restringir dados e comandos privados ao dono",
+      "key": "1-4-restringir-dados-e-comandos-privados-ao-dono",
+      "sha256": "b02fce682556ea3454ac99f7dddad6518ab62f2ae34186525f5dce3f9a8c3929",
+      "frs": [
+        "FR-30"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "blocked-integration",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q2"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "1.3",
+          "status": "blocked-integration",
+          "title": "Servir assets/dados privados e autenticar comandos"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Planejar a execução da parte afetada após os gates/contratos e consumidores anteriores; conservar fixtures e origem sem afirmar integração real."
+    },
+    {
+      "id": "1.5",
+      "title": "Agendar atualizações na cadência de cada dado",
+      "key": "1-5-agendar-atualizações-na-cadência-de-cada-dado",
+      "sha256": "d3a51de43d27e55dded98b5c1dc9c2e3c6099a6b0e932aabc96b597d7b8072de",
+      "frs": [
+        "FR-19",
+        "FR-24"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "local-conformance",
+      "localWorkEligible": true,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q1/Q7",
+        "Q2",
+        "Q5"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "1.2",
+          "status": "done-local",
+          "title": "Controlar orçamento e tentativas em simulação"
+        },
+        {
+          "legacyId": "1.4",
+          "status": "blocked-integration",
+          "title": "Agendar e recuperar Atualizações no repositório durável"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Separar cálculo de cadência/configuração da execução remota; calendário desconhecido permanece indisponível. Calendários reais dependem de Q5."
+    },
+    {
+      "id": "1.6",
+      "title": "Executar e recuperar Atualizações sem publicações duplicadas",
+      "key": "1-6-executar-e-recuperar-atualizações-sem-publicações-duplicadas",
+      "sha256": "d50e88f4d9d98ce1372cc32e07d282a5501555c8b3fa2510e3f236121bd65421",
+      "frs": [
+        "FR-25"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "blocked-integration",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q2"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "1.1",
+          "status": "done-local",
+          "title": "Preservar uma revisão completa em Atualizações locais"
+        },
+        {
+          "legacyId": "1.4",
+          "status": "blocked-integration",
+          "title": "Agendar e recuperar Atualizações no repositório durável"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Planejar a execução da parte afetada após os gates/contratos e consumidores anteriores; conservar fixtures e origem sem afirmar integração real."
+    },
+    {
+      "id": "2.1",
+      "title": "Aprovar, editar e rejeitar propostas com revisão registrada",
+      "key": "2-1-aprovar-editar-e-rejeitar-propostas-com-revisão-registrada",
+      "sha256": "3ed86f37bdb700b4f3952dc30fd1cc221017d198394bddd35d83c2c9ea13a784",
+      "frs": [
+        "FR-23",
+        "FR-31"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "local-conformance",
+      "localWorkEligible": true,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q2"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "2.1",
+          "status": "done-local",
+          "title": "Revisar Empresas/Relações sem publicar antes da Atualização"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Conferir decisões staged, rejeição/reapresentação, versões/idempotência e undo antes da publicação. Persistência real depende de Q2."
+    },
+    {
+      "id": "2.2",
+      "title": "Receber propostas de descoberta com evidência e quota",
+      "key": "2-2-receber-propostas-de-descoberta-com-evidência-e-quota",
+      "sha256": "3f2cdd4be31eed822c52084905a12707c08ece46eeacca3b9b0ad6776059b5ea",
+      "frs": [
+        "FR-20",
+        "FR-22",
+        "FR-23",
+        "FR-31"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "local-conformance",
+      "localWorkEligible": true,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q2"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "2.1",
+          "status": "done-local",
+          "title": "Revisar Empresas/Relações sem publicar antes da Atualização"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Conferir quota global e evidência de propostas em fixtures; sem descoberta externa, seed real ou exceção à quota."
+    },
+    {
+      "id": "2.3",
+      "title": "Conferir o Cadastro inicial e os logos antes da primeira publicação",
+      "key": "2-3-conferir-o-cadastro-inicial-e-os-logos-antes-da-primeira-pub",
+      "sha256": "3e730a705d86f1bf853f92e1af546aa74e2c6a571abf4680642e3874b09b76a9",
+      "frs": [
+        "FR-20",
+        "FR-21",
+        "FR-22",
+        "FR-23"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "blocked-integration",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q2",
+        "Q3",
+        "Q8"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "2.2",
+          "status": "blocked-integration",
+          "title": "Conferir seed e logos antes da primeira publicação"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Planejar a execução da parte afetada após os gates/contratos e consumidores anteriores; conservar fixtures e origem sem afirmar integração real."
+    },
+    {
+      "id": "2.4",
+      "title": "Operar a Fila de revisão com evidências, decisões e prévias",
+      "key": "2-4-operar-a-fila-de-revisão-com-evidências-decisões-e-prévias",
+      "sha256": "10a5d0cc531474d630cfb9d1a73bb328b48db017a2a76a8ebd8285542bc34fad",
+      "frs": [
+        "FR-13",
+        "FR-23",
+        "FR-31"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "blocked-integration",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q2",
+        "Q3",
+        "Q8"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "2.3",
+          "status": "blocked-integration",
+          "title": "Operar a Fila com prévias e resolução de pares/logos"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Planejar a execução da parte afetada após os gates/contratos e consumidores anteriores; conservar fixtures e origem sem afirmar integração real."
+    },
+    {
+      "id": "2.5",
+      "title": "Desfazer alterações publicadas com compensação auditável",
+      "key": "2-5-desfazer-alterações-publicadas-com-compensação-auditável",
+      "sha256": "2d0dc2292bb13d22674f3779f97b6e6515153b56a38bbb2b269f5cab62483674",
+      "frs": [
+        "FR-23"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "blocked-integration",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q2",
+        "Q3"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "2.4",
+          "status": "blocked-integration",
+          "title": "Desfazer dados já publicados com compensação auditável"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Planejar a execução da parte afetada após os gates/contratos e consumidores anteriores; conservar fixtures e origem sem afirmar integração real."
+    },
+    {
+      "id": "3.1",
+      "title": "Calcular custo por tarefa com preços ausentes/zero",
+      "key": "3-1-calcular-custo-por-tarefa-com-preços-ausentes-zero",
+      "sha256": "39b31cc92669c02824192d5ccab96b816e0ecb4292be325f07112a05121dec3e",
+      "frs": [
+        "FR-11"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "done",
+      "workDisposition": "complete-local",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [],
+      "legacyEvidence": [
+        {
+          "legacyId": "3.1",
+          "status": "done-local",
+          "title": "Calcular custo por tarefa com preços ausentes/zero"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": true,
+      "notes": "Conclusão preservada do contrato/cálculo puro FR-11; spec, verificação histórica e código lido sustentam o escopo local."
+    },
+    {
+      "id": "3.2",
+      "title": "Resolver datas e perceber Lançamentos únicos",
+      "key": "3-2-resolver-datas-e-perceber-lançamentos-únicos",
+      "sha256": "0d6effa8f09163193cb13f0d412343860ba1e7c69a87d332f9ca5a38939457e4",
+      "frs": [
+        "FR-13",
+        "FR-26"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "done",
+      "workDisposition": "complete-local",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [],
+      "legacyEvidence": [
+        {
+          "legacyId": "3.2",
+          "status": "done-local",
+          "title": "Resolver datas e perceber Lançamentos únicos"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": true,
+      "notes": "Conclusão preservada da resolução local AA>HF>OR e família/variantes; spec/registro histórico e código atual correspondem ao escopo."
+    },
+    {
+      "id": "3.3",
+      "title": "Consultar a comparação com filtros combinados",
+      "key": "3-3-consultar-a-comparação-com-filtros-combinados",
+      "sha256": "f82672e65dcff5fdf6227eab4bdfcff9b4fd539cc6bf5afb44089178199af601",
+      "frs": [
+        "FR-9",
+        "FR-10",
+        "FR-12"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "done",
+      "workDisposition": "complete-local",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [],
+      "legacyEvidence": [
+        {
+          "legacyId": "3.3",
+          "status": "done-local",
+          "title": "Consultar a comparação com filtros combinados"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": true,
+      "notes": "Conclusão preservada da projeção local e filtros/ordenação; spec/registro histórico e código atual correspondem ao escopo."
+    },
+    {
+      "id": "3.4",
+      "title": "Normalizar APIs estruturadas e identidade por Fonte",
+      "key": "3-4-normalizar-apis-estruturadas-e-identidade-por-fonte",
+      "sha256": "2247ec04c5c873867ae999ea96fa373e13ec51d0d07f598ccbd8c417f1ea022e",
+      "frs": [
+        "FR-9",
+        "FR-12",
+        "FR-13",
+        "FR-26"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "blocked-integration",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q2"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "3.4",
+          "status": "blocked-integration",
+          "title": "Normalizar APIs estruturadas e identidade por Fonte"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Planejar a execução da parte afetada após os gates/contratos e consumidores anteriores; conservar fixtures e origem sem afirmar integração real."
+    },
+    {
+      "id": "3.5",
+      "title": "Apresentar a comparação de Modelos no padrão Artificial Analysis e nos estilos existentes",
+      "key": "3-5-apresentar-a-comparação-de-modelos-no-padrão-artificial-anal",
+      "sha256": "848d6762a8572f804508ffd616d71cabb53e3f3a278e2f98d672bddf18945ffc",
+      "frs": [
+        "FR-9",
+        "FR-10",
+        "FR-11",
+        "FR-12",
+        "FR-27"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "blocked-integration",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q3"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "3.5",
+          "status": "blocked-integration",
+          "title": "Apresentar HÍBRIDO/TERMINAL/ANALÍTICO e linha expandida"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Planejar a execução da parte afetada após os gates/contratos e consumidores anteriores; conservar fixtures e origem sem afirmar integração real."
+    },
+    {
+      "id": "4.1",
+      "title": "Manter estado, bases e preferências no store compartilhado",
+      "key": "4-1-manter-estado-bases-e-preferências-no-store-compartilhado",
+      "sha256": "993ea91ebf4b896d6645b328f6de0c254832b28cce4f9ef55bbf67a275a07a4b",
+      "frs": [
+        "FR-2",
+        "FR-6",
+        "FR-27",
+        "FR-32",
+        "FR-38"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "local-delta",
+      "localWorkEligible": true,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q6",
+        "Q11-implementação"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "4.1",
+          "status": "done-local",
+          "title": "Manter estado semântico e preferências coerentes"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Primeira prioridade: VIEWS/view legados ainda existem. Implementar BASES/base e aliases, configuração inicial injetada e preservação do contexto."
+    },
+    {
+      "id": "4.2",
+      "title": "Integrar o renderer Cesium ao Globo principal",
+      "key": "4-2-integrar-o-renderer-cesium-ao-globo-principal",
+      "sha256": "a2fa806f89cf591cdcf6468ebb9ecd534fa4d8ceee4d4ce196c5c257b2f7307b",
+      "frs": [
+        "FR-28",
+        "FR-32",
+        "FR-40"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "blocked-integration",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q3",
+        "Q6",
+        "Q9"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "4.2",
+          "status": "blocked-integration",
+          "title": "Mostrar Empresas/identidades/último Pulso nas Vistas"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Planejar a execução da parte afetada após os gates/contratos e consumidores anteriores; conservar fixtures e origem sem afirmar integração real."
+    },
+    {
+      "id": "4.3",
+      "title": "Compor terreno, edifícios e detalhe automático de MAPA/SAT",
+      "key": "4-3-compor-terreno-edifícios-e-detalhe-automático-de-mapa-sat",
+      "sha256": "5e66e9c4eeecec2f373b0d3b28bfa12188e0330681256b62eb3557d1ea5c76ca",
+      "frs": [
+        "FR-28",
+        "FR-32",
+        "FR-40"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "blocked-integration",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q3",
+        "Q6",
+        "Q9"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "8.2",
+          "status": "blocked-integration",
+          "title": "Trocar satélite/OSM com cache e fallback"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Planejar a execução da parte afetada após os gates/contratos e consumidores anteriores; conservar fixtures e origem sem afirmar integração real."
+    },
+    {
+      "id": "4.4",
+      "title": "Mostrar e selecionar Empresas e Lançamentos no Globo",
+      "key": "4-4-mostrar-e-selecionar-empresas-e-lançamentos-no-globo",
+      "sha256": "f2a9968ead0e76bfb0dd561c6027f72e1ba8770f80903fb11c1b9f67e0ed4c73",
+      "frs": [
+        "FR-1",
+        "FR-2",
+        "FR-3",
+        "FR-4",
+        "FR-5",
+        "FR-26"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "blocked-integration",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q3",
+        "Q8"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "4.2",
+          "status": "blocked-integration",
+          "title": "Mostrar Empresas/identidades/último Pulso nas Vistas"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Planejar a execução da parte afetada após os gates/contratos e consumidores anteriores; conservar fixtures e origem sem afirmar integração real."
+    },
+    {
+      "id": "4.5",
+      "title": "Explorar Relações e prévias fantasmas sem publicar propostas",
+      "key": "4-5-explorar-relações-e-prévias-fantasmas-sem-publicar-propostas",
+      "sha256": "95674852c3f804aace832628f0306464eab94935c58117a7838f214c5deac460",
+      "frs": [
+        "FR-23",
+        "FR-31"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "blocked-integration",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q3",
+        "Q8"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "4.2",
+          "status": "blocked-integration",
+          "title": "Mostrar Empresas/identidades/último Pulso nas Vistas"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Planejar a execução da parte afetada após os gates/contratos e consumidores anteriores; conservar fixtures e origem sem afirmar integração real."
+    },
+    {
+      "id": "4.6",
+      "title": "Operar Prévia, Terminal e som por teclado e toque",
+      "key": "4-6-operar-prévia-terminal-e-som-por-teclado-e-toque",
+      "sha256": "4a3eeda513863987abb5806e9bf117fa61beb6846891b8bb60985ad4ec8797a7",
+      "frs": [
+        "FR-5",
+        "FR-6",
+        "FR-7",
+        "FR-8",
+        "FR-31"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "blocked-integration",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q3"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "4.3",
+          "status": "blocked-integration",
+          "title": "Interagir com Terminal e som pelo teclado/toque"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Planejar a execução da parte afetada após os gates/contratos e consumidores anteriores; conservar fixtures e origem sem afirmar integração real."
+    },
+    {
+      "id": "4.7",
+      "title": "Aplicar famílias visuais, navegação e acesso completo no celular",
+      "key": "4-7-aplicar-famílias-visuais-navegação-e-acesso-completo-no-celu",
+      "sha256": "b90dffcced5ca53b84814ed1cbbc0857dd459fd2b683b1778f37523d8b6de849",
+      "frs": [
+        "FR-27",
+        "FR-29",
+        "FR-32"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "blocked-integration",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q3",
+        "Q9"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "4.4",
+          "status": "blocked-integration",
+          "title": "Aplicar os seis temas e acesso completo no celular"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Planejar a execução da parte afetada após os gates/contratos e consumidores anteriores; conservar fixtures e origem sem afirmar integração real."
+    },
+    {
+      "id": "5.1",
+      "title": "Projetar e ocultar Notícias nas cinco superfícies",
+      "key": "5-1-projetar-e-ocultar-notícias-nas-cinco-superfícies",
+      "sha256": "5afda041a5f3b12ba30b1a6ef9d38043bf0df050334236915d2580d2e41687d1",
+      "frs": [
+        "FR-14",
+        "FR-15",
+        "FR-33",
+        "FR-34"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "local-conformance",
+      "localWorkEligible": true,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q2"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "5.1",
+          "status": "done-local",
+          "title": "Projetar e ocultar Notícias nas cinco superfícies"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Conferir dedup/aliases, par dataRevision/feedbackRevision, supressão nas cinco projeções/Busca/contexto e sinais de foco para a UI."
+    },
+    {
+      "id": "5.2",
+      "title": "Coletar e validar resumos sem dar autoridade de escrita ao Agente",
+      "key": "5-2-coletar-e-validar-resumos-sem-dar-autoridade-de-escrita-ao-a",
+      "sha256": "9af17e8e70a93a4787b18fb63ad62e2624c6a4cb01d07e75ee1c5709313bcb78",
+      "frs": [
+        "FR-14",
+        "FR-15",
+        "FR-16",
+        "FR-17",
+        "FR-34"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "blocked-integration",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q1/Q7",
+        "Q2"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "5.2",
+          "status": "blocked-integration",
+          "title": "Validar resumo/relevância sem dar ferramentas ao Agente"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Planejar a execução da parte afetada após os gates/contratos e consumidores anteriores; conservar fixtures e origem sem afirmar integração real."
+    },
+    {
+      "id": "5.3",
+      "title": "Operar FLUXO, LABS, NOTÍCIAS e Leitor com contexto",
+      "key": "5-3-operar-fluxo-labs-notícias-e-leitor-com-contexto",
+      "sha256": "f73a542606cdc9e1963f8160e44902ce231c3be65ef62cb7c3c9f557ad139c0d",
+      "frs": [
+        "FR-33",
+        "FR-34"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "blocked-integration",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q3"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "5.3",
+          "status": "blocked-integration",
+          "title": "Operar Fluxo/LABS/NOTÍCIAS e Leitor com contexto"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Planejar a execução da parte afetada após os gates/contratos e consumidores anteriores; conservar fixtures e origem sem afirmar integração real."
+    },
+    {
+      "id": "5.4",
+      "title": "Manter origem e créditos nas projeções de dados",
+      "key": "5-4-manter-origem-e-créditos-nas-projeções-de-dados",
+      "sha256": "2c4bcbead8a53be76a8c73126840da00fac3e59fbb6b05ee405145b3c7f5bc24",
+      "frs": [
+        "FR-16",
+        "FR-28",
+        "FR-34"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "blocked-integration",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q3",
+        "Q4",
+        "Q6"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "5.4",
+          "status": "blocked-integration",
+          "title": "Manter atribuição em todas as projeções"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Planejar a execução da parte afetada após os gates/contratos e consumidores anteriores; conservar fixtures e origem sem afirmar integração real."
+    },
+    {
+      "id": "6.1",
+      "title": "Confirmar instrumentos, cobertura, calendários e fontes de reserva",
+      "key": "6-1-confirmar-instrumentos-cobertura-calendários-e-fontes-de-res",
+      "sha256": "fbd67792399bc69a1bedfe4c4b3d8f9eb3e0ff55bc411cda169699776a45584d",
+      "frs": [
+        "FR-18",
+        "FR-19",
+        "FR-20",
+        "FR-36"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "blocked-integration",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q5"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "6.1",
+          "status": "blocked-integration",
+          "title": "Confirmar instrumentos/cobertura/calendários e fallback"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Planejar a execução da parte afetada após os gates/contratos e consumidores anteriores; conservar fixtures e origem sem afirmar integração real."
+    },
+    {
+      "id": "6.2",
+      "title": "Atualizar cotações respeitando sessões, atraso e falha parcial",
+      "key": "6-2-atualizar-cotações-respeitando-sessões-atraso-e-falha-parcia",
+      "sha256": "3a0f5ba4085c8797a7c2230c36f988fae817a68b97204c653bcaa4688f785e28",
+      "frs": [
+        "FR-19",
+        "FR-25"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "blocked-integration",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q2",
+        "Q5"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "6.2",
+          "status": "blocked-integration",
+          "title": "Atualizar cotações com atrasos e sessões corretos"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Planejar a execução da parte afetada após os gates/contratos e consumidores anteriores; conservar fixtures e origem sem afirmar integração real."
+    },
+    {
+      "id": "6.3",
+      "title": "Explorar a Faixa e o Painel MERCADOS",
+      "key": "6-3-explorar-a-faixa-e-o-painel-mercados",
+      "sha256": "7f1e9bb80bd5d5196b5d2c3b68d0b9a6899bd65795857b2b085454f85d42d155",
+      "frs": [
+        "FR-18",
+        "FR-19",
+        "FR-29",
+        "FR-36"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "blocked-integration",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q3",
+        "Q5"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "6.3",
+          "status": "blocked-integration",
+          "title": "Explorar Faixa e Painel MERCADOS"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Planejar a execução da parte afetada após os gates/contratos e consumidores anteriores; conservar fixtures e origem sem afirmar integração real."
+    },
+    {
+      "id": "6.4",
+      "title": "Mostrar finanças em NOTÍCIAS e a demonstração do especialista em ações",
+      "key": "6-4-mostrar-finanças-em-notícias-e-a-demonstração-do-especialist",
+      "sha256": "061dd9c092eec67fdf11e3bddd8cba3370ae07ddb5fd3e78c12f35259713cd72",
+      "frs": [
+        "FR-19",
+        "FR-36"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "blocked-integration",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q3",
+        "Q5"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "6.3",
+          "status": "blocked-integration",
+          "title": "Explorar Faixa e Painel MERCADOS"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Planejar a execução da parte afetada após os gates/contratos e consumidores anteriores; conservar fixtures e origem sem afirmar integração real."
+    },
+    {
+      "id": "7.1",
+      "title": "Buscar entidades e restaurar o contexto da URL",
+      "key": "7-1-buscar-entidades-e-restaurar-o-contexto-da-url",
+      "sha256": "832ac6872411fb43fe1f224957a7be2cb3ebd586933f48a5464daf2f091dd6f4",
+      "frs": [
+        "FR-37",
+        "FR-38"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "local-delta",
+      "localWorkEligible": true,
+      "dependenciesBeforeLocalWork": [
+        "4.1"
+      ],
+      "integrationGates": [
+        "Q3",
+        "Q11-implementação"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "7.1",
+          "status": "done-local",
+          "title": "Buscar entidades locais e restaurar contexto da URL"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Depois de 4.1, atualizar busca/projeção e serializer/hidratação base=MAPA|SAT em fixtures. A interface completa mantém Q3/browser."
+    },
+    {
+      "id": "7.2",
+      "title": "Pesquisar com fontes, navegação tipada e orçamento separado",
+      "key": "7-2-pesquisar-com-fontes-navegação-tipada-e-orçamento-separado",
+      "sha256": "2234e8185441d90895e100104042e92a3afb8c497926481976b55cb3c29fa212",
+      "frs": [
+        "FR-35",
+        "FR-36"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "blocked-integration",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q1/Q7",
+        "Q2",
+        "Q3"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "7.2",
+          "status": "blocked-integration",
+          "title": "Pesquisar com ações/citações versionadas e orçamento"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Planejar a execução da parte afetada após os gates/contratos e consumidores anteriores; conservar fixtures e origem sem afirmar integração real."
+    },
+    {
+      "id": "7.3",
+      "title": "Retomar e excluir o Histórico privado",
+      "key": "7-3-retomar-e-excluir-o-histórico-privado",
+      "sha256": "d173dba9d6a3216c61fb3c40782c90f74343211523c48af310e154ce8ae8afc4",
+      "frs": [
+        "FR-35"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "blocked-integration",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q1/Q7",
+        "Q2",
+        "Q3"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "7.3",
+          "status": "blocked-integration",
+          "title": "Retomar e excluir Histórico privado"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Planejar a execução da parte afetada após os gates/contratos e consumidores anteriores; conservar fixtures e origem sem afirmar integração real."
+    },
+    {
+      "id": "8.1",
+      "title": "Validar a fonte e explorar BACKBONES com contexto",
+      "key": "8-1-validar-a-fonte-e-explorar-backbones-com-contexto",
+      "sha256": "710e5020784251c6ec88cd96ca69372646ca02bb5e7230205c6b8280bdce119c",
+      "frs": [
+        "FR-28",
+        "FR-31",
+        "FR-39",
+        "FR-40"
+      ],
+      "approvalStatus": "approved-requirements-scope-and-acceptance-criteria",
+      "developmentStatus": "backlog",
+      "workDisposition": "blocked-integration",
+      "localWorkEligible": false,
+      "dependenciesBeforeLocalWork": [],
+      "integrationGates": [
+        "Q3",
+        "Q4",
+        "Q9"
+      ],
+      "legacyEvidence": [
+        {
+          "legacyId": "8.1",
+          "status": "blocked-integration",
+          "title": "Validar fonte/licença e explorar BACKBONES"
+        }
+      ],
+      "completionTransferredFromHistoricalEvidence": false,
+      "notes": "Planejar a execução da parte afetada após os gates/contratos e consumidores anteriores; conservar fixtures e origem sem afirmar integração real."
+    }
+  ],
+  "integrationGates": [
+    {
+      "id": "Q1/Q7",
+      "owner": "Andre + Arquitetura/UX",
+      "required": "Fornecedores LLM/busca, preços, verba/tetos separados, tamanho editorial e política de retenção/exclusão.",
+      "stories": [
+        "1.2",
+        "1.5",
+        "5.2",
+        "7.2",
+        "7.3"
+      ],
+      "status": "open",
+      "blocks": "Integração/aceite real da parte afetada; fixtures e política injetada seguem o escopo registrado."
+    },
+    {
+      "id": "Q2",
+      "owner": "Andre + Arquitetura",
+      "required": "Hospedagem/IdP/custo e provas de autorização, transações/CAS/fencing, jobs, rollback, recuperação e sete dias operacionais.",
+      "stories": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4",
+        "1.5",
+        "1.6",
+        "2.1",
+        "2.2",
+        "2.3",
+        "2.4",
+        "2.5",
+        "3.4",
+        "5.1",
+        "5.2",
+        "6.2",
+        "7.2",
+        "7.3"
+      ],
+      "status": "open",
+      "blocks": "Integração/aceite real da parte afetada; fixtures e política injetada seguem o escopo registrado."
+    },
+    {
+      "id": "Q3",
+      "owner": "UX",
+      "required": "Acabamento/emblema, controles móveis, ordem e retorno de foco, teclado/toque, contraste, leitores de tela e evidência de browser.",
+      "stories": [
+        "1.3",
+        "2.3",
+        "2.4",
+        "2.5",
+        "3.5",
+        "4.2",
+        "4.3",
+        "4.4",
+        "4.5",
+        "4.6",
+        "4.7",
+        "5.3",
+        "5.4",
+        "6.3",
+        "6.4",
+        "7.1",
+        "7.2",
+        "7.3",
+        "8.1"
+      ],
+      "status": "open",
+      "blocks": "Integração/aceite real da parte afetada; fixtures e política injetada seguem o escopo registrado."
+    },
+    {
+      "id": "Q4",
+      "owner": "Arquitetura + Andre",
+      "required": "Proveniência/data/licença e associação confirmada entre cabos e estações para BACKBONES.",
+      "stories": [
+        "5.4",
+        "8.1"
+      ],
+      "status": "open",
+      "blocks": "Integração/aceite real da parte afetada; fixtures e política injetada seguem o escopo registrado."
+    },
+    {
+      "id": "Q5",
+      "owner": "Arquitetura",
+      "required": "Matriz de instrumentos, símbolos/listagens, unidades/moedas, calendários, histórico e cobertura principal/reserva.",
+      "stories": [
+        "1.5",
+        "6.1",
+        "6.2",
+        "6.3",
+        "6.4"
+      ],
+      "status": "open",
+      "blocks": "Integração/aceite real da parte afetada; fixtures e política injetada seguem o escopo registrado."
+    },
+    {
+      "id": "Q6",
+      "owner": "Arquitetura + UX + Andre",
+      "required": "Base inicial, providers/composição/coverage, credenciais, licença, custo/quota/cache/créditos e limiares/histerese.",
+      "stories": [
+        "4.1",
+        "4.2",
+        "4.3",
+        "5.4"
+      ],
+      "status": "open",
+      "blocks": "Integração/aceite real da parte afetada; fixtures e política injetada seguem o escopo registrado."
+    },
+    {
+      "id": "Q8",
+      "owner": "Andre + Domain/Contracts",
+      "required": "Significado, precisão, evidência de Localização real e regras de classe visual, seleção e limite de câmera.",
+      "stories": [
+        "2.3",
+        "2.4",
+        "4.4",
+        "4.5"
+      ],
+      "status": "open",
+      "blocks": "Integração/aceite real da parte afetada; fixtures e política injetada seguem o escopo registrado."
+    },
+    {
+      "id": "Q9",
+      "owner": "Arquitetura",
+      "required": "Estratégia de runtime Cesium, assets/workers/CSP/cache/WebGL e matriz de browser/dispositivo/desempenho/recuperação.",
+      "stories": [
+        "4.2",
+        "4.3",
+        "4.7",
+        "8.1"
+      ],
+      "status": "open",
+      "blocks": "Integração/aceite real da parte afetada; fixtures e política injetada seguem o escopo registrado."
+    },
+    {
+      "id": "Q11-implementação",
+      "owner": "Domain/Contracts + UI",
+      "required": "Contrato executável compartilhado base=MAPA|SAT e aliases de URL; implementar decisão já fechada antes dos consumidores.",
+      "stories": [
+        "4.1",
+        "7.1"
+      ],
+      "status": "open",
+      "blocks": "Integração/aceite real da parte afetada; fixtures e política injetada seguem o escopo registrado."
+    }
+  ],
+  "resolvedProductDecisions": [
+    "Q10: Globo principal sempre 3D, MAPA escuro/SAT, terreno/prédios compatíveis e fotorealismo automático em SAT; sem voos.",
+    "Q11: formato canônico base e compatibilidade dos aliases de URL; trabalho executável ainda pendente."
+  ],
+  "nextAction": {
+    "skill": "bmad-build",
+    "storyId": "4.1",
+    "storyKey": "4-1-manter-estado-bases-e-preferências-no-store-compartilhado",
+    "scope": "Contrato/store/URL em fixtures e configuração inicial injetada; sem provider, escolha de base inicial de produção ou renderer novo."
+  },
+  "scriptGeneration": {
+    "ok": true,
+    "action": "generate",
+    "status_file": "_bmad-output/implementation-artifacts/sprint-status.yaml",
+    "dry_run": false,
+    "fresh": false,
+    "epics": 8,
+    "stories": 35,
+    "counts": {
+      "backlog": 39,
+      "optional": 8,
+      "in-progress": 1,
+      "done": 3
+    },
+    "generated": "10-12-2026 20:32",
+    "last_updated": "10-12-2026 20:32",
+    "warnings": [
+      "unparsed Epic/Story-like heading at _bmad-output/planning-artifacts/epics.md:578: ## Epic List"
+    ],
+    "new_entries": [
+      "epic-1",
+      "1-1-manter-os-dados-publicados-quando-uma-fonte-falha",
+      "1-2-aplicar-o-orçamento-das-rotinas-automáticas",
+      "1-3-mostrar-o-status-e-o-horário-de-atualização-por-tipo-de-dado",
+      "1-4-restringir-dados-e-comandos-privados-ao-dono",
+      "1-5-agendar-atualizações-na-cadência-de-cada-dado",
+      "1-6-executar-e-recuperar-atualizações-sem-publicações-duplicadas",
+      "epic-1-retrospective",
+      "epic-2",
+      "2-1-aprovar-editar-e-rejeitar-propostas-com-revisão-registrada",
+      "2-2-receber-propostas-de-descoberta-com-evidência-e-quota",
+      "2-3-conferir-o-cadastro-inicial-e-os-logos-antes-da-primeira-pub",
+      "2-4-operar-a-fila-de-revisão-com-evidências-decisões-e-prévias",
+      "2-5-desfazer-alterações-publicadas-com-compensação-auditável",
+      "epic-2-retrospective",
+      "epic-3",
+      "3-1-calcular-custo-por-tarefa-com-preços-ausentes-zero",
+      "3-2-resolver-datas-e-perceber-lançamentos-únicos",
+      "3-3-consultar-a-comparação-com-filtros-combinados",
+      "3-4-normalizar-apis-estruturadas-e-identidade-por-fonte",
+      "3-5-apresentar-a-comparação-de-modelos-no-padrão-artificial-anal",
+      "epic-3-retrospective",
+      "epic-4",
+      "4-1-manter-estado-bases-e-preferências-no-store-compartilhado",
+      "4-2-integrar-o-renderer-cesium-ao-globo-principal",
+      "4-3-compor-terreno-edifícios-e-detalhe-automático-de-mapa-sat",
+      "4-4-mostrar-e-selecionar-empresas-e-lançamentos-no-globo",
+      "4-5-explorar-relações-e-prévias-fantasmas-sem-publicar-propostas",
+      "4-6-operar-prévia-terminal-e-som-por-teclado-e-toque",
+      "4-7-aplicar-famílias-visuais-navegação-e-acesso-completo-no-celu",
+      "epic-4-retrospective",
+      "epic-5",
+      "5-1-projetar-e-ocultar-notícias-nas-cinco-superfícies",
+      "5-2-coletar-e-validar-resumos-sem-dar-autoridade-de-escrita-ao-a",
+      "5-3-operar-fluxo-labs-notícias-e-leitor-com-contexto",
+      "5-4-manter-origem-e-créditos-nas-projeções-de-dados",
+      "epic-5-retrospective",
+      "epic-6",
+      "6-1-confirmar-instrumentos-cobertura-calendários-e-fontes-de-res",
+      "6-2-atualizar-cotações-respeitando-sessões-atraso-e-falha-parcia",
+      "6-3-explorar-a-faixa-e-o-painel-mercados",
+      "6-4-mostrar-finanças-em-notícias-e-a-demonstração-do-especialist",
+      "epic-6-retrospective",
+      "epic-7",
+      "7-1-buscar-entidades-e-restaurar-o-contexto-da-url",
+      "7-2-pesquisar-com-fontes-navegação-tipada-e-orçamento-separado",
+      "7-3-retomar-e-excluir-o-histórico-privado",
+      "epic-7-retrospective",
+      "epic-8",
+      "8-1-validar-a-fonte-e-explorar-backbones-com-contexto",
+      "epic-8-retrospective"
+    ],
+    "preserved": 0,
+    "changed": 0,
+    "upgraded_from_disk": [],
+    "dropped_orphans": [],
+    "legacy_mapped": [],
+    "illegal": [],
+    "in_sync": false,
+    "explicit_set": [
+      "epic-3=in-progress",
+      "3-1-calcular-custo-por-tarefa-com-preços-ausentes-zero=done",
+      "3-2-resolver-datas-e-perceber-lançamentos-únicos=done",
+      "3-3-consultar-a-comparação-com-filtros-combinados=done"
+    ]
+  },
+  "acceptedParserWarnings": [
+    {
+      "warning": "unparsed Epic/Story-like heading at _bmad-output/planning-artifacts/epics.md:578: ## Epic List",
+      "resolution": "Epic List é o título do índice, sem conteúdo de Story omitido. A contagem oito/35 e todos os IDs correspondem ao pacote aprovado. Documento aprovado preservado por hash."
+    }
+  ],
+  "evidenceLimits": {
+    "productTestsExecuted": false,
+    "browserExecuted": false,
+    "providersCalled": false,
+    "secretsRead": false,
+    "newImplementation": false,
+    "stageCommitPushDeploy": false,
+    "historicalVerification": "Registros locais de 10/10 foram lidos; resultados históricos não foram reexecutados nesta rodada.",
+    "documentChecks": "Parser/gerador, formato YAML, hashes, cobertura de IDs/mapping e conservação de arquivos."
+  },
+  "finalDocumentValidation": {
+    "format": {
+      "ok": true,
+      "action": "validate",
+      "status_file": "_bmad-output/implementation-artifacts/sprint-status.yaml",
+      "valid": true,
+      "problems": [],
+      "legacy_mapped": []
+    },
+    "syncPreview": {
+      "ok": true,
+      "action": "generate",
+      "status_file": "_bmad-output/implementation-artifacts/sprint-status.yaml",
+      "dry_run": true,
+      "fresh": false,
+      "epics": 8,
+      "stories": 35,
+      "counts": {
+        "backlog": 39,
+        "optional": 8,
+        "in-progress": 1,
+        "done": 3
+      },
+      "generated": "10-12-2026 20:32",
+      "last_updated": "10-12-2026 20:32",
+      "warnings": [
+        "unparsed Epic/Story-like heading at _bmad-output/planning-artifacts/epics.md:578: ## Epic List"
+      ],
+      "new_entries": [],
+      "preserved": 51,
+      "changed": 0,
+      "upgraded_from_disk": [],
+      "dropped_orphans": [],
+      "legacy_mapped": [],
+      "illegal": [],
+      "in_sync": true,
+      "explicit_set": []
+    },
+    "documentaryChecks": {
+      "protectedFilesPreserved": 84,
+      "approvedStoryVersionsMatched": 35,
+      "legacyIdsMapped": 29,
+      "currentStoryIdsCovered": 35,
+      "linksResolved": true,
+      "productTestsExecuted": false
+    }
+  },
+  "preservedFiles": {
+    "_bmad-output/implementation-artifacts/local-core-reviews/budget.json": "3efb804589746f67b3e7067e9cf4e28d2512a35354e19ec30d7879e89321269d",
+    "_bmad-output/implementation-artifacts/local-core-reviews/curation.json": "f0fa38a0b1d16dc7aa9731766a9cb8f48f28a6f3cfd5576eff39058fa2831683",
+    "_bmad-output/implementation-artifacts/local-core-reviews/exploration.json": "f43b37f477da9311f6886886bd71aaa8b85093ea7c5b5b57d75d38adad3e05ec",
+    "_bmad-output/implementation-artifacts/local-core-reviews/integration.json": "ab20e4b6dce84d73b247e1821341d9dada8461b55647c5bd6b4f629a3c339257",
+    "_bmad-output/implementation-artifacts/local-core-reviews/model-queries.json": "f37e27bf79fabe85957682b461a7668861d3de807ff1c24b29a5a847a0c0ead2",
+    "_bmad-output/implementation-artifacts/local-core-reviews/news.json": "796ce01faa095bf2a7301dea85fe0f72d17170141ee663644435b1c960cb844c",
+    "_bmad-output/implementation-artifacts/local-core-reviews/update-integrity.json": "e59c574f3b1650d27f6d671e9f54e9c55a670b1e7508a95fe7c259016021f2c5",
+    "_bmad-output/implementation-artifacts/local-core-verification.json": "791dbb3a0bc78983e07dd49f4971d852d445d683c7c9b760b0d4be0a2b469c4c",
+    "_bmad-output/implementation-artifacts/local-plan.json": "29a7eba5f78a0bddf84d973aa6661230aa44837104fec761662b2eebe6397209",
+    "_bmad-output/implementation-artifacts/model-cost-fixtures-verification.json": "940b62d19febb33ac4a85aae468e65e0141b58dfd6e0f05044ea5c87b6cab82c",
+    "_bmad-output/implementation-artifacts/reviews/model-cost-fixtures-blind-hunter.md": "5ad36297fc9774005c8a0308113650bdb64b12f227664c18ad216501fcf3ff3c",
+    "_bmad-output/implementation-artifacts/spec-local-budget.md": "b06b20e3f292aeb2b373207c02fcd6905ddfb7dc166d5eb316b3738a8315649f",
+    "_bmad-output/implementation-artifacts/spec-local-curation.md": "77fbfa627bb6f140fdfb8ee40737e3fa6c36597fab7fb3e5319d36a041a7db1c",
+    "_bmad-output/implementation-artifacts/spec-local-exploration.md": "e3788494eb2e3ccb729196bdb35f0996faa287899ea5db8a9e361742714db139",
+    "_bmad-output/implementation-artifacts/spec-local-model-queries.md": "facc60b0ae823d209d01de7a4758524d5a14df1823171882ac69fbe62996aa4c",
+    "_bmad-output/implementation-artifacts/spec-local-news.md": "e59fb7a5afcd5cdc6bbfcac47ed45a02d1bd96a11a2c3b049c812da3630a642e",
+    "_bmad-output/implementation-artifacts/spec-local-update-integrity.md": "60d4f52da472ba842cc4e5b34cf00a0e16d57a56df8860c44a2a17ae40d74c6a",
+    "_bmad-output/implementation-artifacts/spec-model-cost-fixtures.md": "7a6dd6b9622fad0c200796684474fab5ead7ff5d7f8f53e8b6e25d9203e0e2a3",
+    "_bmad-output/planning-artifacts/approvals/story-approvals-2026-10-12.json": "d18da3c90b606647da05d9c6371c03efada73c99092e142df668cea4ec323d34",
+    "_bmad-output/planning-artifacts/approvals/story-approvals-reconciled-2026-10-12.json": "9e4e62633e37baae1283dc8b4beab30b90f62cb45334a20f86bc64b35c40eb1b",
+    "_bmad-output/planning-artifacts/architecture/architecture-LLMs-2026-10-10/ARCHITECTURE-SPINE.md": "71e0836138d5cf0b284ceb8f7002330558baaed7e5007d79b5d7f01cb90d3983",
+    "_bmad-output/planning-artifacts/architecture/architecture-LLMs-2026-10-10/cesium-integration.md": "fe7cb8758b0702eda55c175981d4fb0ad9064cb02b701805db8ce236ab17e47d",
+    "_bmad-output/planning-artifacts/architecture/architecture-LLMs-2026-10-10/contracts.md": "2c093e0a5b90232083a20c8541927972d656bccea3ee74b37d819026506c08d5",
+    "_bmad-output/planning-artifacts/architecture/architecture-LLMs-2026-10-10/implementation-readiness.md": "0c0b537958307796869bd7491517e33c8c87137f1ff6d072f78649da78010cba",
+    "_bmad-output/planning-artifacts/epics.md": "3c8d1ace7d42bacc77a0d2ed4c7c0eafcd221fd9d9ee4f625708a5f52d9e745d",
+    "_bmad-output/planning-artifacts/prds/prd-LLMs-2026-10-07/addendum.md": "6650288e61bb3a1439162ee7526d56956e7acf4004ff5b33fff1efe107048100",
+    "_bmad-output/planning-artifacts/prds/prd-LLMs-2026-10-07/prd.md": "bf1e117e51a6180ce8e6b116a0e86b7204763a3be5d188355ac0955fb2d1c62d",
+    "_bmad-output/planning-artifacts/reviews/epics-planning-review-2026-10-12.md": "1253e363937e2af4ec6ae16b53f212e2a71ecb864daf94ef8728369ebb7de058",
+    "_bmad-output/planning-artifacts/ux-designs/ux-LLMs-2026-10-09/DESIGN.md": "23543b44d7fa85a904ba8cae0fc39d057234c359d4a33c935d7706f07091fa00",
+    "_bmad-output/planning-artifacts/ux-designs/ux-LLMs-2026-10-09/EXPERIENCE.md": "a88c09a03c7e91cfd98ca79903143c689165eaf3659c6aaa4108267032fa9d81",
+    "_bmad-output/planning-artifacts/ux-designs/ux-LLMs-2026-10-09/variants/artificial-analysis-light/DESIGN.md": "74149b0b56fd783f02b4abdceb61bdadb2b6f7b09ca80d7315fa6d2bab848a33",
+    "_bmad-output/planning-artifacts/ux-designs/ux-LLMs-2026-10-09/variants/artificial-analysis-light/EXPERIENCE.md": "ca067603c1be0caeca6e2195662a55a5695f44e733456091ce4b464d024e84a3",
+    "package.json": "93213d1c30c24f069dd93d17ba208f447c580a1cac5661218f021c4103adb013",
+    "src/adapters/memory-budget-ledger.mjs": "3c617574d725d60460429693d842538d642b4cc27a288bba5edd097eb6821645",
+    "src/adapters/memory-control.mjs": "917d216738ce65a0f5317b118a4791ad2e987a240459776f2026ef9a15a5e4bc",
+    "src/adapters/memory-curation.mjs": "260b3a10614537571b31fcea27557101fd0534a24b8c0976e36e38e43629432c",
+    "src/adapters/memory-news.mjs": "6a77019409ffb8f3eb3a14f9b9617c38b2680e21f845460c9dc5d3e105700e01",
+    "src/adapters/memory-snapshots.mjs": "8d48195b67c522ce707e79ea9a33144be151e68e3f9811b16b00854c43fe9235",
+    "src/application/local-news-view.mjs": "2898c11e9a7dbd06c7b1827ecceb51d5d7deff9c1a480648b6312708f0579e37",
+    "src/application/local-update.mjs": "3c118d467a1db8835e3e3c95d16dd206f48cb5e1e788f62e7656256e9acea5f5",
+    "src/application/simulated-budget-call.mjs": "bb066d56b2d28cef50a298e8f8131ece826818099e4905c56ef5a50ef073b113",
+    "src/application/snapshot-reader.mjs": "8cdf9517413ba10e43670db7cac16e6d4c2746eebab6d7bd56367b1bc3c41d56",
+    "src/contracts/access.mjs": "903fc0f004b5b8dfeb22d8486ec68892ce8a9df077777b10688a32d11839bdab",
+    "src/contracts/budget.mjs": "c1de591acc559ac225461f9b1064655b99dc208d06868018266e86c5402781ca",
+    "src/contracts/catalog.mjs": "a130baa6fc00057c215dba8d20c3725bce875de0cf37a711f332ba3568fa4028",
+    "src/contracts/curation.mjs": "ad76e1198e299ef9c1393754552d7d783f41bf8567c9a3a79f00562a9e1c85db",
+    "src/contracts/exploration.mjs": "c3248c215b0c748858a5f50124bc6fd9acd763a48138d353f1c3a0bafbf1b71a",
+    "src/contracts/model-pricing.mjs": "0431415c9b4230828559e4f1f7e500b24b7050d029c6b6e61d7a74e44c2396a7",
+    "src/contracts/model-query.mjs": "8e35fd18a8e2ad62b0ef1c304afd66e6062724afc2f36b29bdcbef4602bf79d6",
+    "src/contracts/models.mjs": "ea35b7fd5984a517675fc8787dc290a98f8fa1e4a6e81dcfd789dd9b0000178d",
+    "src/contracts/navigation.mjs": "3eeab76ecf9c86791d99383ebec3ae5e3cf9685308cbaf819605faa97e975232",
+    "src/contracts/news-feedback.mjs": "956290c939866c1a0a3309404ddcd40963c2f88c2d40aa769e526a37fdaa30af",
+    "src/contracts/news.mjs": "822bdc39261c86bfb894c4f57a92d93e4d27f90a9c6f33c0661da6ce6a5802c3",
+    "src/contracts/primitives.mjs": "65404c0ecb7a61c0699554dabe4597994c6371e074e25644d742123b23a566e5",
+    "src/contracts/snapshot.mjs": "b52a93d580801c2eafc94e246f570deedb4d5bef82d453e6054de3820a0121c8",
+    "src/contracts/source-state.mjs": "4e59b7ba502e94988d616067c25e85264dbd12a4b90f170224c0b2bc4c55c16f",
+    "src/domain/call-cost-bound.mjs": "e4c4a568ae56fab390d8d23942710b45570f4a5291feec96c99fb79228be6d2c",
+    "src/domain/collection-guard.mjs": "06fe2f8f460fd1fb666b3c003452e902735c9731b685b83a7ddfc64d15adeca1",
+    "src/domain/exploration-state.mjs": "aabe3b43598d6f34eee49421699d593ff660a9fcecb0d29d36d367fb3ddcbc80",
+    "src/domain/exploration-url.mjs": "c2c67d92fdf9018bae69e0d5154e61e80f9ae4c323e764884b3ea56cfdb8744a",
+    "src/domain/freshness.mjs": "7b9e937813c78a47ba1536098237b1a456c3b1ff9469a6d505240725c63a6350",
+    "src/domain/global-search.mjs": "e112f263534873975db1fd7a5840586b4fd940495ea83bc3594e3b21af4b0a90",
+    "src/domain/model-cost.mjs": "75ab972c43937937fc0126070610e23865d9e52603e77ade7777b482eb1a325c",
+    "src/domain/model-queries.mjs": "9c1b04144d2e18de1dfed31289d1ed4579e737dfe9d5294e628d8ef7acb674d6",
+    "src/domain/news-projections.mjs": "3791ebbc1856e97eefa5483ed5625420d764fd11d6ba466e4986f239951217a4",
+    "tests/budget-bound.test.mjs": "d02b4d4f390e116d29f05ed1fb8ab239b736e3e3539d31e5e92500c1973f554c",
+    "tests/budget-ledger.test.mjs": "3294986a15753e5f8f68aa4c5808862b8b3cc44bd5b41a810ce509b276aca0d1",
+    "tests/curation.test.mjs": "4f10eecead17d7cda5cf5d8de7855ba417f98df296fca8156db40679d3e7c57c",
+    "tests/demo-model-cost.test.mjs": "433c5ac561ec686e07322f5bcb7a772a4543f284b5577ddf498ee027f42ed2ed",
+    "tests/exploration.test.mjs": "2b5076d79b0f69ff5d14fa6b047d02521469cf02f9df74863ba3a7adaae73683",
+    "tests/fixtures/local-workspace-invalid.json": "c1baa0373c6a82eed7f80b82e18f419ed304e3ad3b9e578c1bd427bfe79aec5a",
+    "tests/fixtures/local-workspace.json": "d966c9aee50740cdcec30586477283797ffa11b960ae5a5c168cbcd2539316b5",
+    "tests/fixtures/model-pricing-invalid.json": "278106828f2e67b1d14631d2966291f19980877e59728e7929736884866927b4",
+    "tests/fixtures/model-pricing.json": "f85de082bcf6044004169847f2157758bc002351ce7b673c7bec20fce1077a53",
+    "tests/freshness.test.mjs": "fa580b46a38928b796e674a63f2ef9ba4d87cd3a17d35aab127684f6f76634ba",
+    "tests/helpers/local-fixtures.mjs": "689aa4f689b61444c856a0b2031ce223ed07bdf173e62ae77c2d8629eba91144",
+    "tests/integration-regressions.test.mjs": "f17ce5d3cd69e16d466235a9d3ea16f245779ebfe0a68770263122f79b4dad91",
+    "tests/local-core-demo.test.mjs": "9f08024652435f9f1bd9c982aa006a25ce293fe0057bfe54320c83d0622a65ed",
+    "tests/local-snapshot.test.mjs": "990458770bac480e0533c0a87775c17bca01440ecae8cc053df056dd77ce6811",
+    "tests/model-cost.test.mjs": "c50911f5fbe26d2d299528af3245ae3496df602a679c6ad645103a80437bbb86",
+    "tests/model-pricing.test.mjs": "df5054c8b6ec01640de618d498bc0a20a949e3250b968162e2b6a28af717b671",
+    "tests/model-queries.test.mjs": "6784b1cd1744a57d74028cc66502b8d88a756718adc71df19414cba8143d128f",
+    "tests/news.test.mjs": "13aa1603efdf41ba71363ecb940853c37127004faaf5837cf9ecf1b753d7b2ad",
+    "tests/update-regressions.test.mjs": "918bc6663d3314c1f49298ef0e053695032d6574ebc309a0ea4c5c4a996dcfdf"
+  }
+}
+

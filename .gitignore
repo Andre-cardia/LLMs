@@ -1,0 +1,18 @@
+.env
+
+# Cesium: token público restrito da conta, configuração apenas local
+**/cesium-config.local.json
+**/cesium-config.json
+/dist/
+
+# Credenciais próprias por ambiente
+.env.*.local
+.env.local
+
+# Preferências pessoais do instalador BMAD
+/_bmad/config.user.toml
+
+# Dependências, relatórios gerados e metadados do sistema
+node_modules/
+/coverage/
+.DS_Store

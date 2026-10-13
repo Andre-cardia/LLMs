@@ -1,0 +1,8 @@
+# Reconciliação — decisões Cesium e PRD
+
+Fontes comparadas: `ARCHITECTURE-SPINE.md`, `cesium-integration.md`, PRD e addendum. PRD e addendum agora concordam: Globo sempre 3D, bases escolhidas pelo usuário MAPA escuro ou SAT; em SAT, a imagem fotorealística entra automaticamente em zoom próximo e volta à imagem de satélite ao afastar, sair da cobertura ou falhar. O estilo escuro está decidido; a base inicial MAPA/SAT continua em aberto.
+
+1. **O spine e o handoff Cesium continuam descrevendo escopo de produto obsoleto.** AD-17/Q10 ainda adotam “2D/3D”, e o handoff mantém quatro Vistas distintas (`3D`, `2D`, `MAPA`, `SAT`) e uma tabela com mapa plano, embora o PRD atual só ofereça o Globo 3D com as bases MAPA/SAT. **Consequência:** a decomposição pode criar uma Vista 2D ou tratar as bases como projeções independentes, contrariando o contrato atual do produto.
+2. **A receita geográfica continua dependente de validação técnica antes das stories afetadas.** PRD §11, addendum §F e Q6 mantêm em aberto provedores e cobertura para o fundo MAPA escuro, SAT, terreno, edifícios e fotorealismo; também exigem validar composição/transição, limiares, fallback, créditos, cache, custos e quota. **Consequência:** a escolha das duas bases e o retorno de SAT em zoom-out, falta de cobertura ou falha não podem ser considerados comprovados até testar a combinação com providers elegíveis. A base inicial permanece uma decisão distinta e aberta.
+
+Referências: `../architecture/architecture-LLMs-2026-10-10/ARCHITECTURE-SPINE.md` (AD-17, Q3/Q6/Q10); `../architecture/architecture-LLMs-2026-10-10/cesium-integration.md` (tabela de Vistas e Q6/Q10); `prd.md` (FR-32, FR-40 e §11); `addendum.md` (§F).

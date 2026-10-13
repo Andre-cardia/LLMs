@@ -1,0 +1,54 @@
+{
+  "appOrigin": "https://irisglobal.com.br",
+  "deployed": false,
+  "checks": [
+    {
+      "check": "terrain-production",
+      "httpStatus": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "check": "imagery-production",
+      "httpStatus": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "check": "buildings-production",
+      "httpStatus": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "check": "google-production",
+      "httpStatus": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "check": "www-subdomain",
+      "httpStatus": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "check": "http-denied",
+      "httpStatus": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "check": "localhost-denied",
+      "httpStatus": 403,
+      "expected": 403,
+      "passed": true
+    },
+    {
+      "check": "other-origin-denied",
+      "httpStatus": 403,
+      "expected": 403,
+      "passed": true
+    }
+  ]
+}

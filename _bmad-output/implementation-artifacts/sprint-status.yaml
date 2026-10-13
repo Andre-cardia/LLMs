@@ -1,0 +1,132 @@
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when its first story starts (via build's sprint sync)
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates the next story after the previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; the status view surfaces open ones
+generated: 10-12-2026 20:32
+last_updated: 10-12-2026 21:25
+project: LLMs
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+development_status:
+  epic-1: backlog
+  1-1-manter-os-dados-publicados-quando-uma-fonte-falha: backlog
+  1-2-aplicar-o-orçamento-das-rotinas-automáticas: backlog
+  1-3-mostrar-o-status-e-o-horário-de-atualização-por-tipo-de-dado: backlog
+  1-4-restringir-dados-e-comandos-privados-ao-dono: backlog
+  1-5-agendar-atualizações-na-cadência-de-cada-dado: backlog
+  1-6-executar-e-recuperar-atualizações-sem-publicações-duplicadas: backlog
+  epic-1-retrospective: optional
+
+  epic-2: backlog
+  2-1-aprovar-editar-e-rejeitar-propostas-com-revisão-registrada: backlog
+  2-2-receber-propostas-de-descoberta-com-evidência-e-quota: backlog
+  2-3-conferir-o-cadastro-inicial-e-os-logos-antes-da-primeira-pub: backlog
+  2-4-operar-a-fila-de-revisão-com-evidências-decisões-e-prévias: backlog
+  2-5-desfazer-alterações-publicadas-com-compensação-auditável: backlog
+  epic-2-retrospective: optional
+
+  epic-3: in-progress
+  3-1-calcular-custo-por-tarefa-com-preços-ausentes-zero: done
+  3-2-resolver-datas-e-perceber-lançamentos-únicos: done
+  3-3-consultar-a-comparação-com-filtros-combinados: done
+  3-4-normalizar-apis-estruturadas-e-identidade-por-fonte: backlog
+  3-5-apresentar-a-comparação-de-modelos-no-padrão-artificial-anal: backlog
+  epic-3-retrospective: optional
+
+  epic-4: in-progress
+  # 4.1 Build concluído: 33 testes direcionados com demo, 103 totais; revisão automática concluída, humana pendente.
+  # Prova somente local: não conclui 7.1/épico 4 nem fecha gates de integração/produção.
+  4-1-manter-estado-bases-e-preferências-no-store-compartilhado: review
+  4-2-integrar-o-renderer-cesium-ao-globo-principal: backlog
+  4-3-compor-terreno-edifícios-e-detalhe-automático-de-mapa-sat: backlog
+  4-4-mostrar-e-selecionar-empresas-e-lançamentos-no-globo: backlog
+  4-5-explorar-relações-e-prévias-fantasmas-sem-publicar-propostas: backlog
+  4-6-operar-prévia-terminal-e-som-por-teclado-e-toque: backlog
+  4-7-aplicar-famílias-visuais-navegação-e-acesso-completo-no-celu: backlog
+  epic-4-retrospective: optional
+
+  epic-5: backlog
+  5-1-projetar-e-ocultar-notícias-nas-cinco-superfícies: backlog
+  5-2-coletar-e-validar-resumos-sem-dar-autoridade-de-escrita-ao-a: backlog
+  5-3-operar-fluxo-labs-notícias-e-leitor-com-contexto: backlog
+  5-4-manter-origem-e-créditos-nas-projeções-de-dados: backlog
+  epic-5-retrospective: optional
+
+  epic-6: backlog
+  6-1-confirmar-instrumentos-cobertura-calendários-e-fontes-de-res: backlog
+  6-2-atualizar-cotações-respeitando-sessões-atraso-e-falha-parcia: backlog
+  6-3-explorar-a-faixa-e-o-painel-mercados: backlog
+  6-4-mostrar-finanças-em-notícias-e-a-demonstração-do-especialist: backlog
+  epic-6-retrospective: optional
+
+  epic-7: backlog
+  7-1-buscar-entidades-e-restaurar-o-contexto-da-url: backlog
+  7-2-pesquisar-com-fontes-navegação-tipada-e-orçamento-separado: backlog
+  7-3-retomar-e-excluir-o-histórico-privado: backlog
+  epic-7-retrospective: optional
+
+  epic-8: backlog
+  8-1-validar-a-fonte-e-explorar-backbones-com-contexto: backlog
+  epic-8-retrospective: optional
+
+planning_gate: CONCERNS
+full_product_ready: false
+production_authorized: false
+completion_scope: approved-local-contracts-only
+approval_record: ../planning-artifacts/approvals/story-approvals-reconciled-2026-10-12.json
+readiness_report: ../planning-artifacts/reviews/sprint-readiness-2026-10-12.md
+scope_reconciliation: sprint-scope-reconciliation-2026-10-12.json
+execution_plan: sprint-plan-2026-10-12.md
+legacy_local_plan: local-plan.json
+legacy_local_plan_interpretation: historical-29-stories-use-reconciliation-map
+open_integration_gate_groups:
+  - Q1/Q7
+  - Q2
+  - Q3
+  - Q4
+  - Q5
+  - Q6
+  - Q8
+  - Q9
+  - Q11-implementação
+next_recommended_story:
+  id: '4.1'
+  key: 4-1-manter-estado-bases-e-preferências-no-store-compartilhado
+  skill: bmad-walkthrough
+  scope: Revisão humana do contrato/store/URL v2 implementado e testado localmente
+  completion_requires: Aceite humano da entrega 4.1; depois incremento local 7.1
+followup_local_story:
+  id: '7.1'
+  after: '4.1'
+  scope: Busca/projeção/URL em fixtures; interface e acesso real permanecem gated
+historical_done_local_scope:
+  - '3.1'
+  - '3.2'
+  - '3.3'

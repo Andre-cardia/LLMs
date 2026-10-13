@@ -1,0 +1,20 @@
+# Revisão editorial — prose — 2026-10-09
+
+Este PRD e seu addendum existem para ajudar Andre e quem define a arquitetura a transformar o escopo pessoal acordado em decisões técnicas e stories, preservando requisitos, critérios testáveis e condições de publicação.
+
+Modelo estrutural recebido: **Strategic/Context (Pyramid)**. A nota de prontidão está no início; FR-36 foi agrupado com FR-18/19 sem renumerar requisitos. Leitor: **humans**. Guia informado: **Microsoft Writing Style Guide**. Não há hooks, persistent facts ou review guidance. Este passe preserva conteúdo, estrutura e voz; não executa alterações.
+
+Escolhas intencionais preservadas: português direto e próximo ao leitor, jornadas concretas de Andre, termos de domínio com inicial maiúscula, nomes de controles em maiúsculas, abreviações técnicas, IDs FR e referências cruzadas. O vocabulário técnico tem função; somente um termo editorial opaco foi substituído por seu referente explícito. Não houve passagem marcada CUT ou MERGE no relatório estrutural.
+
+Contagens exatas atuais obtidas com `uv run .agents/skills/bmad-review/scripts/word_metrics.py`: **prd.md: 7.881 palavras; addendum.md: 2.251 palavras; conjunto: 10.132 palavras**. Corpos das seções afetadas: FR-34, 154 palavras; FR-23, 188; addendum §F/TeleGeography, 232; addendum §G, 185. Os impactos abaixo usam o critério do script: tokens separados por espaço.
+
+| Pass | Original Text | Revised Text | Changes |
+| --- | --- | --- | --- |
+| prose | PRD FR-34: “Se a tradução falhar ou o orçamento suspender resumos, continua disponível título original, veículo, data e link, com indicação de resumo indisponível.” | “Se a tradução falhar ou o orçamento suspender resumos, continuam disponíveis o título original, o veículo, a data e o link, com indicação de resumo indisponível.” | Corrige concordância com o sujeito composto e explicita os quatro elementos que permanecem disponíveis. Preserva o fallback. **+4 palavras.** |
+| prose | PRD FR-23: “Antes da publicação, DESFAZER cancela a decisão e devolve o cartão a pendente.” | “Antes da publicação, DESFAZER cancela a decisão e devolve o cartão ao estado pendente.” | Completa o referente de “pendente”; o cartão retorna a um estado. Preserva o efeito definido para DESFAZER. **+1 palavra.** |
+| prose | Addendum §G, primeiro item: “Decisões posteriores no [memlog UX](../../ux-designs/ux-LLMs-2026-10-09/.memlog.md) incluem BACKBONES/OSM, ainda ausentes dessas spines.” | “Decisões posteriores no [memlog UX](../../ux-designs/ux-LLMs-2026-10-09/.memlog.md) incluem BACKBONES/OSM, ainda ausentes desses documentos.” | “Esses documentos” remete diretamente a DESIGN.md/EXPERIENCE.md citados no começo do item; “spines” não é definido para o leitor humano. Link e limitação documental permanecem. **0 palavras de diferença.** |
+| prose | Addendum §F/TeleGeography: “Dados carregam quando a camada é ligada; seleção de Empresas e desempenho do Globo precisam continuar utilizáveis.” | “Os dados são carregados quando a camada é ligada; seleção de Empresas e desempenho do Globo precisam continuar utilizáveis.” | Corrige a construção “dados carregam”, que atribui aos dados a ação de carregar. O momento do carregamento e a condição de uso permanecem. **+2 palavras.** |
+
+São **quatro recomendações**, sem corte de requisitos ou mudança de política. Aceitar todas reduz **0 palavras (0%)** e acrescenta **7 palavras**: PRD estimado em 7.886, addendum em 2.253 e conjunto em 10.139. Não foi informado alvo de extensão. Não há perda de contexto ou de voz; as revisões corrigem concordância ou tornam referentes explícitos.
+
+Observação de Markdown, fora dos achados de prose: há listas imediatamente após rótulos como `**Consequências:**` e headings como `### 2.1 Jobs To Be Done`, além da lista numerada após a introdução de §9.1.1. Normalizar uma linha em branco antes das listas melhora a consistência do fluxo/renderização sem mudar texto ou contagem. Não tratei esse markup como correção de redação nem executei uma varredura adicional.

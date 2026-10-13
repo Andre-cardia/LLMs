@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forge Report — Monitor Global de Labs de LLM</title>
+<style>
+  :root{--bg:#0d1117;--card:#161b22;--ink:#e6edf3;--mute:#8b949e;--line:#30363d;--acc:#3fb950;--red:#f85149;--gold:#d29922;--blue:#58a6ff}
+  @media (prefers-color-scheme: light){:root{--bg:#f6f8fa;--card:#fff;--ink:#1f2328;--mute:#59636e;--line:#d1d9e0;--acc:#1a7f37;--red:#cf222e;--gold:#9a6700;--blue:#0969da}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+  .wrap{max-width:1040px;margin:0 auto;padding:40px 24px 64px}
+  header{display:grid;grid-template-columns:1fr 220px;gap:24px;align-items:center;border-bottom:1px solid var(--line);padding-bottom:28px}
+  .kicker{font:600 12px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+  h1{font-size:34px;line-height:1.15;margin:10px 0 12px}
+  .lede{color:var(--mute);max-width:640px;margin:0}
+  .meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  .pill{font:12px ui-monospace,Menlo,monospace;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--mute)}
+  h2{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin:40px 0 14px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .card h3{margin:0 0 6px;font-size:15px;display:flex;gap:8px;align-items:center}
+  .card p{margin:0;color:var(--mute);font-size:14px}
+  .lock h3::before{content:"🔒"}
+  .kill{border-left:3px solid var(--red)}
+  .kill h3::before{content:"✕";color:var(--red);font-weight:700}
+  .crack{border-left:3px solid var(--gold)}
+  .crack h3::before{content:"⚠";color:var(--gold)}
+  .fact{border-left:3px solid var(--blue)}
+  .fact h3::before{content:"✓";color:var(--blue);font-weight:700}
+  .cast{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+  .who{display:flex;gap:12px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .who .ic{font-size:26px;line-height:1}
+  .who b{display:block;font-size:14px}
+  .who span{color:var(--mute);font-size:13px}
+  .who i{display:block;color:var(--ink);font-size:13px;margin-top:4px;opacity:.85}
+  .tag{font:11px ui-monospace,Menlo,monospace;color:var(--mute);border:1px solid var(--line);border-radius:4px;padding:1px 6px;margin-left:6px}
+  footer{margin-top:48px;color:var(--mute);font-size:13px;border-top:1px solid var(--line);padding-top:16px}
+  code{font:13px ui-monospace,Menlo,monospace}
+  @media (max-width:720px){header{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <div class="kicker">BMad Forge Idea · Relatório da sessão</div>
+    <h1>Monitor Global de Labs de LLM</h1>
+    <p class="lede">Globo 3D com laboratórios de LLM e o ecossistema de IA (chips, nuvem, energia, software), terminal retrô com notícias traduzidas, tabela comparativa de modelos e faixa de cotações — para uso pessoal, em infraestrutura portátil e gratuita.</p>
+    <div class="meta">
+      <span class="pill">Objetivo: melhorar</span>
+      <span class="pill">15 perguntas</span>
+      <span class="pill">11 locks</span>
+      <span class="pill">6 rejeições</span>
+      <span class="pill">Andre · LLMs</span>
+    </div>
+  </div>
+  <svg viewBox="0 0 220 220" width="220" height="220" role="img" aria-label="Selo: HARDENED">
+    <defs>
+      <radialGradient id="wax" cx="40%" cy="35%" r="70%">
+        <stop offset="0" stop-color="#e5534b"/><stop offset=".6" stop-color="#a4161a"/><stop offset="1" stop-color="#640d14"/>
+      </radialGradient>
+      <path id="ring" d="M110,110 m-74,0 a74,74 0 1,1 148,0 a74,74 0 1,1 -148,0"/>
+    </defs>
+    <path fill="url(#wax)" d="M110 8c14 0 18 10 30 13s24-3 32 7 2 22 8 33 18 16 18 30-12 18-15 30 5 24-4 32-22 2-33 8-15 18-30 18-19-12-30-15-24 4-32-5-3-22-9-33-18-15-18-30 12-18 15-30-5-24 4-32 22-2 33-8S96 8 110 8z"/>
+    <circle cx="110" cy="110" r="86" fill="none" stroke="#ffffff" stroke-opacity=".25" stroke-width="2"/>
+    <circle cx="110" cy="110" r="60" fill="none" stroke="#ffffff" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="3 4"/>
+    <text font-family="ui-monospace,Menlo,monospace" font-size="11" letter-spacing="3" fill="#ffe8e6" fill-opacity=".9"><textPath href="#ring" startOffset="2%">FORGED · BMAD · FORGE IDEA · LLM LABS GLOBE ·</textPath></text>
+    <g transform="translate(110 102)" fill="none" stroke="#ffe8e6" stroke-width="2.2" stroke-opacity=".95">
+      <circle r="22"/><ellipse rx="10" ry="22"/><path d="M-22 0h44M-19 -11h38M-19 11h38"/>
+    </g>
+    <text x="110" y="150" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="20" letter-spacing="2" fill="#fff">HARDENED</text>
+  </svg>
+</header>
+
+<h2>Decisões travadas</h2>
+<div class="grid">
+  <div class="card lock"><h3>Definição de laboratório</h3><p>Empresa que treina o próprio modelo base (fronteira ou pesos abertos), privada ou listada. Corte: presença no Artificial Analysis/OpenRouter ou pesos relevantes no Hugging Face.</p></div>
+  <div class="card lock"><h3>Ecossistema curado por camada</h3><p>Labs · Chips · Nuvem/datacenter · Energia p/ IA · Software IA — independente de bolsa, incluindo OpenAI, Anthropic e outras privadas. Inclusão obrigatória: <b>Google</b>, <b>Apple</b>, <b>SpaceX/xAI</b>, <b>Microsoft</b>, <b>IBM</b>, <b>Tesla</b>, <b>TSMC</b>, <b>Amazon</b>, <b>Broadcom</b>, <b>Oracle</b>, NVIDIA, ASML, SK Hynix, Samsung, CoreWeave, Constellation, Vistra, Oklo, GE Vernova. Empresas em várias camadas: cor = camada principal, demais como etiquetas.</p></div>
+  <div class="card lock"><h3>Atualização por risco</h3><p>APIs estruturadas → script sem LLM publica sozinho. Notícias → agente barato traduz e publica com original + link. Cadastro → fila de revisão humana. Agente de notícias sem escrita no cadastro.</p></div>
+  <div class="card lock"><h3>Codificação do globo</h3><p>Cor = camada. Pulso = lançamento, decai e para em 7 dias. Zoom regional troca pontos por logos. Filtros por camada.</p></div>
+  <div class="card lock"><h3>Terminal retrô</h3><p>Hover = prévia; clique fixa e digita tudo; Esc pula; ≤ 2 s; som sintetizado desligado por padrão; respeita redução de movimento.</p></div>
+  <div class="card lock"><h3>Logos</h3><p>Arquivos locais oficiais, sem dependência de serviço; transição ASCII → logo; monograma de fallback; nota de marcas.</p></div>
+  <div class="card lock"><h3>Tabela de modelos</h3><p>AA + OpenRouter + HF. “Custo estimado por tarefa” com fórmula visível; “≈” em modelos de raciocínio; latência rotulada como tempo até resposta.</p></div>
+  <div class="card lock"><h3>Mercado enxuto</h3><p>Faixa de cotações (índices + ações de IA) e cotação/minigráfico de 30 dias no terminal. Yahoo + Finnhub, ~15 min no pregão.</p></div>
+  <div class="card lock"><h3>Uso pessoal</h3><p>Fontes gratuitas por ora; licenças revistas antes de abrir ao público.</p></div>
+  <div class="card lock"><h3>Infra portátil</h3><p>GitHub Actions gera arquivos de dados; site estático só lê. Provável Vercel; migração para AWS sem reescrever.</p></div>
+  <div class="card lock"><h3>Custo por tarefa (fallback)</h3><p>API gratuita do AA não traz o campo — estimativa própria transparente (opção A).</p></div>
+</div>
+
+<h2>Rejeitado</h2>
+<div class="grid">
+  <div class="card kill"><h3>Nasdaq inteira</h3><p>~4 mil empresas afogam os labs, notícias ~40× mais caras, produto vira terminal financeiro genérico.</p></div>
+  <div class="card kill"><h3>Critério “só Nasdaq / setor oficial”</h3><p>Rejeitado porque deixaria de fora TSMC, Oracle, Vistra e Oklo (listadas na NYSE) e incluiria centenas de empresas sem relação com IA. Essas empresas estão no projeto.</p></div>
+  <div class="card kill"><h3>Scraping do Artificial Analysis</h3><p>Viola os termos de uso e quebra a cada mudança de layout.</p></div>
+  <div class="card kill"><h3>Rodar só no Mac</h3><p>Atualizações param quando o Mac dorme.</p></div>
+  <div class="card kill"><h3>Cartões de índices e heatmap</h3><p>Excesso de painéis; o essencial cabe na faixa e no terminal.</p></div>
+  <div class="card kill"><h3>Agente publicando cadastro</h3><p>Notícia é entrada hostil — risco de injeção e dados falsos no globo.</p></div>
+</div>
+
+<h2>Fraquezas que sobreviveram ao escrutínio</h2>
+<div class="grid">
+  <div class="card crack"><h3>Cadastro manual</h3><p>Sede, coordenadas e contato não vêm de API; o agente só propõe — manutenção humana contínua.</p></div>
+  <div class="card crack"><h3>Casamento de modelos</h3><p>AA, OpenRouter e HF usam IDs diferentes; pares incertos vão para revisão.</p></div>
+  <div class="card crack"><h3>Yahoo não oficial</h3><p>Pode ser bloqueado sem aviso; Finnhub cobre só parte (EUA).</p></div>
+  <div class="card crack"><h3>Tradução automática</h3><p>Modelo barato pode distorcer fatos; mitigado com título original + link.</p></div>
+  <div class="card crack"><h3>Custo por tarefa é estimativa</h3><p>Sem dado de tokens de raciocínio, modelos que pensam ficam com “≈”.</p></div>
+</div>
+
+<h2>Fatos verificados na sessão</h2>
+<div class="grid">
+  <div class="card fact"><h3>Artificial Analysis</h3><p>Com chave: 696 modelos, 58 criadores, release_date, índices e 15 benchmarks, preço, tokens/s, TTFT. Sem custo por tarefa.</p></div>
+  <div class="card fact"><h3>OpenRouter</h3><p>Sem chave: 467 modelos de 63 orgs com contexto, cache e modalidades.</p></div>
+  <div class="card fact"><h3>Notícias e pesos abertos</h3><p>GDELT, Google News RSS e Hugging Face respondem sem chave.</p></div>
+  <div class="card fact"><h3>Nasdaq</h3><p>4.008 ações no screener; 610 de tecnologia; 81 utilities/elétricas.</p></div>
+</div>
+
+<h2>Quem pressionou a ideia</h2>
+<div class="cast">
+  <div class="who"><div class="ic">📋</div><div><b>John <span class="tag">BMad PM</span></b><span>Product Manager</span><i>“Quem abre este site e por quê?”</i></div></div>
+  <div class="who"><div class="ic">📊</div><div><b>Mary <span class="tag">BMad</span></b><span>Business Analyst</span><i>“Setor oficial diz o que se vende, não se importa para a IA.”</i></div></div>
+  <div class="who"><div class="ic">🏗️</div><div><b>Winston <span class="tag">BMad</span></b><span>System Architect</span><i>“Baixe cada logo uma vez. Por que AWS?”</i></div></div>
+  <div class="who"><div class="ic">🎨</div><div><b>Sally <span class="tag">BMad</span></b><span>UX Designer</span><i>“Um ponto não pode ter duas cores.”</i></div></div>
+  <div class="who"><div class="ic">💻</div><div><b>Amelia <span class="tag">BMad</span></b><span>Senior Engineer</span><i>“Som sintetizado, liberado só após o primeiro clique.”</i></div></div>
+  <div class="who"><div class="ic">🔒</div><div><b>Vex <span class="tag">custom</span></b><span>Security Engineer</span><i>“Notícia é entrada hostil.”</i></div></div>
+  <div class="who"><div class="ic">😤</div><div><b>Grumbal <span class="tag">custom</span></b><span>The Adversary</span><i>“15 hovers, 15 metralhadoras de teclado.”</i></div></div>
+  <div class="who"><div class="ic">🗞️</div><div><b>Renata Okafor</b><span>Jornalista de dados</span><i>“‘Todas as empresas’ matou meu rastreador.”</i></div></div>
+  <div class="who"><div class="ic">✍️</div><div><b>Heloísa Prado</b><span>Editora de agência</span><i>“Mostre sempre o título original.”</i></div></div>
+  <div class="who"><div class="ic">💼</div><div><b>Marcus Feld</b><span>Licenciamento de market data</span><i>“Redistribuição custa caro.”</i></div></div>
+  <div class="who"><div class="ic">📈</div><div><b>Diego Nakamura</b><span>Gestor de fundo de IA</span><i>“Filtro por camada da cadeia, não por bolsa.”</i></div></div>
+  <div class="who"><div class="ic">🗺️</div><div><b>Tomás Riviera</b><span>Designer de visualização</span><i>“Cor é categoria; movimento é evento.”</i></div></div>
+  <div class="who"><div class="ic">⚖️</div><div><b>Lúcia Ferraz</b><span>Advogada de PI</span><i>“Identificar é ok; distorcer a marca, não.”</i></div></div>
+  <div class="who"><div class="ic">🛠️</div><div><b>Priya Raman</b><span>Engenheira de ML</span><i>“Mostrem a conta.”</i></div></div>
+  <div class="who"><div class="ic">🖥️</div><div><b>Kenji Mori</b><span>Engenheiro de infra</span><i>“Mac dormindo = notícias de ontem.”</i></div></div>
+  <div class="who"><div class="ic">☁️</div><div><b>Rafael Duarte</b><span>Arquiteto de nuvem</span><i>“Configure alerta de custo no dia um.”</i></div></div>
+</div>
+
+<footer>
+  Próximo passo sugerido: <code>bmad-prd</code> ou <code>bmad-spec</code> usando <code>forged-idea.md</code> como entrada · Em aberto: hospedagem final, teto do agente (~US$5/mês assumido), modelo tradutor, nº de notícias por empresa.
+</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,1188 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Monitor Global · Artificial Analysis — protótipo UX</title>
+<style>
+/* PROTÓTIPO DE UX — não é código de produção.
+   Ilustra: temas 01 OSIRIS fiel / 02 Fósforo âmbar / 04 Sala de controle noturna (× escuro/claro);
+   globo com texturas NASA Blue Marble / Black Marble; Pontos por Camada; Pulso 7 dias;
+   Relações sempre sutis + destaque na seleção + botão Relações com filtro por tipo (cor);
+   Prévia (hover 300 ms) e Terminal Fixado com digitação, Esc/clique, som opcional;
+   barra de status no topo; barras laterais de ícones; alternância 3D/2D/MAPA/SAT;
+   leitura de cursor; Faixa de cotações na BASE; Tabela de modelos abaixo.
+   v5: Laboratórios em destaque (◆ maior + rótulo fixo com desobstrução + espalhamento de pontos próximos),
+   aba LABS no painel esquerdo, console do Agente especialista em LLMs (tecla /, simulado), som 1 clique + seta.
+   Fontes: .memlog.md, directions-1.html, PRD prd-LLMs-2026-10-07. */
+:root{--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+/* ---- tokens por tema/modo ---- */
+[data-theme=osiris][data-mode=escuro]{--bg:#050607;--bar:#07090B;--s1:#0B1014;--s2:#131A20;--line:#1C2A33;--tx:#D7E3EA;--mu:#708491;--acc:#F2B33D;--d1:#36E2F0;--d2:#3DF58A;--up:#22E07A;--dn:#FF4D5E;--c-lab:#A78BFA;--c-chip:#F472B6;--c-cloud:#4DA3FF;--c-energy:#FB923C;--c-soft:#E2E8F0;--glow:0 0 8px rgba(54,226,240,.35);--globebg:#050607;--atm:#4DA3FF;--label:var(--mono)}
+[data-theme=osiris][data-mode=claro]{--bg:#E9EDF0;--bar:#F6F8F9;--s1:#FFFFFF;--s2:#DDE3E7;--line:#B9C6CE;--tx:#0D1A22;--mu:#576772;--acc:#865C00;--d1:#006F80;--d2:#08723B;--up:#08723B;--dn:#BF2638;--c-lab:#6D4AE0;--c-chip:#C02C83;--c-cloud:#1F6FD1;--c-energy:#C2560C;--c-soft:#2B3A44;--glow:none;--globebg:#0B1014;--atm:#7FB8FF;--label:var(--mono)}
+[data-theme=ambar][data-mode=escuro]{--bg:#0A0700;--bar:#0D0902;--s1:#140E04;--s2:#1F1707;--line:#3A2A0C;--tx:#FFC966;--mu:#A17C36;--acc:#FFB000;--d1:#FFD27A;--d2:#FFE9B8;--up:#9BE564;--dn:#FF6A3D;--c-lab:#E3B877;--c-chip:#B9A9D6;--c-cloud:#8FB3C4;--c-energy:#D98F6E;--c-soft:#CFC6A9;--glow:0 0 10px rgba(255,176,0,.45);--globebg:#0A0700;--atm:#FFB000;--label:var(--mono)}
+[data-theme=ambar][data-mode=claro]{--bg:#F2E8D0;--bar:#EBDDBC;--s1:#F8F1DF;--s2:#E4D3AC;--line:#C4A970;--tx:#3B2604;--mu:#735829;--acc:#855000;--d1:#8A4B00;--d2:#5E3A08;--up:#346819;--dn:#A53318;--c-lab:#9C6B1E;--c-chip:#6A5A92;--c-cloud:#3F6E84;--c-energy:#A4502E;--c-soft:#5E5640;--glow:none;--globebg:#F2E8D0;--atm:#C9A25A;--label:var(--mono)}
+[data-theme=noturna][data-mode=escuro]{--bg:#061226;--bar:#0A1A33;--s1:#0E2142;--s2:#15305A;--line:#23406B;--tx:#F4F7FB;--mu:#8EA3C0;--acc:#E8C77A;--d1:#7CC4FF;--d2:#B7E3FF;--up:#4ADE80;--dn:#F87171;--c-lab:#C4A7FF;--c-chip:#FF9EC7;--c-cloud:#5EE1E6;--c-energy:#FFC56B;--c-soft:#E6EDF7;--glow:0 0 14px rgba(124,196,255,.25);--globebg:#061226;--atm:#7CC4FF;--label:var(--sans)}
+[data-theme=noturna][data-mode=claro]{--bg:#E6ECF3;--bar:#F4F7FB;--s1:#FFFFFF;--s2:#D7E1EC;--line:#B4C3D6;--tx:#0B1E3A;--mu:#506582;--acc:#7E5E21;--d1:#1B61C1;--d2:#0B3F86;--up:#127136;--dn:#BA2E2D;--c-lab:#6B46C1;--c-chip:#C2337A;--c-cloud:#0E8C99;--c-energy:#B86E00;--c-soft:#33475F;--glow:none;--globebg:#E6ECF3;--atm:#9CC8FF;--label:var(--sans)}
+/* AA: em OSIRIS e Âmbar os painéis (Terminal, Leitor, Agente, Fila, MERCADOS) são sempre escuros → no modo claro usam a paleta do modo escuro */
+[data-theme=osiris][data-mode=claro] :is(#term,#reader,#chat,#queue,#mkt){--tx:#D7E3EA;--mu:#708491;--acc:#F2B33D;--d1:#36E2F0;--d2:#3DF58A;--up:#22E07A;--dn:#FF4D5E;--line:#1C2A33;--s1:#0B1014;--s2:#131A20}
+[data-theme=ambar][data-mode=claro] :is(#term,#reader,#chat,#queue,#mkt){--tx:#FFC966;--mu:#A17C36;--acc:#FFB000;--d1:#FFD27A;--d2:#FFE9B8;--up:#9BE564;--dn:#FF6A3D;--line:#3A2A0C;--s1:#140E04;--s2:#1F1707}
+/* AA: OSIRIS claro — rótulos e leitura de cursor sobre a janela escura do Globo usam texto claro */
+[data-theme=osiris][data-mode=claro] .lbl{color:#D7E3EA;text-shadow:0 0 4px #0B1014,0 0 8px #0B1014}
+[data-theme=osiris][data-mode=claro] #cursor{color:#708491}[data-theme=osiris][data-mode=claro] #cursor b{color:#36E2F0}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--mono);font-size:13px}
+a{color:var(--d1)}
+.hud{font-family:var(--label);text-transform:uppercase;letter-spacing:.18em;font-size:10.5px}
+#stage{position:relative;height:100vh;min-height:620px;overflow:hidden;background:var(--globebg)}
+#globe{position:absolute;inset:0}
+/* claro do OSIRIS: globo numa "janela" escura dentro do chrome claro */
+[data-theme=osiris][data-mode=claro] #stage{background:var(--bg)}
+[data-theme=osiris][data-mode=claro] #globe{inset:56px 56px 44px 56px;border-radius:18px;overflow:hidden;background:#0B1014;box-shadow:inset 0 0 0 1px #2B3A44,0 10px 30px rgba(13,26,34,.25)}
+/* âmbar: scanlines + vinheta */
+[data-theme=ambar][data-mode=escuro] #stage::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 1px,transparent 1px 3px),radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.55));z-index:5}
+[data-theme=ambar][data-mode=claro] #stage::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(122,94,44,.07) 0 1px,transparent 1px 22px);z-index:5}
+/* barra de status */
+#top{position:absolute;top:0;left:0;right:0;height:56px;display:flex;align-items:center;gap:22px;padding:0 20px 0 20px;background:linear-gradient(var(--bar),transparent);z-index:20}
+[data-mode=claro] #top{background:var(--bar);border-bottom:1px solid var(--line)}
+#brand{display:flex;flex-direction:column;gap:2px}
+#brand b{font-family:var(--mono);color:var(--acc);letter-spacing:.42em;font-size:15px;text-shadow:var(--glow)}
+#brand span{color:var(--mu);letter-spacing:.3em;font-size:9px}
+#status{margin-left:auto;display:flex;gap:18px;align-items:center;white-space:nowrap}
+#tabs,#tabs button,#brand{white-space:nowrap}
+@media (max-width:1560px){#status .w-xl{display:none}#status{gap:14px}}
+@media (max-width:1280px){#status .w-lg{display:none}#tabs kbd{display:none}}
+#status .v{color:var(--d1);text-shadow:var(--glow)}
+#status .g{color:var(--d2)}
+#status .live::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--up);margin-right:6px;box-shadow:0 0 8px var(--up);animation:blink 1.6s infinite}
+@keyframes blink{50%{opacity:.25}}
+/* barras laterais */
+.rail{position:absolute;top:72px;bottom:56px;width:46px;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:20;padding-top:8px}
+#left{left:10px}#right{right:10px;justify-content:center}
+.rb{position:relative;width:38px;height:38px;border-radius:10px;display:grid;place-items:center;border:1px solid var(--line);background:color-mix(in srgb,var(--s1) 70%,transparent);color:var(--tx);cursor:pointer;font-family:var(--mono);font-size:17px}
+.rb:hover{border-color:var(--line);color:var(--tx);background:var(--s1)}
+.rb.on{color:var(--tx);border-color:var(--line);background:color-mix(in srgb,var(--s1) 80%,transparent)}
+.rb .dot{width:10px;height:10px;border-radius:50%}
+.rb.off .dot{opacity:.25}
+.rb .badge{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;border-radius:8px;background:var(--d1);color:var(--bg);font-size:9.5px;display:grid;place-items:center;padding:0 3px;font-weight:700}
+.rb[data-tip]:hover::after{content:attr(data-tip);position:absolute;white-space:nowrap;top:50%;transform:translateY(-50%);background:var(--s2);color:var(--tx);border:1px solid var(--line);padding:4px 8px;border-radius:6px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-family:var(--label);z-index:40}
+#left .rb[data-tip]:hover::after{left:46px}#right .rb[data-tip]:hover::after{right:46px}
+.rb.act{border-color:var(--acc);color:var(--acc);box-shadow:var(--glow)}
+.sep{width:22px;height:1px;background:var(--line);margin:4px 0}
+/* popovers */
+.pop{position:absolute;right:62px;z-index:30;background:var(--s1);border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-width:240px;display:none;box-shadow:0 12px 32px rgba(0,0,0,.35)}
+.pop.show{display:block}
+.pop h4{margin:0 0 8px;color:var(--acc)}
+.pop label{display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;font-size:12px}
+.sw{width:22px;height:3px;border-radius:2px}
+.themes{display:grid;gap:8px}
+.th{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px;cursor:pointer;background:var(--s2)}
+.th.sel{outline:2px solid var(--acc)}
+.th i{display:block;width:44px;height:28px;border-radius:5px}
+.modes{display:flex;gap:6px;margin-top:10px}
+.modes button{flex:1;font-family:var(--mono);padding:6px;border-radius:6px;border:1px solid var(--line);background:var(--s2);color:var(--tx);cursor:pointer;font-size:11px;letter-spacing:.12em}
+.modes button.sel{border-color:var(--acc);color:var(--acc)}
+/* rodapé do globo */
+#views{position:absolute;left:14px;bottom:58px;display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;z-index:20;background:color-mix(in srgb,var(--s1) 85%,transparent)}
+#views button{font-family:var(--label);text-transform:uppercase;letter-spacing:.18em;font-size:10.5px;padding:8px 14px;background:transparent;border:0;color:var(--mu);cursor:pointer;position:relative}
+#views button.sel{color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
+#views button[data-soon]:hover::after{content:"em breve";position:absolute;bottom:38px;left:0;background:var(--s2);color:var(--tx);padding:3px 7px;border-radius:5px;letter-spacing:.1em}
+#cursor{position:absolute;left:16px;bottom:40px;z-index:20;color:var(--mu)}
+#cursor b{color:var(--d1);font-weight:400}
+#legend{position:absolute;right:66px;bottom:52px;z-index:20;color:var(--mu);display:flex;gap:6px}
+#legend .lg{display:flex;align-items:center;gap:6px;background:none;border:1px solid transparent;border-radius:6px;padding:4px 7px;color:var(--mu);font:inherit;letter-spacing:inherit;text-transform:inherit;cursor:pointer}
+#legend .lg:hover{border-color:var(--line);color:var(--tx)}
+#legend .lg b{color:var(--tx);font-weight:700;margin-left:2px;letter-spacing:.06em}
+#legend .lg.off{opacity:.35}
+#legend .lg.off i{box-shadow:none!important}
+#legend i{width:8px;height:8px;border-radius:50%}
+/* faixa de cotações */
+#ticker{position:absolute;left:0;right:0;bottom:0;height:34px;background:var(--bar);border-top:1px solid var(--line);z-index:25;display:flex;align-items:center;overflow:hidden}
+#ticker .note{flex:none;position:relative;z-index:2;background:var(--bar);padding:0 14px;color:var(--mu);border-right:1px solid var(--line);height:100%;display:flex;align-items:center;font-size:9.5px}
+#ticker .track{display:flex;gap:30px;white-space:nowrap;animation:scroll 70s linear infinite;padding-left:30px}
+#ticker:hover .track{animation-play-state:paused}
+@keyframes scroll{to{transform:translateX(-50%)}}
+.tk{display:flex;align-items:center;gap:7px;cursor:pointer}
+.mono{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:8.5px;font-weight:700;color:var(--bg)}
+.tk .s{color:var(--tx);letter-spacing:.08em}.tk .p{color:var(--mu)}.up{color:var(--up)}.dn{color:var(--dn)}
+/* prévia */
+.pt{width:9px;height:9px;border-radius:50%;background:var(--pc);box-shadow:0 0 0 1.5px rgba(0,0,0,.55),0 0 8px var(--pc);pointer-events:auto;cursor:pointer;transform:translate(-50%,-50%);transition:transform .15s}
+.pt:hover{transform:translate(-50%,-50%) scale(1.6)}
+.pt.sel{width:13px;height:13px;box-shadow:0 0 0 2px var(--acc),0 0 14px var(--pc)}
+[data-mode=claro]:not([data-theme=osiris]) .pt{box-shadow:0 0 0 1.5px rgba(255,255,255,.85),0 0 4px var(--pc)}
+#preview{position:fixed;z-index:35;pointer-events:none;display:none;background:var(--s1);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:180px;box-shadow:var(--glow),0 8px 20px rgba(0,0,0,.35)}
+#preview .n{color:var(--tx);font-weight:700;letter-spacing:.06em}
+/* terminal */
+#term{position:fixed;z-index:36;width:430px;max-width:calc(100vw - 24px);max-height:70vh;overflow:auto;display:none;background:color-mix(in srgb,var(--s1) 94%,transparent);border:1px solid var(--line);border-radius:6px;box-shadow:var(--glow),0 18px 50px rgba(0,0,0,.5);font-size:12.5px;line-height:1.55}
+[data-theme=osiris] #term{border-radius:2px;background:rgba(5,6,7,.94);color:#D7E3EA;border-color:#1C2A33}
+[data-theme=osiris] #term::before,[data-theme=osiris] #term::after{content:"";position:absolute;width:14px;height:14px;border:2px solid #F2B33D}
+[data-theme=osiris] #term::before{top:-2px;left:-2px;border-right:0;border-bottom:0}
+[data-theme=osiris] #term::after{bottom:-2px;right:-2px;border-left:0;border-top:0}
+[data-theme=ambar] #term{background:#140E04;color:#FFC966;border-color:#3A2A0C;border-radius:14px;box-shadow:0 0 0 6px #1F1707,0 0 24px rgba(255,176,0,.35);text-shadow:0 0 6px rgba(255,176,0,.6)}
+[data-theme=noturna] #term{border-radius:14px;backdrop-filter:blur(10px)}
+#term .hd{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--line)}
+[data-theme=osiris] #term .hd,[data-theme=ambar] #term .hd{border-color:#2a2a2a}
+#term .hd span{color:var(--acc)}
+#term .x{background:none;border:0;color:inherit;font:inherit;cursor:pointer;font-size:14px}
+#term pre{margin:0;padding:12px 14px 14px;white-space:pre-wrap;font-family:var(--mono)}
+#term .cur{display:inline-block;width:8px;height:14px;background:currentColor;vertical-align:-2px;animation:blink 1s steps(1) infinite}
+#term .ascii{color:var(--acc);font-size:11px;line-height:1.15;letter-spacing:.05em}
+#term .muted{opacity:.6}
+#term .k{opacity:.65}
+#term .irr{font-size:10px;opacity:.55;cursor:pointer;margin-left:6px;text-decoration:underline}
+#term .logo{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;font-weight:700;color:#050607;vertical-align:middle;margin-right:8px;transition:opacity .5s}
+/* tabela */
+/* abas e vistas */
+#tabs{display:flex;gap:4px;margin-left:28px}
+#tabs button{font-family:var(--label);text-transform:uppercase;letter-spacing:.2em;font-size:10.5px;padding:7px 12px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--mu);cursor:pointer}
+#tabs button.sel{color:var(--acc);border-color:var(--acc);text-shadow:var(--glow)}
+#tabs kbd{font-family:var(--mono);opacity:.5;margin-left:6px;font-size:9px}
+.view{position:fixed;top:56px;left:0;right:0;bottom:34px;overflow:auto;background:var(--bg);z-index:22;display:none;padding:22px 70px 40px}
+.view.show{display:block}
+body.v-models #stage .rail,body.v-news #stage .rail{display:none}
+body.v-models #globe,body.v-news #globe,body.v-models #feed,body.v-news #feed{visibility:hidden}
+#tblWrap{overflow-x:auto}
+#top,#ticker{position:fixed}
+/* fluxo de notícias */
+#feed{position:absolute;left:14px;top:72px;width:330px;max-height:calc(100% - 200px);z-index:21;background:color-mix(in srgb,var(--s1) 88%,transparent);border:1px solid var(--line);border-radius:6px;display:flex;flex-direction:column;box-shadow:var(--glow)}
+#feed .hd{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);color:var(--acc)}
+#feed .hd button{background:none;border:0;color:var(--mu);cursor:pointer;font:inherit}
+#feed .list{overflow:auto;padding:4px 0}
+#feed.min .list,#feed.min .fflt{display:none}
+.fi{padding:7px 10px;border-bottom:1px dashed color-mix(in srgb,var(--line) 70%,transparent);cursor:pointer;font-size:11.5px;line-height:1.4}
+.fi:hover{background:var(--s2)}
+.fi .t{color:var(--mu);font-size:10px}
+.fi .co{font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:700}
+.fi.new{animation:flash 1.6s ease-out}
+@keyframes flash{from{background:color-mix(in srgb,var(--acc) 30%,transparent)}to{background:transparent}}
+/* notícias tela cheia */
+.filters{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0 16px}
+.chip{font-family:var(--label);text-transform:uppercase;letter-spacing:.14em;font-size:10px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:var(--s1);color:var(--tx);cursor:pointer;display:flex;gap:6px;align-items:center}
+.chip.off{opacity:.4}
+.chip i{width:8px;height:8px;border-radius:50%}
+select{font-family:var(--mono);background:var(--s1);color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+.nitem{display:grid;grid-template-columns:70px 34px 1fr;gap:12px;padding:12px 4px;border-bottom:1px solid var(--line);align-items:start}
+.nitem .d{color:var(--mu)}
+.nitem h5{margin:0 0 3px;font-size:13.5px;font-weight:600;font-family:var(--mono)}
+.nitem .o{color:var(--mu);font-size:12px}
+.nitem .m{color:var(--mu);font-size:10.5px;margin-top:5px;letter-spacing:.06em}
+.nitem .m a{margin-left:8px}
+/* comparação de estilos da tabela */
+.styleSw{display:flex;gap:6px;margin-left:auto}
+.styleSw button{font-family:var(--mono);font-size:11px;letter-spacing:.14em;padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:var(--s1);color:var(--tx);cursor:pointer}
+.styleSw button.sel{border-color:var(--acc);color:var(--acc)}
+.cmp{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+/* estilo TERMINAL */
+.tbl-term{font-family:var(--mono)}
+.tbl-term thead th{background:transparent;border-bottom:1px dashed var(--line);color:var(--acc);text-shadow:var(--glow)}
+.tbl-term td{border-bottom:1px dashed color-mix(in srgb,var(--line) 70%,transparent)}
+.tbl-term tr:hover td{background:color-mix(in srgb,var(--acc) 8%,transparent)}
+.tbl-term .bar{display:none}
+.tbl-term.tbl-hib .bar{display:inline-block;height:5px;background:var(--d1);margin-left:8px;vertical-align:middle;opacity:.85;box-shadow:var(--glow)}
+.prompt{font-family:var(--mono);color:var(--d2);margin:6px 0 12px;text-shadow:var(--glow)}
+/* estilo ANALÍTICO */
+.tbl-ana{font-family:var(--sans);font-size:13px}
+.tbl-ana thead th{font-family:var(--sans);text-transform:none;letter-spacing:0;font-size:12px;font-weight:600;color:var(--tx);background:var(--s2);padding:12px 12px}
+.tbl-ana td{padding:13px 12px;font-variant-numeric:tabular-nums}
+.tbl-ana tbody tr:nth-child(odd) td{background:color-mix(in srgb,var(--s1) 60%,transparent)}
+.tbl-ana .num{font-family:var(--mono)}
+.tbl-ana .bar{display:inline-block;height:6px;border-radius:3px;background:var(--d1);margin-left:8px;vertical-align:middle;opacity:.8}
+.ana-wrap{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.tbl-term-wrap{border:1px solid var(--line);border-radius:4px;padding:6px 10px;background:color-mix(in srgb,var(--s1) 70%,transparent)}
+/* leitor de notícia */
+#reader{position:fixed;z-index:37;display:none;background:color-mix(in srgb,var(--s1) 96%,transparent);border:1px solid var(--line);box-shadow:var(--glow),0 18px 50px rgba(0,0,0,.5);font-size:13px;line-height:1.6;overflow:auto}
+#reader.float{width:440px;max-height:72vh;border-radius:6px}
+#reader.side{top:56px!important;right:62px!important;left:auto!important;bottom:34px;width:min(480px,calc(100vw - 140px));max-height:none;border-radius:0;border-right:0;border-top:0;border-bottom:0;animation:slidein .25s ease-out}
+@keyframes slidein{from{transform:translateX(40px);opacity:0}}
+[data-theme=ambar] #reader{background:#140E04;color:#FFC966;text-shadow:0 0 6px rgba(255,176,0,.45)}
+[data-theme=osiris] #reader{background:rgba(5,6,7,.96);color:#D7E3EA}
+#reader .hd{position:sticky;top:0;display:flex;align-items:center;gap:8px;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--line);background:inherit;z-index:1}
+#reader .hd .ttl{color:var(--acc)}
+#reader .lay{display:flex;gap:4px}
+#reader .lay button,#reader .x{background:none;border:1px solid var(--line);border-radius:5px;color:inherit;font:inherit;font-size:10px;padding:3px 7px;cursor:pointer}
+#reader .lay button.sel{border-color:var(--acc);color:var(--acc)}
+#reader .bd{padding:14px 16px 18px;font-family:var(--mono)}
+#reader h3{margin:4px 0 4px;font-size:16px;line-height:1.35}
+#reader .orig{opacity:.6;font-size:12px;margin-bottom:10px}
+#reader .meta{opacity:.7;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px}
+#reader .sec{color:var(--acc);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;margin:14px 0 6px}
+#reader ul{margin:0;padding-left:18px}
+#reader .cos{display:flex;gap:6px;flex-wrap:wrap}
+#reader .cos span{cursor:pointer;border:1px solid var(--line);border-radius:999px;padding:3px 9px;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase}
+#reader .open{display:inline-block;margin-top:16px;padding:9px 14px;border:1px solid var(--acc);color:var(--acc);border-radius:6px;text-decoration:none;letter-spacing:.14em;font-size:11px;text-transform:uppercase}
+#reader .note{opacity:.5;font-size:10px;margin-top:10px}
+.nlink{cursor:pointer}.nlink:hover{text-decoration:underline}
+/* som */
+.srow{display:grid;grid-template-columns:24px 1fr 46px;gap:8px;align-items:center;padding:6px 0}
+.srow input[type=range]{width:100%}
+.tg{font-family:var(--mono);font-size:10px;padding:3px 6px;border-radius:5px;border:1px solid var(--line);background:var(--s2);color:var(--mu);cursor:pointer}
+.tg.on{color:var(--acc);border-color:var(--acc)}
+#below{padding:28px 70px 60px;background:var(--bg)}
+#below h2{color:var(--acc);margin:0 0 4px;letter-spacing:.3em;font-size:13px}
+#below .sub{color:var(--mu);margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{position:sticky;top:0;background:var(--s2);color:var(--mu);text-align:right;padding:9px 10px;font-weight:400;cursor:pointer;border-bottom:1px solid var(--line);font-family:var(--label);text-transform:uppercase;letter-spacing:.12em;font-size:10px;white-space:nowrap}
+th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
+td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+tr:hover td{background:var(--s1)}
+td .num{color:var(--d1)}
+.info{cursor:help;color:var(--d1)}
+.tag{font-size:10px;border:1px solid var(--line);padding:1px 5px;border-radius:4px;color:var(--mu);margin-left:4px}
+.foot{color:var(--mu);margin-top:10px}
+/* ===== v5 · hierarquia: Laboratórios em destaque, ecossistema discreto ===== */
+.ptw{position:relative;width:0;height:0;pointer-events:none}
+.ptw .pt{position:absolute;left:0;top:0}
+.pt{width:6px;height:6px;opacity:.82}
+.pt.lab{width:9px;height:9px;border-radius:1.5px;opacity:1;transform:translate(-50%,-50%) rotate(45deg);box-shadow:0 0 0 1px rgba(0,0,0,.6),0 0 8px var(--pc),0 0 14px color-mix(in srgb,var(--pc) 45%,transparent)}
+.pt.lab:hover,.pt.lab.hl{transform:translate(-50%,-50%) rotate(45deg) scale(1.45)}
+.pt.hl{transform:translate(-50%,-50%) scale(1.9)}
+.pt.lab.sel{width:12px;height:12px;box-shadow:0 0 0 2px var(--acc),0 0 18px var(--pc)}
+.lbl{position:absolute;left:8px;top:-6px;white-space:nowrap;font-family:var(--label);font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--tx);text-shadow:0 0 4px var(--globebg),0 0 8px var(--globebg),0 1px 2px #000;pointer-events:auto;cursor:pointer;padding:0 4px;border-left:1px solid var(--pc);line-height:12px}
+.lbl:hover{color:var(--acc)}
+.lbl .nw{color:var(--acc);margin-left:4px}
+.lbl.hide{visibility:hidden}
+[data-mode=claro]:not([data-theme=osiris]) .lbl{text-shadow:0 0 3px #fff,0 0 6px #fff}
+/* painel esquerdo: abas LABS · FLUXO */
+.ftabs{display:flex;gap:2px}
+.ftabs button{white-space:nowrap;background:none;border:1px solid transparent;border-radius:5px;color:var(--mu);font:inherit;letter-spacing:inherit;text-transform:inherit;padding:3px 7px;cursor:pointer}
+.ftabs button.sel{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 60%,transparent)}
+.lgrp{padding:9px 10px 3px;color:var(--mu);font-size:9.5px}
+.lr{display:grid;grid-template-columns:20px 1fr auto;gap:9px;align-items:center;padding:7px 10px;cursor:pointer;border-bottom:1px dashed color-mix(in srgb,var(--line) 70%,transparent)}
+.lr:hover{background:var(--s2)}
+.lr .dm{width:10px;height:10px;transform:rotate(45deg);border-radius:2px;background:var(--pc);box-shadow:0 0 8px var(--pc);margin-left:4px}
+.lr .n{font-weight:700;letter-spacing:.08em;font-size:11.5px}
+.lr .s{color:var(--mu);font-size:10.5px}
+.lr .p{color:var(--acc);font-size:9.5px;text-align:right;white-space:nowrap;letter-spacing:.1em}
+.lr .p.old{color:var(--mu)}
+/* filtro do Fluxo + notícias por Laboratório */
+.fflt{display:flex;gap:4px;padding:6px 10px;border-bottom:1px solid var(--line)}
+.fflt button{background:none;border:1px solid var(--line);border-radius:999px;color:var(--mu);font:inherit;letter-spacing:inherit;text-transform:inherit;padding:3px 9px;cursor:pointer;font-size:9.5px}
+.fflt button.sel{color:var(--acc);border-color:var(--acc)}
+.fi .lb{color:var(--c-lab);margin-right:3px}
+.lr .ex{display:inline-block;margin-top:3px;font-size:9.5px;letter-spacing:.12em;color:var(--d1);cursor:pointer;text-transform:uppercase}
+.lr .ex:hover{text-decoration:underline}
+.lnews{padding:2px 10px 8px 39px;border-bottom:1px dashed color-mix(in srgb,var(--line) 70%,transparent);background:color-mix(in srgb,var(--s2) 50%,transparent)}
+.lnews div{padding:5px 0;font-size:11px;line-height:1.4;cursor:pointer;border-bottom:1px dotted color-mix(in srgb,var(--line) 60%,transparent)}
+.lnews div:last-child{border-bottom:0}
+.lnews div:hover{color:var(--acc)}
+.lnews .t{color:var(--mu);font-size:9.5px;margin-right:6px}
+#attr{position:absolute;right:66px;bottom:38px;z-index:20;font-size:8.5px;color:var(--mu);letter-spacing:.08em;text-transform:none}
+#attr a{color:var(--mu)}
+.scene-tooltip .bbt{background:var(--s1);border:1px solid var(--line);padding:4px 8px;border-radius:5px;color:var(--tx);font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase}
+/* painel MERCADOS */
+#mkt{position:fixed;top:56px;right:62px;bottom:34px;width:min(470px,calc(100vw - 140px));z-index:37;display:none;flex-direction:column;background:color-mix(in srgb,var(--s1) 96%,transparent);border-left:1px solid var(--line);box-shadow:var(--glow),0 18px 50px rgba(0,0,0,.5);font-family:var(--mono);animation:slidein .25s ease-out;outline:0}
+#mkt.show{display:flex}
+body.chat-open #mkt{bottom:calc(min(46vh,440px) + 34px)}
+[data-theme=osiris] #mkt{background:rgba(5,6,7,.96);color:#D7E3EA}
+[data-theme=ambar] #mkt{background:#140E04;color:#FFC966}
+#mkt .hd{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line)}
+#mkt .hd .ttl{color:var(--acc)}#mkt .hd .upd{color:var(--mu);margin-left:8px}
+#mkt .x{background:none;border:1px solid var(--line);border-radius:5px;color:inherit;font:inherit;font-size:10px;padding:3px 7px;cursor:pointer}
+#mkt .bd{overflow:auto;padding:10px 12px 14px;flex:1}
+#mktF{display:flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:6px;padding:6px 8px;margin-bottom:8px}
+#mktF .ps{color:var(--acc)}#mktF input{flex:1;background:transparent;border:0;outline:0;color:inherit;font:inherit;font-size:12px}
+#mktF button{font-family:var(--mono);font-size:10px;letter-spacing:.12em;border:1px solid var(--acc);color:var(--acc);background:none;border-radius:5px;padding:3px 9px;cursor:pointer}
+#mktMsg{color:var(--dn);font-size:10.5px;min-height:0;margin:-4px 0 6px}
+.mtabs{display:flex;gap:6px;margin-bottom:10px}
+.mtabs button{font-family:var(--label);text-transform:uppercase;letter-spacing:.14em;font-size:9.5px;padding:5px 10px;border-radius:6px;border:1px solid var(--line);background:none;color:var(--mu);cursor:pointer}
+.mtabs button.sel{color:var(--acc);border-color:var(--acc)}
+.mcards{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+.mcard{border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:color-mix(in srgb,var(--s2) 40%,transparent)}
+.mcard .l{color:var(--mu);font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mcard .v{font-size:12.5px;font-weight:700;margin:2px 0 1px}
+.mcard .c{font-size:10px}
+.mbreadth{border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin-bottom:10px}
+.mbreadth .top{display:flex;gap:10px;align-items:center;font-size:10px;letter-spacing:.12em}
+.mbreadth .bar{flex:1;height:5px;border-radius:3px;display:flex;overflow:hidden}
+.mbreadth .bar i{display:block;height:100%}
+.mbreadth .ext{display:flex;justify-content:space-between;font-size:10.5px;margin-top:6px}
+.msec{color:var(--acc);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;margin:12px 0 4px;display:flex;align-items:center;gap:6px}
+.msec i{width:8px;height:8px;border-radius:50%}
+.mrow{display:grid;grid-template-columns:16px 52px 1fr 68px 56px 64px;gap:6px;align-items:center;font-size:11px;padding:5px 2px;border-bottom:1px dashed color-mix(in srgb,var(--line) 70%,transparent);cursor:pointer}
+.mrow:hover{background:var(--s2)}
+.mrow .st{color:var(--mu);cursor:pointer;font-size:12px;text-align:center}.mrow .st.on{color:var(--acc)}
+.mrow .tk{font-weight:700;letter-spacing:.06em}.mrow .nm{color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10.5px}
+.mrow .pr{text-align:right}.mrow .ch{text-align:right}
+.mrow.idx{cursor:default}
+.mwatch-empty{color:var(--mu);text-align:center;padding:26px 8px;letter-spacing:.1em;font-size:11px}
+#mktAI{display:block;width:100%;margin-top:14px;padding:9px;border:1px solid var(--acc);border-radius:6px;background:none;color:var(--acc);font-family:var(--mono);letter-spacing:.16em;font-size:10.5px;text-transform:uppercase;cursor:pointer}
+#mkt .foot2{color:var(--mu);font-size:9.5px;letter-spacing:.12em;margin-top:10px;text-transform:uppercase}
+.mcard.hl,.mrow.hl{outline:1px solid var(--acc)}
+/* Fila de revisão (painel lateral) */
+#queue{position:fixed;top:56px;right:62px;bottom:34px;width:min(460px,calc(100vw - 140px));z-index:37;display:none;flex-direction:column;background:color-mix(in srgb,var(--s1) 96%,transparent);border-left:1px solid var(--line);box-shadow:var(--glow),0 18px 50px rgba(0,0,0,.5);font-family:var(--mono);animation:slidein .25s ease-out;outline:0}
+#queue.show{display:flex}
+body.chat-open #queue{bottom:calc(min(46vh,440px) + 34px)}
+[data-theme=osiris] #queue{background:rgba(5,6,7,.96);color:#D7E3EA}
+[data-theme=ambar] #queue{background:#140E04;color:#FFC966}
+#queue .hd{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line)}
+#queue .hd .ttl{color:var(--acc)}
+#queue .x{background:none;border:1px solid var(--line);border-radius:5px;color:inherit;font:inherit;font-size:10px;padding:3px 7px;cursor:pointer}
+#queue .bd{overflow:auto;padding:10px 12px 16px;flex:1}
+#queue .sub{color:var(--mu);font-size:10px;padding:0 2px 10px;letter-spacing:.08em}
+.qc{border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin-bottom:10px;background:color-mix(in srgb,var(--s2) 40%,transparent)}
+.qc .qh{display:flex;justify-content:space-between;gap:8px;font-size:10px;letter-spacing:.14em;text-transform:uppercase}
+.qc .qt{color:var(--acc)}.qc .qw{color:var(--mu)}
+.qc .qwhy{font-size:11.5px;margin:6px 0 8px;opacity:.85;line-height:1.45}
+.qr{display:grid;grid-template-columns:96px 1fr;gap:8px;font-size:11.5px;padding:4px 0;border-top:1px dotted color-mix(in srgb,var(--line) 60%,transparent)}
+.qr .k{color:var(--mu);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding-top:2px}
+.qr .v s{opacity:.5}
+.qr .sw{display:inline-block;width:16px;height:3px;vertical-align:middle;border-radius:2px}
+.qr input{width:100%;background:var(--bg);color:inherit;border:1px solid var(--acc);border-radius:4px;font:inherit;padding:2px 6px}
+.qc .sa{text-decoration:none;margin-left:5px}
+.qa{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.qa button{font-family:var(--mono);font-size:10px;letter-spacing:.12em;padding:5px 9px;border-radius:5px;border:1px solid var(--line);background:transparent;color:inherit;cursor:pointer}
+.qa button.ok{border-color:var(--up);color:var(--up)}.qa button.no{color:var(--dn);border-color:color-mix(in srgb,var(--dn) 60%,transparent)}.qa button.gl{margin-left:auto;color:var(--d1)}
+.qc.done{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:11px;flex-wrap:wrap;opacity:.85}
+.qc.done .r-ok{color:var(--up)}.qc.done .r-no{color:var(--dn)}
+.qc.done .note{color:var(--mu);font-size:10px;flex:1 1 100%}
+.qc.done button{margin-left:auto;font-family:var(--mono);font-size:9.5px;border:1px solid var(--line);background:none;color:var(--d1);border-radius:5px;padding:3px 7px;cursor:pointer}
+.qempty{color:var(--mu);text-align:center;padding:30px 10px;letter-spacing:.14em}
+.pt.ghost{background:transparent!important;border:1.5px dashed var(--acc);box-shadow:0 0 12px var(--acc);animation:blink 1.2s infinite}
+/* som: 1 clique liga/desliga + seta para ajustes */
+#bSound .more{position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:13px;height:24px;border:1px solid var(--line);border-right:0;border-radius:5px 0 0 5px;background:var(--s1);font-size:11px;display:grid;place-items:center;color:var(--mu)}
+#bSound .more:hover{color:var(--acc)}
+/* console do Agente */
+#chat{position:fixed;left:62px;right:62px;bottom:34px;height:min(46vh,440px);z-index:38;display:none;flex-direction:column;background:color-mix(in srgb,var(--s1) 96%,transparent);border:1px solid var(--line);border-bottom:0;border-top:2px solid var(--acc);box-shadow:var(--glow),0 -18px 50px rgba(0,0,0,.45);font-family:var(--mono);animation:chatup .22s ease-out}
+#chat.show{display:flex}
+#chat.max{top:56px;height:auto}
+@keyframes chatup{from{transform:translateY(30px);opacity:0}}
+[data-theme=osiris] #chat{background:rgba(5,6,7,.96);color:#D7E3EA}
+[data-theme=ambar] #chat{background:#140E04;color:#FFC966;text-shadow:0 0 6px rgba(255,176,0,.45)}
+#chat .hd{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line)}
+#chat .hd .ttl{color:var(--acc)}
+#chat .hd button{background:none;border:1px solid var(--line);border-radius:5px;color:inherit;font:inherit;font-size:10px;padding:3px 7px;cursor:pointer;margin-left:6px}
+#chat .body{flex:1;display:flex;min-height:0}
+#chat .hist{width:260px;border-right:1px solid var(--line);overflow:auto;display:none;padding:4px 0}
+#chat.h .hist{display:block}
+#chat .hist div{padding:8px 12px;cursor:pointer;font-size:11.5px;border-bottom:1px dashed color-mix(in srgb,var(--line) 70%,transparent)}
+#chat .hist div:hover{background:var(--s2)}
+#chat .hist small{display:block;color:var(--mu);font-size:9.5px;letter-spacing:.12em}
+#chat .log{flex:1;overflow:auto;padding:12px 16px;font-size:12.5px;line-height:1.6;white-space:pre-wrap}
+#chat .u{color:var(--d1);margin-top:6px}
+#chat .u::before{content:"❯ ";color:var(--acc)}
+#chat .a{margin:4px 0 14px}
+#chat .act{color:var(--d2);margin-top:4px}
+#chat .src{color:var(--mu);font-size:11px;margin-top:2px}
+#chat .sim{color:var(--mu);font-size:9px;letter-spacing:.16em;text-transform:uppercase;opacity:.7}
+#chat .sugs{display:flex;gap:6px;flex-wrap:wrap;padding:6px 14px}
+#chat .sugs span{border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:10.5px;cursor:pointer;color:var(--mu)}
+#chat .sugs span:hover{color:var(--acc);border-color:var(--acc)}
+#chat form{display:flex;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid var(--line);margin:0}
+#chat .ps{color:var(--acc)}
+#chat input{flex:1;background:transparent;border:0;outline:0;color:inherit;font:inherit;font-size:13px}
+#chat .cur{display:inline-block;width:8px;height:14px;background:currentColor;vertical-align:-2px;animation:blink 1s steps(1) infinite}
+body.chat-open #reader.side{bottom:calc(min(46vh,440px) + 34px)}
+tr.hl td{background:color-mix(in srgb,var(--acc) 18%,transparent)!important}
+@media (prefers-reduced-motion: reduce){#ticker .track{animation:none}#status .live::before{animation:none}}
+@media (max-width:760px){#feed{display:none}#tabs{margin-left:8px}.view{padding:14px 10px}#top{padding-left:14px}#brand span,#status .hide-m{display:none}.rail{display:none}#views{left:10px}#cursor{display:none}#legend{left:6px;right:6px;bottom:80px;overflow-x:auto;white-space:nowrap}#below{padding:20px 12px}#term{left:6px!important;right:6px;bottom:40px!important;top:auto!important;width:auto}}
+
+/* A variante clara apresenta a ficha como leitura editorial, sem decoração CRT. */
+body[data-template=aa] #termBody .ascii,body[data-template=aa] #termBody .cur,body[data-template=aa] #reader .cur{display:none!important}
+body[data-template=aa] #term .hd #termTitle{font-family:Georgia,serif!important;font-size:22px;color:#000000;font-weight:400}
+body[data-template=aa] #termBody .aa-company-name{font:400 28px/1.25 Georgia,serif;color:#000000;display:inline-block;margin-bottom:4px}
+body[data-template=aa] #termBody .aa-company-location{font:13px/1.5 Arial,sans-serif;color:#666666;display:inline-block;margin-bottom:12px}
+</style>
+<style id="aa-editorial-style">
+/* TEMPLATE ANALÍTICO CLARO — composição editorial, separado do HUD original.
+   Referência visual observada em artificialanalysis.ai em 2026-10-12.
+   Georgia/Arial são substitutos locais; nenhuma fonte proprietária é redistribuída. */
+body[data-template=aa],body[data-template=aa] :is(#term,#reader,#chat,#queue,#mkt){--aa-table-bg:#F1F2F4;--aa-news-accent:#6001D2;--bg:#FFFFFF!important;--bar:#FFFFFF!important;--s1:#FFFFFF!important;--s2:#F5F5F5!important;--line:#D9D9D9!important;--tx:#000000!important;--mu:#666666!important;--acc:#741A66!important;--d1:#741A66!important;--d2:#000000!important;--up:#257B3C!important;--dn:#B53C32!important;--c-lab:#8842FD!important;--c-chip:#CC785C!important;--c-cloud:#0089F4!important;--c-energy:#D87527!important;--c-soft:#736CD3!important;--glow:none!important;--globebg:#ECEDEF!important;--atm:#E7E7E7!important;--sans:Arial,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important;--mono:Arial,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important;--label:Arial,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important;background:#FFFFFF;color:#000000;font-family:var(--sans);font-size:14px;text-shadow:none!important}
+body[data-template=aa]{--aa-header:72px;--aa-tools:54px;--aa-footer:38px}body[data-template=aa] #brand{align-items:flex-start}
+html{background:var(--bg);overflow-x:hidden}body[data-template=aa]{overflow-x:clip}
+body[data-template=aa] :where(button,.hud,.fi .co,.msec,.mcard .l,.qc .qh,.qr .k,#reader .sec,#reader .meta,#reader .open,.lbl,.lr .n,.lr .ex,#mktAI,#mkt .foot2){font-family:var(--sans)!important;text-transform:none!important;letter-spacing:normal!important;text-shadow:none!important}
+body[data-template=aa] :is(h1,h2,h3,h4){font-family:Georgia,'Times New Roman',serif;font-weight:400;color:var(--tx)}
+body[data-template=aa] a{color:var(--acc)}
+body[data-template=aa] button{cursor:pointer}body[data-template=aa] button:disabled{cursor:default;opacity:.6}
+body[data-template=aa] :is(button,a,input,select,[tabindex]):focus-visible{outline:2px solid var(--acc);outline-offset:3px}
+body[data-template=aa] .aa-hidden{display:none!important}
+body[data-template=aa] #top{height:var(--aa-header);padding:0 max(24px,calc((100vw - 1440px)/2));background:var(--bg)!important;border-bottom:1px solid var(--line);gap:32px;z-index:50}
+body[data-template=aa] #brand b{font-family:Georgia,'Times New Roman',serif;display:inline-block;background:var(--tx);color:var(--bg);border-radius:24px;padding:5px 14px;font-size:22px;letter-spacing:-.4px;font-weight:400;text-shadow:none}
+body[data-template=aa] #brand span{font-family:var(--sans);font-size:11px;color:var(--mu);letter-spacing:0}
+body[data-template=aa] #tabs{background:var(--s2);border-radius:24px;padding:5px;gap:3px;margin-left:auto}
+body[data-template=aa] #tabs button{font-size:14px;padding:11px 20px;border-radius:20px;border:0;background:transparent;color:var(--tx)}
+body[data-template=aa] #tabs button.sel{background:var(--tx);border:0;box-shadow:none;color:var(--bg)}
+body[data-template=aa] #tabs kbd{display:none}
+body[data-template=aa] #status{margin:0;gap:0;font-size:11px}
+body[data-template=aa] .aa-demo-pill{border:1px solid var(--line);border-radius:8px;padding:8px 10px;color:var(--mu)}
+body[data-template=aa] #right{display:flex!important;position:fixed;top:var(--aa-header);left:0;right:0;bottom:auto;height:var(--aa-tools);width:auto;padding:8px max(24px,calc((100vw - 1440px)/2));flex-direction:row;align-items:center;justify-content:flex-start;gap:8px;background:var(--bg);border-bottom:1px solid var(--line);z-index:49;overflow-x:auto;overflow-y:hidden}
+body[data-template=aa] .rb{flex:0 0 auto;display:flex;gap:8px;align-items:center;justify-content:center;width:auto;min-width:40px;height:38px;padding:0 12px;font-size:14px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--tx);box-shadow:none}
+body[data-template=aa] .rb:hover{background:var(--s2);color:var(--tx);border-color:var(--line)}
+body[data-template=aa] .rb.act{background:var(--s2);color:var(--acc);border-color:var(--acc)}
+body[data-template=aa] #bChat{background:var(--acc);color:var(--bg);border-color:var(--acc)}
+body[data-template=aa] #bChat.act{box-shadow:inset 0 0 0 1px var(--bg)}
+body[data-template=aa] #bMode{display:flex}
+body[data-template=aa] #right .sep{height:22px;width:1px;flex:0 0 1px;margin:0 3px}
+body[data-template=aa] .rb[data-tip]:hover::after{display:none}
+body[data-template=aa] #bQueue .badge{position:static;display:inline-flex!important;background:var(--s2);color:var(--tx);font-size:11px;padding:2px 5px;line-height:1}
+body[data-template=aa] #bSound .more{position:static;transform:none;margin-left:2px;border:0;width:12px;height:28px;background:none;font-size:15px}
+body[data-template=aa] #bSound{min-width:55px}
+body[data-template=aa] .pop{position:fixed;top:calc(var(--aa-header) + var(--aa-tools) + 10px)!important;right:24px;max-width:calc(100vw - 32px);max-height:calc(100dvh - 220px);overflow:auto;box-shadow:0 8px 24px #00000014;border-radius:8px;padding:18px;z-index:65;background:var(--bg)}
+body[data-template=aa] .pop h4{font-family:Georgia,'Times New Roman',serif!important;font-size:24px;margin-bottom:16px}
+body[data-template=aa] .th{display:block;background:var(--bg);padding:11px 14px;color:var(--tx);text-decoration:none}
+body[data-template=aa] .th:hover{background:var(--s2)}.aa-template-note{font-size:12px;color:var(--mu);line-height:1.5;margin:8px 0}
+body[data-template=aa] #stage{height:100dvh;min-height:700px;background:var(--globebg)}
+body[data-template=aa] #stage::after,body[data-template=aa] #term::before,body[data-template=aa] #term::after{content:none!important}
+body[data-template=aa] #globe{inset:calc(var(--aa-header) + var(--aa-tools)) 0 var(--aa-footer)!important;border:0;border-radius:0;background:var(--globebg)!important;box-shadow:none!important;overflow:hidden}
+body[data-template=aa] .view{top:calc(var(--aa-header) + var(--aa-tools));bottom:var(--aa-footer);padding:0;background:var(--bg);overscroll-behavior:contain;scroll-behavior:smooth}
+body[data-template=aa] .aa-overview{max-width:1440px;margin:auto;padding:54px 40px 0}
+body[data-template=aa] .aa-hero{display:grid;grid-template-columns:1.22fr 1fr;gap:48px;align-items:end;margin-bottom:34px}
+body[data-template=aa] .aa-eyebrow{display:block;font-size:13px;color:var(--mu);margin-bottom:20px}
+body[data-template=aa] .aa-hero h1{font-size:clamp(54px,6.33vw,80px);line-height:1.03;letter-spacing:-2.8px;margin:0}
+body[data-template=aa] .aa-hero-copy{padding-bottom:4px;max-width:480px}.aa-hero-copy p{font-size:20px;line-height:1.5;margin:0 0 15px}.aa-hero-copy p.aa-muted{font-size:16px;color:var(--mu)}
+body[data-template=aa] .aa-hero-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:22px}
+body[data-template=aa] :is(.aa-primary,.aa-secondary){border:1px solid var(--line);border-radius:8px;padding:13px 17px;font-size:14px;background:var(--bg);color:var(--tx);display:inline-flex;gap:12px;align-items:center}
+body[data-template=aa] .aa-primary{background:var(--acc);color:var(--bg);border-color:var(--acc)}
+body[data-template=aa] .aa-demo-note{display:flex;gap:9px;align-items:flex-start;color:var(--mu);font-size:12px;line-height:1.55;margin-bottom:27px;padding-top:18px;border-top:1px solid var(--line)}
+body[data-template=aa] .aa-demo-dot{background:var(--acc);border-radius:50%;width:6px;height:6px;flex:0 0 6px;margin-top:6px}
+body[data-template=aa] .aa-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+body[data-template=aa] .aa-metric{min-width:0;padding:16px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+body[data-template=aa] .aa-metric h2{display:flex;align-items:center;gap:10px;font-size:24px;margin:0 0 7px}
+body[data-template=aa] .aa-accent{width:16px;height:16px;display:inline-block;flex:0 0 16px;border-radius:0}
+body[data-template=aa] .aa-metric .aa-caption{font-size:12px;color:var(--mu);margin:0 0 24px;min-height:18px}
+body[data-template=aa] .aa-chart{display:flex;height:205px;gap:9px;padding-top:10px;border-bottom:1px solid var(--line);background:repeating-linear-gradient(to top,transparent 0px,transparent 44px,var(--s2) 45px,var(--s2) 46px)}
+body[data-template=aa] .aa-bar-col{display:flex;flex:1;min-width:0;flex-direction:column;align-items:stretch;justify-content:flex-end;background:none;border:0;padding:0 1px;position:relative}
+body[data-template=aa] .aa-bar-col:hover{background:var(--s2)}
+body[data-template=aa] .aa-bar-value{font-size:11px;white-space:nowrap;text-align:center;font-variant-numeric:tabular-nums;margin-bottom:6px;color:var(--tx)}
+body[data-template=aa] .aa-bar{width:100%;min-height:3px;display:block;border-radius:0}
+body[data-template=aa] .aa-chart-labels{display:flex;gap:9px;margin-top:10px}.aa-chart-labels span{flex:1;min-width:0;font-size:10px;line-height:1.35;overflow-wrap:anywhere;text-align:center;color:var(--mu)}
+body[data-template=aa] .aa-chart-foot{margin-top:17px;display:flex;justify-content:space-between;gap:8px;color:var(--mu);font-size:11px}
+body[data-template=aa] .aa-overview-foot{display:flex;justify-content:space-between;gap:16px;font-size:13px;color:var(--mu);margin:30px 0}
+body[data-template=aa] .aa-table-section{background:var(--aa-table-bg);padding:40px max(28px,calc((100vw - 1360px)/2)) 44px;margin-top:10px;border-top:1px solid var(--line)}
+body[data-template=aa] .cmp{align-items:baseline;gap:16px}
+body[data-template=aa] .aa-table-section #aaTableTitle{font-family:Georgia,'Times New Roman',serif!important;font-size:36px!important;color:var(--tx)!important;letter-spacing:-.5px!important}
+body[data-template=aa] .styleSw{margin-left:auto;gap:5px;flex-wrap:wrap}
+body[data-template=aa] .styleSw button{padding:7px 10px;background:var(--bg);font-size:12px}
+body[data-template=aa] .styleSw button.sel{background:var(--acc);color:var(--bg);border-color:var(--acc)}
+body[data-template=aa] .filters{margin:24px 0 16px;gap:8px}body[data-template=aa] .chip{text-transform:none!important;font-size:12px!important;padding:7px 11px!important;background:var(--bg)!important}
+body[data-template=aa] .chip.off{opacity:.7;background:var(--s2)!important}
+body[data-template=aa] #tblWrap{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:0;max-width:100%;overflow:auto}
+body[data-template=aa] #tbl{font-family:var(--sans);font-size:13px;min-width:1180px}
+body[data-template=aa] #tbl th{font-family:var(--sans);font-size:12px;background:var(--bg);text-transform:none;letter-spacing:0;color:var(--mu);padding:16px 14px;border-bottom:1px solid var(--line);font-weight:400}
+body[data-template=aa] #tbl td{padding:17px 14px;border-bottom:1px solid var(--s2);background:var(--bg);font-size:13px}
+body[data-template=aa] #tbl tbody tr:hover td{background:var(--s2)}
+body[data-template=aa] #tbl .num{font-family:var(--sans);color:var(--tx);font-variant-numeric:tabular-nums}
+body[data-template=aa] .tbl-term.tbl-hib .bar,body[data-template=aa] .tbl-ana .bar{height:4px;background:#8842FD;box-shadow:none}
+body[data-template=aa] .tag{font-size:10px;background:var(--s2);color:var(--mu);border-color:var(--s2)}
+body[data-template=aa] .prompt{color:var(--mu);font-size:12px;text-shadow:none}
+body[data-template=aa] .foot{line-height:1.6;font-size:11px;margin-top:16px}
+body[data-template=aa] #vNews{padding:48px max(28px,calc((100vw - 1280px)/2)) 44px}
+body[data-template=aa] .aa-news-heading h1{font-size:60px;letter-spacing:-1.5px;margin:0 0 16px}.aa-news-heading p{font-size:17px;line-height:1.5;color:var(--mu)}
+body[data-template=aa] .nitem{padding:22px 8px;grid-template-columns:70px 34px 1fr;border-bottom-color:var(--s2)}
+body[data-template=aa] .nitem h5{font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:400;line-height:1.3;margin-bottom:7px}
+body[data-template=aa] .nitem .o{line-height:1.5}.nitem .m{line-height:1.6}
+body[data-template=aa] :is(#term,#reader,#chat,#queue,#mkt,#preview){background:var(--bg)!important;color:var(--tx)!important;border:1px solid var(--line)!important;border-radius:8px!important;box-shadow:0 8px 24px #00000014!important;text-shadow:none!important;backdrop-filter:none!important;font-family:var(--sans);font-size:13px}
+body[data-template=aa] :is(#reader.side,#queue,#mkt){top:calc(var(--aa-header) + var(--aa-tools) + 12px)!important;right:16px!important;bottom:calc(var(--aa-footer) + 12px);width:min(470px,calc(100vw - 32px))}
+body[data-template=aa] :is(#reader .hd,#queue .hd,#mkt .hd,#chat .hd,#term .hd){padding:15px 16px;border-bottom:1px solid var(--line);background:var(--bg);font-size:13px}
+body[data-template=aa] #reader .bd{font-family:var(--sans);padding:20px}.aa-muted{color:var(--mu)}
+body[data-template=aa] #reader h3{font-size:27px;line-height:1.2}
+body[data-template=aa] #reader .sec{color:var(--tx);font-size:14px;font-weight:700;letter-spacing:0;margin-top:24px}
+body[data-template=aa] #reader .open{font-size:13px;padding:11px 14px;background:var(--acc);color:var(--bg);border-color:var(--acc)}
+body[data-template=aa] #reader .note{opacity:1;color:var(--mu)}
+body[data-template=aa] #reader .meta{font-size:12px;color:var(--mu);opacity:1}
+body[data-template=aa] #term pre{font-family:var(--sans);font-size:13px;line-height:1.8;padding:20px}
+body[data-template=aa] #term .logo{color:var(--bg)}
+body[data-template=aa] #chat{left:16px;right:16px;bottom:calc(var(--aa-footer) + 12px);height:min(46vh,440px);border-top:1px solid var(--line)!important}
+body[data-template=aa] #chat.max{top:calc(var(--aa-header) + var(--aa-tools) + 12px);height:auto}
+body[data-template=aa] #chat .msg{font-size:14px;line-height:1.6;font-family:var(--sans)}
+body[data-template=aa] #chat .u{background:var(--s2);padding:11px 14px;border-radius:8px}
+body[data-template=aa] #chat form{padding:16px}body[data-template=aa] #chat input{min-width:0}
+body[data-template=aa] #chat .src{font-size:12px;line-height:1.6}.sim{font-size:11px!important;opacity:1!important}
+body[data-template=aa].chat-open :is(#reader.side,#queue,#mkt){bottom:calc(min(46vh,440px) + var(--aa-footer) + 24px)}
+body[data-template=aa] .qc{background:var(--bg);border-color:var(--line);padding:14px}.qr{grid-template-columns:84px 1fr;line-height:1.5}.qc .qwhy{font-size:13px;line-height:1.6}.qa button{font-size:11px;padding:7px 10px}
+body[data-template=aa] .mcards{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.mcard{padding:10px;background:var(--bg)}.mcard .l{font-size:10px}.mcard .v{font-size:17px}.mrow{padding:10px 2px;border-bottom:1px solid var(--s2);grid-template-columns:16px 48px minmax(0,1fr) 60px 48px 48px;gap:4px}.mrow svg{max-width:48px}.msec{font-size:12px;margin-top:22px}
+body[data-template=aa] #mktAI{background:var(--acc);color:var(--bg);border-color:var(--acc);font-size:12px;padding:12px}
+body[data-template=aa] #feed{top:calc(var(--aa-header) + var(--aa-tools) + 18px);left:18px;width:300px;max-height:calc(100% - 290px);background:var(--bg);border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 16px #00000010}
+body[data-template=aa] #feed .hd{padding:12px;border-color:var(--line)}.fi{font-size:12px!important;line-height:1.6!important;border-bottom:1px solid var(--s2)!important;padding:11px 12px!important}.fi .t{font-size:11px!important}.lr .dm{box-shadow:none}.lr .n{font-size:12px}.lr{padding:11px;border-bottom:1px solid var(--s2)}
+body[data-template=aa] .pt,body[data-template=aa] .pt.lab,body[data-template=aa] .pt.lab.sel{box-shadow:none!important}.pt.sel{outline:2px solid var(--acc)}
+body[data-template=aa] .lbl{background:#FFFFFFd9;border-radius:3px;padding:2px 5px;color:var(--tx)!important;font-size:10px;line-height:14px;text-shadow:none!important}
+body[data-template=aa] #views{left:18px;bottom:86px;background:var(--bg);border:1px solid var(--line);border-radius:8px}.aa-globe-note{position:absolute;left:18px;bottom:54px}
+body[data-template=aa] #views button{font-size:12px;padding:10px 12px;letter-spacing:0;text-transform:none}body[data-template=aa] #views button.sel{background:var(--s2);box-shadow:none;color:var(--acc)}
+body[data-template=aa] #legend{right:18px;bottom:86px;max-width:calc(100vw - 380px);overflow-x:auto;white-space:nowrap;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:3px}
+body[data-template=aa] #legend .lg{padding:8px 9px;font-size:12px}body[data-template=aa] #legend i{box-shadow:none!important}
+body[data-template=aa] #cursor{bottom:62px;left:18px;padding:3px 7px;background:#FFFFFFe8;border-radius:4px;color:var(--mu)!important;font-size:11px}body[data-template=aa] #cursor b{color:var(--tx)!important}
+body[data-template=aa] #attr{bottom:46px;right:18px;color:var(--tx);font-size:10px;background:var(--bg);padding:4px 8px;border:1px solid var(--line);border-radius:4px;max-width:calc(100vw - 36px)}
+body[data-template=aa] #ticker{height:var(--aa-footer);background:var(--bg);border-top:1px solid var(--line);font-size:11px;z-index:48}body[data-template=aa] #ticker .note{font-size:10px;background:var(--bg);max-width:280px;line-height:1.3}
+body[data-template=aa] .mono{color:var(--bg)}
+body[data-template=aa] .aa-search{position:fixed;top:calc(var(--aa-header) + var(--aa-tools) + 20px);left:50%;transform:translateX(-50%);width:min(660px,calc(100vw - 32px));max-height:calc(100dvh - 240px);overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:8px;box-shadow:0 12px 48px #00000022;padding:24px;z-index:70}
+body[data-template=aa] .aa-search[hidden]{display:none}.aa-search-head{display:flex;justify-content:space-between;align-items:center;gap:20px}.aa-search-head h2{font-size:30px;margin:0 0 20px}.aa-search-head button{border:0;background:none;font-size:18px;align-self:start}.aa-search label{font-size:13px;display:block;margin-bottom:8px}.aa-search input{display:block;width:100%;padding:14px;border:1px solid var(--line);border-radius:8px;font:inherit}.aa-search p{font-size:12px}.aa-result{display:block;width:100%;text-align:left;border:0;border-top:1px solid var(--s2);background:var(--bg);padding:13px 0;font-size:14px}.aa-result:hover{background:var(--s2)}.aa-result small{display:block;color:var(--mu);margin-top:4px}
+@media(max-width:1100px){body[data-template=aa] #status{display:none}body[data-template=aa] #top{padding:0 24px;gap:20px}body[data-template=aa] .aa-overview{padding:40px 24px 0}body[data-template=aa] .aa-hero{gap:32px}.aa-hero-copy p{font-size:18px}body[data-template=aa] .aa-chart{gap:6px}body[data-template=aa] #legend{max-width:calc(100vw - 360px)}}
+@media(max-width:760px){body[data-template=aa]{--aa-header:108px;--aa-tools:54px}body[data-template=aa] #top{height:var(--aa-header);padding:13px 16px;display:flex;flex-wrap:wrap;gap:10px}body[data-template=aa] #brand{flex:0 0 100%}body[data-template=aa] #brand b{font-size:24px}body[data-template=aa] #brand span{display:none}body[data-template=aa] #tabs{margin:0;width:100%;padding:3px;justify-content:space-between}body[data-template=aa] #tabs button{flex:1;padding:7px 9px;font-size:13px}body[data-template=aa] #right{padding:8px 12px;gap:6px}body[data-template=aa] .rb{font-size:12px;padding:0 10px;height:36px}body[data-template=aa] .aa-overview{padding:30px 18px 0}body[data-template=aa] .aa-hero{grid-template-columns:1fr;gap:20px;margin-bottom:25px}body[data-template=aa] .aa-hero h1{font-size:54px;letter-spacing:-1.7px}body[data-template=aa] .aa-eyebrow{margin-bottom:14px;font-size:12px}.aa-hero-copy p{font-size:17px;margin-bottom:11px}.aa-hero-copy p.aa-muted{font-size:14px}body[data-template=aa] .aa-metrics{grid-template-columns:1fr;gap:14px}body[data-template=aa] .aa-chart{height:200px;gap:14px}body[data-template=aa] .aa-chart-labels{gap:14px}body[data-template=aa] .aa-overview-foot{font-size:12px;flex-direction:column;gap:5px;margin:24px 0}body[data-template=aa] .aa-table-section{padding:28px 16px 35px}body[data-template=aa] #aaTableTitle{font-size:30px!important}body[data-template=aa] .styleSw{width:100%;margin:0}body[data-template=aa] .cmp{gap:10px}body[data-template=aa] #vNews{padding:28px 18px}.aa-news-heading h1{font-size:45px!important}.nitem{grid-template-columns:48px 1fr!important;gap:10px!important}.nitem>span.mono{display:none}.nitem h5{font-size:20px!important}body[data-template=aa] #term{bottom:calc(var(--aa-footer) + 12px)!important;max-height:calc(100dvh - var(--aa-header) - var(--aa-tools) - 52px);left:12px!important;right:12px!important;max-width:calc(100vw - 24px)}body[data-template=aa] #feed{display:flex!important;top:calc(var(--aa-header) + var(--aa-tools) + 12px);left:12px;width:230px;max-height:180px}body[data-template=aa] #legend{left:12px;right:12px;bottom:88px;max-width:none;width:auto}body[data-template=aa] #views{left:12px;bottom:139px}body[data-template=aa] #cursor{display:none}body[data-template=aa] #attr{bottom:49px;right:12px;left:12px;font-size:9px}body[data-template=aa] #ticker .note{max-width:130px;font-size:9px;padding:0 10px}body[data-template=aa] #chat{left:12px;right:12px;height:48vh}body[data-template=aa] #chat .hist{width:150px}body[data-template=aa] #chat .hd{flex-wrap:wrap;gap:8px;padding:12px}body[data-template=aa] #chat .ttl{font-size:12px}body[data-template=aa] #chat form{padding:12px}body[data-template=aa] #chat input{font-size:12px}body[data-template=aa] .mcards{grid-template-columns:repeat(2,minmax(0,1fr))}body[data-template=aa] .mrow{grid-template-columns:16px 44px minmax(0,1fr) 58px 47px 38px;gap:2px;font-size:10px}.mrow svg{max-width:38px}.mrow .nm{font-size:9px!important}body[data-template=aa] .aa-search{padding:18px;max-height:calc(100dvh - 240px)}.aa-search-head h2{font-size:25px}}
+@media(prefers-reduced-motion:reduce){body[data-template=aa] .view{scroll-behavior:auto}body[data-template=aa] *{animation:none!important;transition:none!important}}
+
+/* Neutro de leitura ajustado para pequenos textos essenciais; var(--mu) segue em detalhe decorativo. */
+body[data-template=aa] :is(.aa-demo-pill,.aa-demo-note,.aa-caption,.aa-chart-labels span,.aa-chart-foot,.aa-overview-foot,.aa-hero-copy p.aa-muted,.aa-search .aa-muted,.aa-result small,#tbl th,.foot,#newsCount,.nitem .o,.nitem .m,#mkt .upd,#mkt .foot2,#queue .sub,#chat .sim){color:var(--mu)!important}
+body[data-template=aa] .aa-panel-demo{font-family:var(--sans)!important;font-size:10px;color:var(--mu)!important;padding:3px 6px;border:1px solid var(--line);border-radius:4px;margin-left:6px;font-weight:400;white-space:nowrap}
+
+body[data-template=aa] .mrow.yf-picked{background:var(--s2);outline:1px solid var(--aa-news-accent)}
+/* Notícias: hierarquia editorial observada no Yahoo Finance, em modo claro. */
+body[data-template=aa] #vNews{padding:0 24px 48px}
+body[data-template=aa] .aa-news-heading{max-width:1400px;margin:22px auto 0;display:flex;align-items:end;justify-content:space-between;gap:18px}
+body[data-template=aa] .aa-news-heading h1{font:700 34px/1.2 Arial,sans-serif;letter-spacing:-1px;margin:0}
+body[data-template=aa] .aa-news-heading .aa-eyebrow{font-size:12px;margin:0 0 8px;color:var(--mu)}
+.yf-demo{color:var(--mu);font-size:11px;border:1px solid var(--line);border-radius:4px;padding:6px 8px}
+body[data-template=aa] #vNews>.cmp,body[data-template=aa] #nFilters{max-width:1400px;margin:12px auto 0}
+body[data-template=aa] #vNews>.cmp h2{display:none}body[data-template=aa] #nFilters{padding-bottom:16px;border-bottom:1px solid var(--line);margin-top:10px}
+body[data-template=aa] #newsList{max-width:1400px;margin:20px auto 0}
+.yf-market-strip{display:flex;gap:0;border-bottom:1px solid var(--line);max-width:1400px;margin:0 auto;overflow-x:auto;align-items:center}
+.yf-quote{flex:1;min-width:148px;padding:16px 20px 16px 4px;border:0;background:var(--bg);text-align:left;display:grid;grid-template-columns:1fr auto;gap:5px;font-size:12px}.yf-quote b{color:var(--aa-news-accent)}.yf-quote strong{font-size:11px;grid-column:2;text-align:right}.yf-quote:hover{background:var(--s2)}.yf-strip-label{flex:0 0 114px;font-size:10px;line-height:1.5;color:var(--mu);padding-left:14px;border-left:1px solid var(--line)}
+.yf-layout{display:grid;grid-template-columns:minmax(0,1fr) 278px;gap:26px}.yf-main{min-width:0}.yf-lead-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);gap:24px}
+.yf-art-button{display:block;border:0;padding:0;background:none;width:100%;overflow:hidden;border-radius:8px;text-align:left}.yf-art{height:220px;position:relative;overflow:hidden;background:linear-gradient(135deg,#101a32,color-mix(in srgb,var(--yf-art-color) 60%,#101a32));color:#fff}.yf-art svg{width:100%;height:100%;display:block}.yf-art>span{position:absolute;bottom:34px;left:24px;font:bold 18px Arial,sans-serif}.yf-art>small{position:absolute;bottom:16px;left:24px;font:10px Arial,sans-serif;color:var(--line)}.yf-art.compact{height:140px}.yf-art.compact>span{font-size:13px;left:12px;bottom:28px}.yf-art.compact>small{left:12px;bottom:12px;font-size:8px}
+body[data-template=aa] .yf-headline{display:block;border:0;padding:0;background:none;color:var(--tx);text-align:left;font:700 17px/1.35 Arial,sans-serif;text-transform:none;letter-spacing:-.2px;width:100%;margin:10px 0 8px}.yf-headline:hover{color:var(--aa-news-accent)!important;text-decoration:underline}.yf-headline.lead{font-size:28px!important;letter-spacing:-.7px!important;line-height:1.15!important;margin-top:16px!important}.yf-summary{font:14px/1.5 Arial,sans-serif;color:var(--mu);margin:10px 0}.yf-meta{font:11px/1.6 Arial,sans-serif;color:var(--mu);margin:8px 0}.yf-company{font-size:10px!important;border:0;border-radius:3px;background:var(--s2);color:var(--aa-news-accent);padding:4px 7px}.yf-company:hover{background:var(--s2)}
+body[data-template=aa] .yf-layout h2{font:700 18px/1.3 Arial,sans-serif;margin:0 0 16px;color:var(--tx)}.yf-top-stories article{padding-bottom:16px;margin-bottom:14px;border-bottom:1px solid var(--line)}.yf-top-stories article:last-child{border-bottom:0;margin-bottom:0}.yf-top-stories h2 span{color:var(--aa-news-accent)}
+.yf-sidebar{border:1px solid var(--line);border-radius:8px;padding:18px;height:fit-content}.yf-trending{display:flex;justify-content:space-between;gap:10px;width:100%;border:0;border-bottom:1px solid var(--line);padding:10px 0;background:var(--bg);text-align:left;font-size:12px}.yf-trending>span:last-child{text-align:right}.yf-trending small{display:block;font-size:10px;color:var(--mu);margin-top:3px}.yf-trending>span:first-child>b{color:var(--aa-news-accent)}.yf-trending:hover{background:var(--s2)}.yf-market-more{font-size:12px;border:0;background:none;color:var(--aa-news-accent);font-weight:bold;padding:16px 0 8px}.yf-coverage{border-top:1px solid var(--line);margin-top:22px;padding-top:20px}.yf-coverage button{display:flex;align-items:center;gap:8px;border:0;background:none;padding:10px 0;width:100%;font-size:12px;text-align:left}.yf-coverage i{width:7px;height:7px;border-radius:50%}.yf-coverage span{margin-left:auto;color:var(--aa-news-accent)}
+.yf-latest{border-top:1px solid var(--line);margin-top:26px;padding-top:24px}.yf-row{display:grid;grid-template-columns:minmax(0,1fr) 160px;gap:24px;padding:18px 0;border-bottom:1px solid var(--line)}.yf-row .yf-headline{font-size:20px!important;margin-top:0}.yf-row .yf-art.compact{height:116px}.yf-original{font-size:12px;line-height:1.5;color:var(--mu);margin:8px 0}.yf-empty{padding:48px 16px;text-align:center}.yf-empty button{padding:10px 16px;background:var(--aa-news-accent);color:var(--bg);border:0;border-radius:5px}
+.aa-globe-tone{position:absolute;right:18px;top:calc(var(--aa-header) + var(--aa-tools) + 18px);z-index:21;background:#ffffffed;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--mu);display:flex;align-items:center;gap:10px}.aa-globe-tone select{font:11px Arial,sans-serif;padding:5px;background:var(--bg);color:var(--tx)}body.v-models .aa-globe-tone,body.v-news .aa-globe-tone{display:none}body[data-template=aa] #globe{background:var(--globebg)!important}
+@media(max-width:1050px){.yf-layout{grid-template-columns:minmax(0,1fr) 230px;gap:20px}.yf-lead-grid{grid-template-columns:1fr}.yf-top-stories{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}.yf-top-stories h2{grid-column:1/-1}.yf-top-stories .yf-art-button{display:none}.yf-art{height:230px}}
+@media(max-width:760px){body[data-template=aa] #vNews{padding:0 16px 32px}.yf-market-strip{margin:0 -16px;padding-left:16px}.yf-quote{min-width:128px;padding:14px 16px 14px 0}.yf-layout{grid-template-columns:1fr}.yf-sidebar{margin-top:8px}.yf-lead-grid{gap:24px}.yf-top-stories{grid-template-columns:1fr}.yf-top-stories article{margin-bottom:0;padding:12px 0}.yf-top-stories article:last-child{border-bottom:1px solid var(--line)}.yf-art{height:210px}.yf-headline.lead{font-size:27px!important}.yf-row{grid-template-columns:minmax(0,1fr) 104px;gap:14px}.yf-row .yf-art.compact{height:92px}.yf-row .yf-art>span,.yf-row .yf-art>small{display:none}.yf-row .yf-headline{font-size:17px!important}.yf-row .yf-original{display:none}body[data-template=aa] .aa-news-heading{margin-top:24px;display:block}body[data-template=aa] .aa-news-heading h1{font-size:30px!important}.yf-demo{display:inline-block;margin-top:12px}.aa-globe-tone{right:12px;top:auto;bottom:calc(var(--aa-footer) + 180px);font-size:10px;gap:6px;padding:6px}.aa-globe-tone select{max-width:105px}}
+
+
+/* Artificial Analysis Dark: same composition; neutral palette adapted locally. */
+body[data-template=aa][data-mode=escuro]{background:var(--bg);color:var(--tx);color-scheme:dark}
+body[data-template=aa] .yf-art>small{color:#DDDDDD}
+body[data-template=aa][data-mode=escuro],body[data-template=aa][data-mode=escuro] :is(#term,#reader,#chat,#queue,#mkt){--bg:#101114!important;--bar:#101114!important;--s1:#18191D!important;--s2:#24262B!important;--line:#34363E!important;--tx:#F2F2F3!important;--mu:#A8ABB3!important;--acc:#C092FF!important;--d1:#C092FF!important;--d2:#F2F2F3!important;--up:#64D18A!important;--dn:#FF8B83!important;--aa-table-bg:#18191D;--aa-news-accent:#C092FF;--atm:#58607B!important;--c-lab:#A78BFA!important;--c-chip:#E8997C!important;--c-cloud:#5EAEFF!important;--c-energy:#F5AC6B!important;--c-soft:#ADA7FF!important}
+body[data-template=aa][data-mode=escuro] :is(.aa-metric,#tblWrap,#tbl td,#tbl th,.yf-sidebar,#feed,#term,#reader,#mkt,#queue,#chat,.pop,.aa-search){background:var(--s1)!important}
+body[data-template=aa][data-mode=escuro] #stage{background:var(--globebg)}
+body[data-template=aa][data-mode=escuro] :is(#top,#right,#ticker,#ticker .note){background:var(--bg)!important}
+body[data-template=aa][data-mode=escuro] :is(.yf-demo,.yf-market-strip,.yf-row,.yf-top-stories article,.yf-latest,.yf-sidebar,.yf-trending,.yf-coverage,#vNews #nFilters){border-color:var(--line)}
+body[data-template=aa][data-mode=escuro] :is(.aa-globe-tone,.lbl,#cursor){background:#18191DEB!important}
+body[data-template=aa][data-mode=escuro] :is(#termTitle,.aa-company-name){color:var(--tx)!important}
+body[data-template=aa][data-mode=escuro] .aa-company-location{color:var(--mu)!important}
+body[data-template=aa][data-mode=escuro] .yf-summary{color:var(--mu)}
+body[data-template=aa] .yf-trending .up{color:var(--up)!important}body[data-template=aa] .yf-trending .dn{color:var(--dn)!important}
+body[data-template=aa][data-mode=escuro] .aa-search-head button{color:var(--tx)}
+body[data-template=aa][data-mode=escuro] #tbl tbody tr:hover td{background:var(--s2)!important}
+body[data-template=aa][data-mode=escuro] #tbl tbody tr.hl td{background:color-mix(in srgb,var(--acc) 18%,var(--s1))!important}
+body[data-template=aa] #globe{border-radius:0!important}
+
+/* Notícias com fotos da própria fonte e cobertura financeira completa. */
+body[data-template=aa] .yf-photo{background:var(--s2);color:var(--mu)}
+.yf-photo img{display:block;width:100%;height:100%;object-fit:cover}.yf-photo img[hidden]{display:none}
+body[data-template=aa] .yf-photo>small{bottom:0;left:0;right:0;padding:6px 10px;background:linear-gradient(transparent,rgba(0,0,0,.8));color:white;font:10px/1.4 Arial,sans-serif}
+.yf-image-fallback{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font:12px Arial,sans-serif}.yf-image-fallback[hidden]{display:none}.yf-image-fallback>span:first-child{font-size:32px}.yf-image-fallback small{font-size:10px}
+.yf-source{font:11px Arial,sans-serif;color:var(--aa-news-accent)}
+.yf-top-stories article:has(.yf-photo){display:grid;grid-template-columns:88px minmax(0,1fr);gap:0 12px}.yf-top-stories article .yf-art-button{grid-row:1/5}.yf-top-stories article .yf-art{height:84px}.yf-top-stories article .yf-headline{font-size:14px!important;margin:0 0 6px}.yf-top-stories article .yf-meta{margin:2px 0;font-size:10px}.yf-top-stories article .yf-company{justify-self:start}.yf-top-stories article .yf-source{margin-top:5px}.yf-top-stories .yf-photo>small{display:none}
+.yf-sidebar{padding:16px}.yf-finance-section{border-top:1px solid var(--line);margin-top:22px;padding-top:20px}.yf-finance-section h2 small{font-size:12px;color:var(--mu)}
+.yf-breadth-count{display:flex;justify-content:space-between;font-size:12px}.yf-breadth-bar{height:5px;border-radius:5px;background:var(--dn);overflow:hidden;margin:12px 0}.yf-breadth-bar i{height:100%;display:block;background:var(--up)}.yf-extremes{display:grid;gap:8px}.yf-extremes button{border:0;background:var(--s2);color:var(--tx);border-radius:4px;padding:8px;text-align:left;font-size:11px}.yf-extremes b{margin:0 5px}
+.yf-sector{font:700 11px Arial,sans-serif;color:var(--mu);display:flex;gap:6px;align-items:center;margin:20px 0 4px}.yf-sector i{height:6px;width:6px;border-radius:50%}.yf-sector span{margin-left:auto}
+.yf-stock{border-bottom:1px solid var(--line);padding:8px 0 12px}.yf-stock-top{display:flex;align-items:flex-start;gap:4px}.yf-stock .yf-trending{border:0;background:transparent;padding:6px 0;gap:4px}.yf-stock .yf-trending b{font-size:11px}.yf-stock .yf-trending small{font-size:10px}.yf-stock .yf-trending>span:first-child{max-width:120px}.yf-favorite{border:0;padding:4px 0 4px 4px;font-size:19px;color:var(--aa-news-accent);background:none}.yf-spark{display:flex;align-items:center;justify-content:space-between;gap:5px;margin:5px 0 10px}.yf-spark small{font-size:9px;color:var(--mu)}
+.yf-agent-button{border:1px solid color-mix(in srgb,var(--aa-news-accent) 30%,var(--line));border-radius:5px;padding:8px;width:100%;color:var(--aa-news-accent);background:color-mix(in srgb,var(--aa-news-accent) 5%,var(--bg));font-size:11px;font-weight:600}.yf-agent-button:hover{background:var(--s2)}
+.yf-world{display:flex;justify-content:space-between;gap:6px;width:100%;padding:12px 0;text-align:left;border:0;border-bottom:1px solid var(--line);background:none;font-size:11px}.yf-world>span:last-child{text-align:right}.yf-world small{display:block;color:var(--mu);font-size:10px;margin-top:5px}
+#financeAgent{width:min(620px,calc(100vw - 32px));max-height:calc(100dvh - 40px);box-sizing:border-box;border:1px solid var(--line);border-radius:12px;padding:24px;background:var(--s1);color:var(--tx);box-shadow:0 24px 80px #0006;font-family:Arial,sans-serif;overflow-y:auto}#financeAgent::backdrop{background:rgba(0,0,0,.55)}#financeAgent header{display:flex;align-items:start;justify-content:space-between;gap:16px}#financeAgent h2{font-size:23px;margin:6px 0 10px}.finance-eyebrow{color:var(--aa-news-accent);font-size:11px}#financeClose{border:0;background:var(--s2);color:var(--tx);font-size:25px;width:32px;height:32px;border-radius:50%}#financeStatus{display:inline-block;font-size:11px;color:var(--mu);border:1px solid var(--line);border-radius:4px;padding:6px;margin:0 0 18px}#financeStock{display:grid;gap:8px;border:1px solid var(--line);border-radius:6px;padding:14px;background:var(--s2);font-size:13px}#financeStock small{color:var(--mu);font-size:11px}#financeMessages{max-height:240px;overflow:auto;margin:16px 0;font-size:13px;line-height:1.6}.finance-welcome{color:var(--mu)}.finance-user,.finance-reply{border-radius:6px;padding:12px;border:1px solid var(--line)}.finance-user{background:color-mix(in srgb,var(--aa-news-accent) 8%,var(--s1));margin-left:30px}.finance-reply small{display:block;color:var(--mu);margin-top:8px}#financeSuggestions{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}#financeSuggestions button{border:1px solid var(--line);color:var(--aa-news-accent);background:var(--s1);padding:8px;border-radius:5px;font-size:11px}#financeForm label{display:block;font-size:12px;margin-bottom:8px}#financeForm>div{display:flex;gap:8px}#financeQuestion{min-width:0;flex:1;padding:12px;background:var(--bg);color:var(--tx);border:1px solid var(--line);border-radius:5px;font-size:14px}#financeForm button{background:var(--aa-news-accent);color:var(--bg);border:0;border-radius:5px;padding:0 16px}
+@media(max-width:1050px){.yf-top-stories .yf-art-button{display:block}.yf-stock .yf-trending b{font-size:10px}.yf-stock .yf-trending>span:first-child{max-width:90px}}
+@media(max-width:760px){.yf-layout{display:flex;flex-direction:column}.yf-main{display:contents}.yf-lead-grid,.yf-empty{order:0}.yf-sidebar{order:1}.yf-latest{order:2}.yf-stock .yf-trending>span:first-child{max-width:none}.yf-stock .yf-trending b{font-size:13px}.yf-stock .yf-trending small{font-size:11px}.yf-agent-button{font-size:12px;padding:10px}.yf-top-stories article .yf-art-button{display:block}.yf-top-stories article .yf-headline{font-size:16px!important}#financeAgent{padding:18px}#financeAgent h2{font-size:21px}#financeForm>div{flex-wrap:wrap}#financeForm button{padding:11px 16px}.yf-image-fallback small{max-width:90%;text-align:center}}
+</style>
+</head>
+<body data-template="aa" data-theme="osiris" data-mode="claro">
+<section id="stage">
+  <div id="globe"></div>
+  <label class="aa-globe-tone" for="aaGlobeTone">Fundo do Globo <select id="aaGlobeTone"><option value="soft">Cinza suave</option><option value="original">Cinza original</option><option value="white">Branco</option></select></label>
+  <header id="top" class="hud">
+    <div id="brand"><b>Monitor Global</b><span>Inteligência artificial, em perspectiva</span></div>
+    <nav id="tabs"><button class="sel" data-tab="globo">◍ Globo<kbd>1</kbd></button><button data-tab="models">▤ Modelos<kbd>2</kbd></button><button data-tab="news">≡ Notícias<kbd>3</kbd></button></nav>
+    <div id="status"><span class="aa-demo-pill">Protótipo · dados demo</span><span class="aa-hidden"><span id="clock"></span><span id="nEmp">35</span></span></div>
+  </header>
+  <nav class="rail" id="right">
+    <button class="rb" id="bAASearch" data-tip="Busca" aria-label="Busca global">⌕ <span>Busca</span></button>
+    <button class="rb" id="bChat" data-tip="Agente · tecla /">✦ <span>Especialista IA</span></button>
+    <button class="rb on" id="bRel" data-tip="Relações">⟡ <span>Relações</span></button>
+    <button class="rb" id="bMkt" data-tip="Mercados">$ <span>Mercados</span></button>
+    <button class="rb" id="bCesium" data-tip="Mapa 3D experimental" aria-label="Abrir mapa 3D experimental">⌖ <span>Mapa 3D · teste</span></button>
+    <button class="rb" id="bBB" data-tip="Backbones · cabos submarinos">≋ <span>Backbones</span></button>
+    <div class="sep"></div>
+    <button class="rb" id="bTheme" data-tip="Tema">◐ <span>Templates</span></button>
+    <button class="rb" id="bMode" data-tip="Trocar modo de aparência" aria-label="Alternar modo claro e escuro">◑ <span>Modo</span></button>
+    <button class="rb" id="bSound" data-tip="Som · clique liga/desliga"><span id="sIcon">🔇</span><span class="more" id="bSoundMore" title="Ajustes de som">‹</span></button>
+    <div class="sep"></div>
+    <button class="rb" id="bQueue" data-tip="Fila de revisão">☰ <span>Revisão</span><span class="badge" id="qBadge">4</span></button>
+  </nav>
+  <div class="pop" id="popRel" style="top:150px"><h4 class="hud">Relações</h4><div id="relList"></div><div class="foot hud" style="font-size:9px;margin-top:8px">sempre sutis · acendem na seleção</div></div>
+  <div class="pop" id="popSound" style="top:300px"><h4 class="hud">Som</h4><div class="srow"><span>⌨</span><div><div class="hud" style="font-size:9.5px">Digitação</div><input type="range" id="volType" min="0" max="100" value="60"></div><button class="tg" id="tgType">OFF</button></div><div class="srow"><span>✳</span><div><div class="hud" style="font-size:9.5px">Ambiente · espaço</div><input type="range" id="volAmb" min="0" max="100" value="35"></div><button class="tg" id="tgAmb">OFF</button></div><div class="foot hud" style="font-size:9px">ambos começam desligados</div></div>
+  <div class="pop" id="popTheme" style="top:200px"><h4 class="hud">Escolha um template</h4><div class="themes" id="themeList"></div><div class="modes aa-hidden"><button data-m="escuro">Escuro</button><button data-m="claro">Claro</button></div></div>
+  <aside id="feed"><div class="hd hud"><span class="ftabs"><button data-ft="labs">◆ Labs</button><button data-ft="feed" title="Fluxo de notícias">▸ Fluxo</button></span><span><span id="feedN" style="color:var(--mu)"></span> <button id="feedMin" title="Minimizar">▁</button></span></div><div class="fflt hud" id="fflt"><button data-ff="all">Todas</button><button data-ff="lab">◆ Só Laboratórios</button></div><div class="list" id="feedList"></div><div class="list" id="labsList"></div></aside>
+  <div id="views"><button class="sel" data-v="3d">◍ 3D</button><button data-v="2d" data-soon>▭ 2D</button><button data-v="mapa">☾ MAPA</button><button class="" data-v="sat">✦ SAT</button></div>
+  <div id="cursor" class="hud">CURSOR <b id="cLat">—</b>, <b id="cLng">—</b> · ZOOM <b id="cZoom">—</b> &nbsp; ├──────┤ <span id="cScale">—</span> km</div>
+  <div id="legend" class="hud"></div>
+  <div id="attr" class="hud" style="display:none"></div>
+  <footer id="ticker"><div class="note hud">Demo · cotações ilustrativas · sem dados ao vivo</div><div class="track" id="track"></div></footer>
+</section>
+<div id="preview"></div>
+<div id="aaSearch" class="aa-search" role="dialog" aria-modal="true" aria-labelledby="aaSearchTitle" hidden><div class="aa-search-head"><h2 id="aaSearchTitle">Buscar no ecossistema</h2><button id="aaSearchClose" aria-label="Fechar busca">✕</button></div><label for="aaSearchIn">Empresa, modelo, ticker ou notícia</label><input id="aaSearchIn" type="search" placeholder="Ex.: OpenAI, Qwen, NVDA…" autocomplete="off"><p class="aa-muted">Busca demonstrativa nos dados locais do protótipo.</p><div id="aaSearchResults"></div></div>
+<div id="reader" class="float" role="dialog" aria-label="Leitor de notícia"><div class="hd hud"><span class="ttl">Leitor de notícia <span class="aa-panel-demo">Demo</span></span><span style="display:flex;gap:6px;align-items:center"><span class="lay"><button data-lay="float" class="sel" title="Janela flutuante">◫ FLUTUANTE</button><button data-lay="side" title="Painel lateral">▮ LATERAL</button></span><button class="x" id="readerX" aria-label="Fechar">✕</button></span></div><div class="bd" id="readerBody"></div></div>
+<section id="chat" role="dialog" aria-label="Agente especialista em LLMs"><div class="hd hud"><span class="ttl">✦ Especialista em LLMs <span class="aa-panel-demo">Demo</span></span><span><button id="chatHistB">◷ Histórico</button><button id="chatMax" title="Tela cheia">⤢</button><button id="chatX" aria-label="Fechar">✕</button></span></div><div class="body"><div class="hist" id="chatHist"></div><div class="log" id="chatLog"></div></div><div class="sugs" id="chatSugs"></div><form id="chatForm"><span class="ps">❯</span><input id="chatIn" autocomplete="off" placeholder="Pergunte sobre modelos, laboratórios, preços, notícias…  (Enter envia · Esc fecha)"></form></section>
+<aside id="mkt" role="dialog" aria-label="Mercados" tabindex="-1"><div class="hd hud"><span><span class="ttl">$ Mercados</span><span class="upd">Dados demo</span></span><button class="x" id="mktX" aria-label="Fechar">✕</button></div><div class="bd"><form id="mktF"><span class="ps">❯</span><input id="mktIn" autocomplete="off" placeholder="Ticker · ex.: NVDA, TSM, 000660, SOX"><button>IR</button></form><div id="mktMsg"></div><div class="mtabs"><button data-mt="all" class="sel">Visão geral</button><button data-mt="watch">☆ Watch</button></div><div id="mktBody"></div><button id="mktAI">✳ Resumo do Agente · mercado de IA hoje</button><div class="foot2">Cotações demo · sem conexão com Yahoo Finance</div></div></aside>
+<aside id="queue" role="dialog" aria-label="Fila de revisão" tabindex="-1"><div class="hd hud"><span class="ttl">☰ Fila de revisão · <span id="qN">4</span> pendentes <span class="aa-panel-demo">Demo</span></span><button class="x" id="queueX" aria-label="Fechar">✕</button></div><div class="bd" id="queueBody"></div></aside>
+<div id="term" role="dialog" aria-label="Terminal"><div class="hd hud"><span id="termTitle">TERMINAL</span><button class="x" id="termX" aria-label="Fechar">✕</button></div><pre id="termBody"></pre></div>
+
+<section class="view" id="vModels">
+  <section class="aa-overview" aria-labelledby="aaHeroTitle">
+    <div class="aa-hero"><div><span class="aa-eyebrow">Uma visão independente do setor</span><h1 id="aaHeroTitle">Análise do<br>ecossistema de IA</h1></div><div class="aa-hero-copy"><p>Explore modelos, laboratórios e a infraestrutura que sustenta a inteligência artificial.</p><p class="aa-muted">Compare inteligência, velocidade e custo. Acompanhe notícias e navegue pelo mundo da IA.</p><div class="aa-hero-actions"><button id="aaCompare" class="aa-primary">Comparar modelos <span aria-hidden="true">↓</span></button><button id="aaGlobe" class="aa-secondary">Explorar o globo <span aria-hidden="true">↗</span></button></div></div></div>
+    <div class="aa-demo-note"><span class="aa-demo-dot" aria-hidden="true"></span>Dados demonstrativos herdados do protótipo. Gráficos, notícias, cotações e respostas do chat são ilustrativos; não representam dados atuais do Artificial Analysis.</div>
+    <div class="aa-metrics" id="aaMetrics" aria-label="Comparações demonstrativas de modelos"></div>
+    <div class="aa-overview-foot"><span>Explore o que cada modelo oferece</span><span>Inteligência · Velocidade · Custo por tarefa</span></div>
+  </section>
+  <section class="aa-table-section" aria-labelledby="aaTableTitle">
+
+  <div class="cmp"><h2 id="aaTableTitle" class="hud" style="color:var(--acc);letter-spacing:.3em;font-size:13px;margin:0">Compare os modelos</h2><span class="hud" style="color:var(--mu)">8 modelos demonstrativos · clique no cabeçalho para ordenar</span>
+  <div class="styleSw"><span class="hud" style="color:var(--mu);align-self:center">estilo:</span><button data-st="hib" class="sel">Híbrido</button><button data-st="term">Terminal</button><button data-st="ana">Analítico</button></div></div>
+  <div class="filters" id="mFilters"></div>
+  <div class="prompt" id="prompt">&gt; SELECT * FROM modelos ORDER BY inteligência DESC LIMIT 8;<span class="cur" style="display:inline-block;width:8px;height:13px;background:currentColor;vertical-align:-2px;animation:blink 1s steps(1) infinite"></span></div>
+  <div id="tblWrap" class="tbl-term-wrap"><table id="tbl" class="tbl-term"><thead><tr>
+    <th data-k="model">Modelo</th><th data-k="lab">Laboratório</th><th data-k="date">Lançamento</th><th data-k="iq">Inteligência</th><th data-k="cost">Custo estimado por tarefa <span class="info" title="(2.000 × preço de entrada + 1.000 × preço de saída) / 1.000.000 — Tarefa padrão. '≈' em Modelos de raciocínio: tokens de raciocínio não incluídos.">ⓘ</span></th>
+    <th data-k="pin">Entrada /1M</th><th data-k="pout">Saída /1M</th><th data-k="cache">Cache leitura</th><th data-k="ctx">Contexto</th>
+    <th data-k="ttft">Tempo até a resposta <span class="info" title="Em Modelos de raciocínio inclui o tempo de 'pensamento'.">ⓘ</span></th><th data-k="tps">Tokens/s</th><th data-k="io">Entradas → Saídas</th>
+  </tr></thead><tbody></tbody></table></div>
+  <div class="foot hud">Dados demo do protótipo. Referências: <a href="https://artificialanalysis.ai/" target="_blank" rel="noopener">Artificial Analysis</a> · OpenRouter · Hugging Face. Sem consulta a dados atuais.</div>
+  </section>
+</section>
+<section class="view" id="vNews"><div class="yf-market-strip" id="yfMarketStrip" aria-label="Panorama financeiro · 10 indicadores demo"></div><div class="aa-news-heading"><div><span class="aa-eyebrow">Inteligência artificial · cobertura do ecossistema</span><h1>Notícias de IA</h1></div><span class="yf-demo">Fontes originais + notícias demo · cotações demo</span></div>
+  <div class="cmp"><h2 class="hud" style="color:var(--acc);letter-spacing:.3em;font-size:13px;margin:0">Notícias</h2><span class="hud" style="color:var(--mu)" id="newsCount"></span></div>
+  <div class="filters" id="nFilters"></div>
+  <div id="newsList"></div>
+</section>
+
+<dialog id="financeAgent" aria-labelledby="financeTitle" aria-describedby="financeStatus"><header><div><span class="finance-eyebrow">Mercado financeiro</span><h2 id="financeTitle">Especialista em ações</h2></div><button id="financeClose" aria-label="Fechar especialista em ações">×</button></header><p id="financeStatus">Agente futuro · demonstração local</p><div id="financeStock"></div><div id="financeMessages" role="log" aria-live="polite" aria-label="Conversa sobre a ação"></div><div id="financeSuggestions" aria-label="Perguntas sugeridas"><button>Quais fundamentos acompanhar?</button><button>Quais são os principais riscos?</button><button>O que observar nos resultados?</button></div><form id="financeForm"><label for="financeQuestion">Pergunte sobre esta ação</label><div><input id="financeQuestion" placeholder="Digite sua pergunta…" maxlength="2000" required autocomplete="off"><button type="submit">Enviar</button></div></form></dialog>
+<script src="assets/globe.gl.min.js"></script>
+<script src="assets/news-original-sources.js"></script>
+<script>
+const LAYERS=[{k:'lab',n:'Laboratórios',i:'◆'},{k:'chip',n:'Chips',i:'▣'},{k:'cloud',n:'Nuvem',i:'☁'},{k:'energy',n:'Energia',i:'ϟ'},{k:'soft',n:'Software',i:'⌘'}];
+const RELTYPES=[{k:'fab',n:'Fabricação de chips',v:'--c-chip'},{k:'infra',n:'Nuvem e infraestrutura',v:'--c-cloud'},{k:'inv',n:'Investimento',v:'--acc'},{k:'energy',n:'Energia',v:'--c-energy'},{k:'model',n:'Parceria de modelos',v:'--c-lab'}];
+const C=[ // id, nome, cidade, lat, lng, camada, etiquetas, ticker, preço, var, site, contato, lançamento (dias), modelos
+['openai','OpenAI','San Francisco, EUA',37.7749,-122.4194,'lab',[],null,0,0,'openai.com','press@openai.com',null,['GPT-6','GPT-6 mini','o5']],
+['anthropic','Anthropic','San Francisco, EUA',37.7897,-122.3972,'lab',[],null,0,0,'anthropic.com','press@anthropic.com',5,['Claude Opus 5.5','Claude Sonnet 5.5','Claude Haiku 5.5']],
+['google','Google (Alphabet)','Mountain View, EUA',37.4220,-122.0841,'lab',['chip','cloud'],'GOOGL · NASDAQ',212.4,0.9,'abc.xyz','press@google.com',null,['Gemini 3.5 Pro','Gemini 3.5 Flash','Gemma 4']],
+['apple','Apple','Cupertino, EUA',37.3349,-122.0090,'lab',['chip'],'AAPL · NASDAQ',318.2,-0.4,'apple.com','media.help@apple.com',null,['Apple Foundation Model 3']],
+['nvidia','NVIDIA','Santa Clara, EUA',37.3708,-121.9637,'chip',['soft','lab'],'NVDA · NASDAQ',188.7,-2.1,'nvidia.com','press@nvidia.com',null,['Nemotron 4 Ultra']],
+['microsoft','Microsoft','Redmond, EUA',47.6396,-122.1281,'lab',['cloud'],'MSFT · NASDAQ',528.9,0.6,'microsoft.com','rrt@we-worldwide.com',null,['MAI-2','Phi-5']],
+['amazon','Amazon','Seattle, EUA',47.6223,-122.3366,'cloud',['lab','chip'],'AMZN · NASDAQ',247.1,1.2,'aboutamazon.com','press@amazon.com',null,['Nova 2 Premier']],
+['meta','Meta','Menlo Park, EUA',37.4848,-122.1484,'lab',[],'META · NASDAQ',781.0,1.5,'meta.com','press@meta.com',null,['Llama 5']],
+['oracle','Oracle','Austin, EUA',30.2420,-97.7200,'cloud',[],'ORCL · NYSE',297.3,2.4,'oracle.com','pr_us@oracle.com',null,[]],
+['ibm','IBM','Armonk, EUA',41.1084,-73.7203,'lab',['cloud'],'IBM · NYSE',289.6,-0.3,'ibm.com','press@us.ibm.com',null,['Granite 5']],
+['spacex','SpaceX (xAI)','Hawthorne, EUA',33.9207,-118.3280,'lab',['cloud'],'SPCX · NASDAQ',162.8,3.1,'spacex.com','media@spacex.com',null,['Grok 5','Grok 5 mini']],
+['tesla','Tesla','Austin, EUA',30.2218,-97.6170,'soft',['chip','energy'],'TSLA · NASDAQ',431.5,-1.7,'tesla.com','press@tesla.com',null,[]],
+['broadcom','Broadcom','Palo Alto, EUA',37.4142,-122.1497,'chip',[],'AVGO · NASDAQ',356.2,1.1,'broadcom.com','press.relations@broadcom.com',null,[]],
+['amd','AMD','Santa Clara, EUA',37.3830,-121.9700,'chip',[],'AMD · NASDAQ',212.9,-0.8,'amd.com','press@amd.com',null,[]],
+['micron','Micron','Boise, EUA',43.5280,-116.1450,'chip',[],'MU · NASDAQ',184.1,0.7,'micron.com','media@micron.com',null,[]],
+['tsmc','TSMC','Hsinchu, Taiwan',24.7736,121.0108,'chip',[],'TSM · NYSE',298.4,1.9,'tsmc.com','pr@tsmc.com',null,[]],
+['asml','ASML','Veldhoven, Países Baixos',51.4072,5.4158,'chip',[],'ASML · NASDAQ',1012.5,0.4,'asml.com','media.relations@asml.com',null,[]],
+['skhynix','SK Hynix','Icheon, Coreia do Sul',37.2350,127.4920,'chip',[],'000660 · KRX',338000,2.2,'skhynix.com','pr@skhynix.com',null,[]],
+['samsung','Samsung','Suwon, Coreia do Sul',37.2580,127.0460,'chip',[],'005930 · KRX',91200,-0.6,'samsung.com','press@samsung.com',null,[]],
+['alibaba','Alibaba','Hangzhou, China',30.2741,120.1551,'lab',['cloud'],'BABA · NYSE',142.3,1.8,'alibabagroup.com','ir@alibaba-inc.com',1,['Qwen 4','Qwen 3.5','Qwen3-Coder']],
+['baidu','Baidu','Pequim, China',40.0570,116.3070,'lab',['cloud'],'BIDU · NASDAQ',118.6,-1.1,'baidu.com','ir@baidu.com',null,['ERNIE 5']],
+['deepseek','DeepSeek','Hangzhou, China',30.2085,120.2130,'lab',[],null,0,0,'deepseek.com','service@deepseek.com',null,['DeepSeek V4','DeepSeek R3']],
+['moonshot','Moonshot AI','Pequim, China',39.9840,116.3070,'lab',[],null,0,0,'moonshot.cn','—',null,['Kimi K3']],
+['zhipu','Zhipu AI','Pequim, China',39.9990,116.3300,'lab',[],null,0,0,'zhipuai.cn','—',null,['GLM-5']],
+['mistral','Mistral AI','Paris, França',48.8566,2.3522,'lab',[],null,0,0,'mistral.ai','press@mistral.ai',null,['Mistral Large 3','Ministral 3']],
+['coreweave','CoreWeave','Livingston, EUA',40.7960,-74.3150,'cloud',[],'CRWV · NASDAQ',131.4,4.6,'coreweave.com','press@coreweave.com',null,[]],
+['equinix','Equinix','Redwood City, EUA',37.5200,-122.2600,'cloud',[],'EQIX · NASDAQ',812.0,0.2,'equinix.com','press@equinix.com',null,[]],
+['vertiv','Vertiv','Westerville, EUA',40.1262,-82.9291,'cloud',['energy'],'VRT · NYSE',158.3,1.4,'vertiv.com','media@vertiv.com',null,[]],
+['arista','Arista','Santa Clara, EUA',37.3770,-121.9220,'cloud',[],'ANET · NYSE',146.7,0.9,'arista.com','press@arista.com',null,[]],
+['constellation','Constellation Energy','Baltimore, EUA',39.2904,-76.6122,'energy',[],'CEG · NASDAQ',338.5,2.8,'constellationenergy.com','media@constellation.com',null,[]],
+['vistra','Vistra','Irving, EUA',32.8140,-96.9489,'energy',[],'VST · NYSE',204.1,1.6,'vistracorp.com','media@vistracorp.com',null,[]],
+['oklo','Oklo','Santa Clara, EUA',37.3500,-121.9550,'energy',[],'OKLO · NYSE',98.2,-3.4,'oklo.com','media@oklo.com',null,[]],
+['gevernova','GE Vernova','Cambridge, EUA',42.3736,-71.1097,'energy',[],'GEV · NYSE',612.0,0.5,'gevernova.com','media@gevernova.com',null,[]],
+['nuscale','NuScale','Portland, EUA',45.5152,-122.6784,'energy',[],'SMR · NYSE',41.3,-2.2,'nuscalepower.com','media@nuscalepower.com',null,[]],
+['palantir','Palantir','Denver, EUA',39.7392,-104.9903,'soft',[],'PLTR · NASDAQ',176.9,2.0,'palantir.com','media@palantir.com',null,[]]
+].map(a=>({id:a[0],name:a[1],city:a[2],lat:a[3],lng:a[4],layer:a[5],tags:a[6],ticker:a[7],price:a[8],chg:a[9],site:a[10],contact:a[11],launch:a[12],models:a[13]}));
+const byId=Object.fromEntries(C.map(c=>[c.id,c]));
+const REL=[['tsmc','nvidia','fab'],['tsmc','amd','fab'],['tsmc','apple','fab'],['tsmc','broadcom','fab'],['asml','tsmc','fab'],['skhynix','nvidia','fab'],['samsung','nvidia','fab'],
+['oracle','openai','infra'],['microsoft','openai','infra'],['coreweave','openai','infra'],['amazon','anthropic','infra'],['google','anthropic','infra'],['nvidia','spacex','infra'],
+['microsoft','openai','inv'],['amazon','anthropic','inv'],['google','anthropic','inv'],['nvidia','coreweave','inv'],
+['constellation','microsoft','energy'],['vistra','oracle','energy'],['oklo','meta','energy'],['gevernova','microsoft','energy'],
+['microsoft','mistral','model'],['apple','openai','model'],['meta','ibm','model']].map(([a,b,t])=>({a:byId[a],b:byId[b],t}));
+const NEWS={
+ alibaba:[['08/10','Alibaba lança Qwen 4 com janela de 2 milhões de tokens','Alibaba unveils Qwen 4 with 2M-token context window'],['07/10','Ações da Alibaba sobem após anúncio do Qwen 4','Alibaba shares rise after Qwen 4 announcement'],['03/10','Alibaba Cloud amplia data centers no Sudeste Asiático','Alibaba Cloud expands data centers in Southeast Asia']],
+ anthropic:[['04/10','Anthropic apresenta Claude Haiku 5.5','Anthropic introduces Claude Haiku 5.5'],['01/10','Anthropic amplia acordo de computação com o Google','Anthropic expands compute deal with Google'],['26/09','Claude Opus 5.5 lidera índice de programação','Claude Opus 5.5 tops coding index']],
+ nvidia:[['06/10','NVIDIA anuncia nova geração de chips para data centers','NVIDIA announces next-gen data center chips'],['04/10','SOX recua com realização de lucros em semicondutores','SOX slips as chipmakers see profit-taking'],['30/09','NVIDIA investe em nova rodada da CoreWeave','NVIDIA joins CoreWeave funding round']]};
+const defNews=c=>{const i=C.indexOf(c),d1=String(1+(i*3)%8).padStart(2,'0'),d2=String(24+(i%6)).padStart(2,'0');return [[d1+'/10',`${c.name} comenta estratégia de IA em evento com investidores`,`${c.name} outlines AI strategy at investor event`],[d2+'/09',`${c.name} anuncia parceria no ecossistema de IA`,`${c.name} announces AI ecosystem partnership`]]};
+const MODELS=[
+ ['Claude Opus 5.5','Anthropic','2026-09-22',57.6,4,20,0.4,1000000,8.2,97,'texto, imagem, arquivo → texto',true],
+ ['GPT-6','OpenAI','2026-08-14',59.1,5,25,0.5,1000000,11.4,88,'texto, imagem, áudio → texto',true],
+ ['Gemini 3.5 Pro','Google','2026-07-30',56.2,2.5,15,0.25,2000000,6.9,142,'texto, imagem, vídeo, áudio → texto',true],
+ ['Qwen 4','Alibaba','2026-10-08',52.4,0.6,2.4,null,2000000,1.1,118,'texto, imagem → texto',false],
+ ['DeepSeek V4','DeepSeek','2026-06-12',50.8,0.28,1.1,0.03,256000,1.9,64,'texto → texto',false],
+ ['Grok 5','SpaceX (xAI)','2026-09-02',55.0,3,15,0.75,512000,9.8,73,'texto, imagem → texto',true],
+ ['Mistral Large 3','Mistral AI','2026-05-20',44.1,0.5,1.5,null,256000,0.6,96,'texto, imagem → texto',false],
+ ['Llama 5','Meta','2026-04-29',46.3,null,null,null,1000000,0.8,110,'texto, imagem → texto',false]
+].map(r=>({model:r[0],lab:r[1],date:r[2],iq:r[3],pin:r[4],pout:r[5],cache:r[6],ctx:r[7],ttft:r[8],tps:r[9],io:r[10],reason:r[11]}));
+
+const $=s=>document.querySelector(s);const css=v=>getComputedStyle(document.body).getPropertyValue(v).trim();
+/* escape de HTML: todo dado (nomes, notícias, resumos) entra como texto, nunca como markup */
+const esc=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+/* armazenamento seguro: localStorage bloqueado/cheio não derruba o script */
+const store={get:k=>{try{return localStorage.getItem('mg-aa-'+String(k).replace(/^mg(?:\d+)?-/,''))}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem('mg-aa-'+String(k).replace(/^mg(?:\d+)?-/,''),v)}catch(e){}}};
+/* valida contra lista fechada; parâmetros de URL são override de sessão e NUNCA são persistidos */
+const pick=(v,ok,def)=>ok.includes(v)?v:def;
+const pref=(param,key,ok,def)=>pick(params.get(param),ok,null)||pick(store.get(key),ok,def);
+const layerColor=l=>css('--c-'+l);
+const state={layers:new Set(LAYERS.map(l=>l.k)),rel:true,relTypes:new Set(RELTYPES.map(r=>r.k)),sel:null,sound:false,amb:false,view:'3d',tab:'globo',tstyle:'hib',nLayers:new Set(LAYERS.map(l=>l.k)),nCo:'',mIn:new Set(),mHl:new Set()};
+const params=new URLSearchParams(location.search);
+const THEMES=[{k:'osiris',n:'OSIRIS fiel',d:'HUD preciso · dourado + ciano'},{k:'ambar',n:'Fósforo âmbar',d:'CRT âmbar · varredura'},{k:'noturna',n:'Sala de controle noturna',d:'Marinho · luzes das cidades'}];
+const TEX={osiris:{escuro:'earth-day-5400.jpg',claro:'earth-day-5400.jpg'},ambar:{escuro:'earth-amber-5400.jpg',claro:'earth-sepia-5400.jpg'},noturna:{escuro:'earth-night-8k.jpg',claro:'earth-day-5400.jpg'}};
+const TEX_ALT={osiris:'earth-night-8k.jpg',ambar:'earth-night-amber-8k.jpg',noturna:'earth-day-5400.jpg'};
+let theme='osiris';
+let mode=pick(params.get('mode'),['claro','escuro'],'claro'); // Abertura padrão sempre Light; Dark disponível por URL ou controle Modo.
+document.body.dataset.theme=theme;document.body.dataset.mode=mode;
+
+/* ---------- globo ---------- */
+const el=$('#globe');
+let G; try{G=new Globe(el,{rendererConfig:{antialias:true,alpha:true}})}catch(e){G=Globe({rendererConfig:{antialias:true,alpha:true}})(el)}
+G.backgroundColor('rgba(0,0,0,0)').bumpImageUrl('assets/earth-topology.png').showGraticules(false)
+ .atmosphereAltitude(0.16).pointOfView({lat:30,lng:-40,altitude:2.3},0);
+G.renderer().setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+const ctl=G.controls();ctl.autoRotate=!matchMedia('(prefers-reduced-motion: reduce)').matches;ctl.autoRotateSpeed=0.35;ctl.enableDamping=true;
+el.addEventListener('pointerdown',()=>{ctl.autoRotate=false});
+/* pinça do trackpad (Chrome: wheel + ctrlKey; Safari: gesture*) controla o zoom do GLOBO, nunca o zoom da página.
+   Zoom da página para acessibilidade continua em Cmd + / Cmd − . */
+document.addEventListener('wheel',e=>{if(!e.ctrlKey)return;e.preventDefault();if(state.tab!=='globo'||e.target.closest('#feed,#term,#reader,#chat,.pop,.view'))return;
+ const pv=G.pointOfView();ctl.autoRotate=false;G.pointOfView({altitude:Math.min(4,Math.max(0.01,pv.altitude*Math.exp(e.deltaY*0.01)))},0)},{passive:false});
+['gesturestart','gesturechange','gestureend'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
+function sizeGlobe(){const r=el.getBoundingClientRect();G.width(r.width).height(r.height)}
+window.addEventListener('resize',sizeGlobe);
+G.onGlobeReady(()=>{const m=G.globeMaterial();m.bumpScale=6;const tune=()=>{if(m.map){m.map.anisotropy=G.renderer().capabilities.getMaxAnisotropy();m.map.needsUpdate=true}else setTimeout(tune,300)};tune()});
+const visible=c=>state.layers.has(c.layer)||c.tags.some(t=>state.layers.has(t));
+function hexA(h,a){h=h.replace('#','');const n=parseInt(h.length===3?h.split('').map(x=>x+x).join(''):h,16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`}
+const isLab=c=>c.layer==='lab';
+const shortName=c=>c.name.replace(/ \(.*\)$/,'');
+const ptLat=c=>c.dlat??c.lat,ptLng=c=>c.dlng??c.lng;
+const elMap={};let GHOST=[],RELG=[];
+function renderPoints(){
+  G.htmlElementsData([...C.filter(visible),...GHOST]).htmlLat(ptLat).htmlLng(ptLng).htmlAltitude(0.004).htmlTransitionDuration(0)
+   .htmlElement(c=>{const w=document.createElement('div');w.className='ptw';if(c.ghost){w.innerHTML=`<div class="pt lab ghost"></div><div class="lbl" style="--pc:${css('--acc')}">${esc(c.name.toUpperCase())}<span class="nw">NOVO?</span></div>`;return w}const d=document.createElement('div');d.className='pt'+(isLab(c)?' lab':'')+(state.sel===c?' sel':'');d.style.setProperty('--pc',layerColor(c.layer));
+     const open=e=>{e.stopPropagation();hoverOff();openTerm(c)};d.onmouseenter=()=>hoverOn(c);d.onmouseleave=()=>hoverOff();d.onclick=open;w.appendChild(d);
+     if(isLab(c)){const l=document.createElement('div');l.className='lbl';l.style.setProperty('--pc',layerColor(c.layer));l.innerHTML=esc(shortName(c).toUpperCase())+(c.launch!=null&&c.launch<=7?`<span class="nw">◉ ${c.launch===0?'HOJE':c.launch+'D'}</span>`:'');l.onmouseenter=()=>hoverOn(c);l.onmouseleave=()=>hoverOff();l.onclick=open;w.appendChild(l)}
+     elMap[c.id]=w;return w});
+  syncPts();
+  G.ringsData(C.filter(c=>c.launch!=null&&c.launch<=7&&visible(c))).ringLat(ptLat).ringLng(ptLng)
+   .ringColor(c=>{const s=1-(c.launch/7);const col=css('--acc');return t=>hexA(col,(1-t)*(0.35+0.65*s))})
+   .ringMaxRadius(c=>2+4*(1-c.launch/7)).ringPropagationSpeed(2.2).ringRepeatPeriod(c=>700+c.launch*180);
+}
+/* seleção e cores aplicadas nos elementos existentes (globe.gl pode reaproveitar os nós) */
+function syncPts(){C.forEach(c=>{const w=elMap[c.id];if(!w)return;const d=w.querySelector('.pt');d.style.setProperty('--pc',layerColor(c.layer));d.classList.toggle('sel',state.sel===c);const l=w.querySelector('.lbl');if(l)l.style.setProperty('--pc',layerColor(c.layer))})}
+function renderArcs(){
+  const data=(state.rel?REL.filter(r=>state.relTypes.has(r.t)&&visible(r.a)&&visible(r.b)):[]).concat(RELG);
+  const vc=Object.fromEntries(RELTYPES.map(r=>[r.k,css(r.v)]));
+  G.arcsData(data).arcStartLat(r=>ptLat(r.a)).arcStartLng(r=>ptLng(r.a)).arcEndLat(r=>ptLat(r.b)).arcEndLng(r=>ptLng(r.b))
+   .arcColor(r=>{if(r.ghost){const g=css('--acc');return [hexA(g,.95),hexA(g,.95)]}const on=state.sel&&(r.a===state.sel||r.b===state.sel);const a=state.sel?(on?0.95:0.05):0.16;return [hexA(vc[r.t],a),hexA(vc[r.t],a*0.6)]})
+   .arcStroke(r=>r.ghost?0.7:state.sel&&(r.a===state.sel||r.b===state.sel)?0.55:0.28)
+   .arcDashLength(r=>r.ghost?0.08:state.sel&&(r.a===state.sel||r.b===state.sel)?0.35:1).arcDashGap(r=>r.ghost?0.05:state.sel&&(r.a===state.sel||r.b===state.sel)?0.12:0)
+   .arcDashAnimateTime(r=>r.ghost?1400:state.sel&&(r.a===state.sel||r.b===state.sel)?2200:0).arcAltitudeAutoScale(0.35).arcsTransitionDuration(0);
+}
+function applyTheme(persist){
+  theme='osiris';
+  document.body.dataset.theme=theme;document.body.dataset.mode=mode;document.title='Monitor Global · Artificial Analysis '+(mode==='escuro'?'Dark':'Light');if(persist){store.set('mg-theme',theme);store.set('mg-mode',mode)}
+  const alt=state.view==='mapa';
+  G.globeImageUrl('assets/'+(alt?TEX_ALT[theme]:(mode==='escuro'?'earth-night-8k.jpg':TEX[theme][mode]))).atmosphereColor(css('--atm'))
+   .backgroundImageUrl(null);
+  G.showAtmosphere(true);
+  setTimeout(()=>{const m=G.globeMaterial();if(theme==='noturna'&&mode==='escuro'){m.emissiveIntensity=0.2}},50);
+  renderPoints();renderArcs();buildLeft();buildLegend();buildTicker();buildRelList();buildThemeList();if(typeof renderFeed==='function'&&$('#feedList').children.length){renderFeed();renderLabs();renderMFilters();renderTable();if(state.tab==='news')renderNews();if(document.querySelector('#mkt.show'))renderMkt()}
+  $('#bMode').innerHTML=(mode==='escuro'?'☀':'◑')+' <span>'+(mode==='escuro'?'Claro':'Escuro')+'</span>';$('#bMode').setAttribute('aria-label',mode==='escuro'?'Ativar modo claro':'Ativar modo escuro');aaUpdateGlobeTone();
+  requestAnimationFrame(sizeGlobe);
+}
+/* ---------- rails, legend, popovers ---------- */
+/* v5: barra lateral de Camadas removida — a legenda horizontal da base é o filtro de Camadas, com contagem por Camada (Camada principal) */
+function buildLeft(){buildLegend()}
+function buildLegend(){const G2=$('#legend');G2.innerHTML=LAYERS.map(l=>{const n=C.filter(c=>c.layer===l.k).length,on=state.layers.has(l.k);return `<button class="lg${on?'':' off'}" data-l="${l.k}" aria-pressed="${on}" title="${on?'Ocultar':'Mostrar'} ${esc(l.n)}"><i style="background:${layerColor(l.k)};box-shadow:0 0 6px ${layerColor(l.k)}"></i>${esc(l.n)}<b>${n}</b></button>`}).join('');G2.querySelectorAll('button').forEach(b=>b.onclick=e=>{e.stopPropagation();const k=b.dataset.l;state.layers.has(k)?state.layers.delete(k):state.layers.add(k);renderPoints();renderArcs();buildLegend();spread(true)})}
+function buildRelList(){$('#relList').innerHTML=RELTYPES.map(r=>`<label><input type="checkbox" data-r="${r.k}" ${state.relTypes.has(r.k)?'checked':''}><span class="sw" style="background:${css(r.v)}"></span>${r.n}</label>`).join('')+`<label style="margin-top:6px;border-top:1px solid var(--line);padding-top:8px"><input type="checkbox" id="relAll" ${state.rel?'checked':''}> Mostrar rede</label>`;
+ $('#relList').querySelectorAll('[data-r]').forEach(i=>i.onchange=()=>{i.checked?state.relTypes.add(i.dataset.r):state.relTypes.delete(i.dataset.r);renderArcs()});
+ $('#relAll').onchange=e=>{state.rel=e.target.checked;$('#bRel').classList.toggle('on',state.rel);renderArcs()}}
+const SW={osiris:{escuro:['#050607','#F2B33D','#36E2F0'],claro:['#E9EDF0','#9A6A00','#0B1014']},ambar:{escuro:['#0A0700','#FFB000','#FFD27A'],claro:['#F2E8D0','#B36B00','#3B2604']},noturna:{escuro:['#061226','#E8C77A','#7CC4FF'],claro:['#E6ECF3','#A0782A','#1C64C8']}};
+function buildThemeList(){$('#themeList').innerHTML=THEMES.map(t=>{const s=SW[t.k][mode];return `<div class="th ${t.k===theme?'sel':''}" data-t="${t.k}"><i style="background:linear-gradient(135deg,${s[0]} 55%,${s[1]} 55% 75%,${s[2]} 75%)"></i><div><div style="font-weight:700">${t.n}</div><div style="color:var(--mu);font-size:11px">${t.d}</div></div></div>`}).join('');
+ $('#themeList').querySelectorAll('.th').forEach(d=>d.onclick=()=>{theme=d.dataset.t;applyTheme(true)});
+ document.querySelectorAll('.modes button').forEach(b=>{b.classList.toggle('sel',b.dataset.m===mode);b.onclick=()=>{mode=b.dataset.m;applyTheme(true)}})}
+function togglePop(id){['#popRel','#popTheme','#popSound'].forEach(p=>{if(p!==id)$(p).classList.remove('show')});$(id).classList.toggle('show')}
+$('#bRel').onclick=()=>togglePop('#popRel');$('#bTheme').onclick=()=>togglePop('#popTheme');
+$('#bMode').onclick=()=>{mode=mode==='escuro'?'claro':'escuro';applyTheme(true)};
+document.querySelectorAll('#views button').forEach(b=>b.onclick=()=>{if(b.dataset.soon)return;state.view=b.dataset.v;document.querySelectorAll('#views button').forEach(x=>x.classList.toggle('sel',x===b||(x.dataset.v==='3d'&&b.dataset.v!=='3d'&&false)));applyTheme()});
+/* ---------- ticker ---------- */
+const IDX=[['NDX','Nasdaq-100',24812.4,-0.6],['COMP','Nasdaq Composite',22406.1,-0.4],['SPX','S&P 500',6795.3,0.1],['SOX','PHLX Semicondutores',6120.8,-1.9]];
+function fmt(n,d=2){return n.toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d})}
+function buildTicker(){const items=[...IDX.map(i=>({s:i[0],p:i[2],c:i[3],col:css('--d1'),m:'Σ'})),...C.filter(c=>c.ticker).map(c=>({s:c.ticker.split(' · ')[0],p:c.price,c:c.chg,col:layerColor(c.layer),m:c.name.slice(0,2).toUpperCase(),id:c.id}))];
+ const h=items.map(i=>`<span class="tk" ${i.id?`data-id="${i.id}"`:''}><span class="mono" style="background:${i.col}">${esc(i.m)}</span><span class="s">${esc(i.s)}</span><span class="p">${fmt(i.p,i.p>9999?0:2)}</span><span class="${i.c>=0?'up':'dn'}">${i.c>=0?'▲':'▼'} ${fmt(Math.abs(i.c),1)}%</span></span>`).join('');
+ $('#track').innerHTML=h+h;$('#track').querySelectorAll('[data-id]').forEach(t=>t.onclick=()=>goTo(byId[t.dataset.id]))}
+/* ---------- clock & cursor ---------- */
+setInterval(()=>{const d=new Date();$('#clock').textContent=d.toISOString().slice(11,19)+'Z'},1000);
+el.addEventListener('mousemove',e=>{const r=el.getBoundingClientRect();const g=G.toGlobeCoords(e.clientX-r.left,e.clientY-r.top);if(g){$('#cLat').textContent=g.lat.toFixed(2);$('#cLng').textContent=g.lng.toFixed(2)}else{$('#cLat').textContent='—';$('#cLng').textContent='—'}});
+setInterval(()=>{const a=G.pointOfView().altitude;$('#cZoom').textContent=(4/a).toFixed(1);$('#cScale').textContent=Math.round(a*1400).toLocaleString('pt-BR')},400);
+/* ---------- preview ---------- */
+let hoverT,mouse={x:0,y:0};document.addEventListener('mousemove',e=>{mouse={x:e.clientX,y:e.clientY};const p=$('#preview');if(p.style.display==='block'){p.style.left=(mouse.x+16)+'px';p.style.top=(mouse.y+12)+'px'}});
+function hoverOff(){clearTimeout(hoverT);$('#preview').style.display='none'}
+function hoverOn(c){clearTimeout(hoverT);const p=$('#preview');
+ hoverT=setTimeout(()=>{const l=LAYERS.find(x=>x.k===c.layer);p.innerHTML=`<div style="display:flex;gap:8px;align-items:center"><span class="mono" style="background:${layerColor(c.layer)};width:24px;height:24px;font-size:10px">${esc(c.name.slice(0,2).toUpperCase())}</span><div><div class="n">${esc(c.name)}</div><div class="hud" style="color:var(--mu);font-size:9px">${esc(l.n)} · ${esc(c.city)}</div></div></div>${c.launch!=null?`<div class="hud" style="color:var(--acc);font-size:9px;margin-top:6px">◉ LANÇAMENTO HÁ ${c.launch} DIA${c.launch>1?'S':''}</div>`:''}`;p.style.left=(mouse.x+16)+'px';p.style.top=(mouse.y+12)+'px';p.style.display='block'},300)}
+/* ---------- sound ---------- */
+let AC=null,amb=null;const vol={type:.6,amb:.35};
+function ensureAC(){if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume()}
+function click(){if(!state.sound||!AC)return;const o=AC.createOscillator(),g=AC.createGain(),f=AC.createBiquadFilter();o.type='square';o.frequency.value=1700+Math.random()*900;f.type='highpass';f.frequency.value=1200;g.gain.setValueAtTime(0.06*vol.type,AC.currentTime);g.gain.exponentialRampToValueAtTime(0.0001,AC.currentTime+0.03);o.connect(f).connect(g).connect(AC.destination);o.start();o.stop(AC.currentTime+0.035)}
+function startAmb(){ensureAC();const out=AC.createGain();out.gain.value=0;out.connect(AC.destination);
+ const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=420;lp.Q.value=4;lp.connect(out);
+ const oscs=[55,82.4,110.3].map((f,i)=>{const o=AC.createOscillator();o.type=i===1?'triangle':'sine';o.frequency.value=f;o.detune.value=(Math.random()-.5)*14;const g=AC.createGain();g.gain.value=i===0?.5:.22;o.connect(g).connect(lp);o.start();return o});
+ const n=AC.createBufferSource(),buf=AC.createBuffer(1,AC.sampleRate*4,AC.sampleRate),d=buf.getChannelData(0);let last=0;for(let i=0;i<d.length;i++){last=(last+0.02*(Math.random()*2-1))/1.02;d[i]=last*3.5}n.buffer=buf;n.loop=true;const ng=AC.createGain();ng.gain.value=.35;n.connect(ng).connect(lp);n.start();
+ const lfo=AC.createOscillator(),lg=AC.createGain();lfo.frequency.value=.05;lg.gain.value=220;lfo.connect(lg).connect(lp.frequency);lfo.start();
+ out.gain.linearRampToValueAtTime(0.25*vol.amb,AC.currentTime+2.5);amb={out,stop:()=>{out.gain.linearRampToValueAtTime(0,AC.currentTime+1.2);setTimeout(()=>{[...oscs,n,lfo].forEach(o=>{try{o.stop()}catch(e){}});out.disconnect()},1400)}}}
+function syncSoundBtn(){const on=state.sound||state.amb;$('#sIcon').textContent=on?'🔊':'🔇';$('#bSound').classList.toggle('on',on);$('#tgType').textContent=state.sound?'ON':'OFF';$('#tgType').classList.toggle('on',state.sound);$('#tgAmb').textContent=state.amb?'ON':'OFF';$('#tgAmb').classList.toggle('on',state.amb)}
+let lastSound={type:true,amb:false};
+$('#bSound').onclick=()=>{if(state.sound||state.amb){lastSound={type:state.sound,amb:state.amb};state.sound=false;if(state.amb&&amb){amb.stop();amb=null}state.amb=false}else{state.sound=lastSound.type;if(state.sound)ensureAC();if(lastSound.amb){state.amb=true;startAmb()}}syncSoundBtn()};
+$('#bSoundMore').onclick=e=>{e.stopPropagation();togglePop('#popSound')};
+$('#tgType').onclick=()=>{state.sound=!state.sound;if(state.sound)ensureAC();syncSoundBtn()};
+$('#tgAmb').onclick=()=>{state.amb=!state.amb;if(state.amb)startAmb();else if(amb){amb.stop();amb=null}syncSoundBtn()};
+$('#volType').oninput=e=>vol.type=e.target.value/100;
+$('#volAmb').oninput=e=>{vol.amb=e.target.value/100;if(amb)amb.out.gain.setTargetAtTime(0.25*vol.amb,AC.currentTime,.3)};
+/* ---------- terminal ---------- */
+const term=$('#term'),body=$('#termBody');let typing=null,fullHTML='',opening=false;
+function spark(seed,up){let v=50,pts=[];for(let i=0;i<30;i++){v+=Math.sin(i*1.7+seed)*3+(up?0.6:-0.6)+Math.cos(i*0.7+seed*2)*2;pts.push(v)}const mn=Math.min(...pts),mx=Math.max(...pts);return `<svg width="120" height="22" viewBox="0 0 120 22" style="vertical-align:middle"><polyline fill="none" stroke="${up?css('--up'):css('--dn')}" stroke-width="1.5" points="${pts.map((p,i)=>`${i*4},${20-(p-mn)/(mx-mn||1)*18}`).join(' ')}"/></svg>`}
+function asciiName(n){const w=n.split(' ')[0].toUpperCase().slice(0,9);const inner=' '+w.split('').join(' ')+' ';return '+'+'-'.repeat(inner.length)+'+\n|'+inner+'|\n+'+'-'.repeat(inner.length)+'+'}
+function termHTML(c){const l=LAYERS.find(x=>x.k===c.layer);const tags=c.tags.map(t=>LAYERS.find(x=>x.k===t).n).join(', ')||'—';
+ const news=(NEWS[c.id]||defNews(c)).slice(0,5);
+ const q=c.ticker?`${esc(c.ticker)}  <span class="num">${c.price>9999?'₩':'$'}${fmt(c.price,stockCurrency(c)==='KRW'?0:2)}</span>  <span class="${c.chg>=0?'up':'dn'}">${c.chg>=0?'▲':'▼'} ${fmt(Math.abs(c.chg),1)}%</span>  [[SPARK]]`:'PRIVADA';
+ const rels=REL.filter(r=>r.a===c||r.b===c).map(r=>`${esc(r.a===c?'→ '+r.b.name:'← '+r.a.name)} <span class="k">(${esc(RELTYPES.find(t=>t.k===r.t).n.toLowerCase())})</span>`).join('\n  ')||'—';
+ return {text:[`<span class="ascii">${esc(asciiName(c.name))}</span>`,'',`> <b>${esc(c.name.toUpperCase())}</b> — ${esc(c.city.toUpperCase())}`,`> <span class="k">CAMADA:</span> ${esc(l.n.toUpperCase())} · <span class="k">ETIQUETAS:</span> ${esc(tags.toUpperCase())}`,`> <span class="k">SITE:</span> <a href="https://${esc(c.site)}" target="_blank" rel="noopener">${esc(c.site)}</a> · <span class="k">CONTATO:</span> ${esc(c.contact)}`,`> <span class="k">COTAÇÃO:</span> ${q}`,c.models.length?`> <span class="k">MODELOS:</span> ${c.models.map((m,i)=>i===0&&c.launch!=null?`${esc(m)} <span style="color:var(--acc)">(lançado há ${c.launch} dia${c.launch>1?'s':''})</span>`:esc(m)).join(' · ')}`:null,`> <span class="k">RELAÇÕES:</span>\n  ${rels}`,`> <span class="k">NOTÍCIAS:</span>`,...news.map((n,ni)=>`  [${esc(n[0])}] <span class="nlink" data-rd="${esc(c.id)}|${ni}">${esc(n[1])}</span>\n        <span class="muted">"${esc(n[2])}"</span> <a href="#" onclick="return false">↗</a><span class="irr">marcar como irrelevante</span>`)].filter(x=>x!=null).join('\n'),spark:c.ticker?spark(c.id.length,c.chg>=0):''}}
+/* tokenize robusto: '<' sem '>' e '&' que não é entidade viram texto escapado (antes: laço infinito); [[SPARK]] é token atômico */
+const ENT=/^&(#\d{1,7}|#x[0-9a-f]{1,6}|[a-z][a-z0-9]{1,31});/i,TAG=/^<\/?[a-z][a-z0-9-]*(\s[^<>]*)?\/?>/i;
+function tokenize(html){const out=[];let i=0;while(i<html.length){if(html.startsWith('[[SPARK]]',i)){out.push({tag:'[[SPARK]]'});i+=9}else if(html[i]==='<'){const m=TAG.exec(html.slice(i));if(!m){out.push({ch:'&lt;'});i++;continue}out.push({tag:m[0]});i+=m[0].length}else if(html[i]==='&'){const m=ENT.exec(html.slice(i,i+40));if(m){out.push({ch:m[0]});i+=m[0].length}else{out.push({ch:'&amp;'});i++}}else{out.push({ch:html[i]});i++}}return out}
+function openTerm(c){opening=true;setTimeout(()=>opening=false,0);state.sel=c;renderPoints();renderArcs();ctl.autoRotate=false;
+ const t=termHTML(c);fullHTML=t.text.replace('[[SPARK]]',t.spark);$('#termTitle').textContent='TERMINAL · '+c.id.toUpperCase();
+ const sc=G.getScreenCoords(ptLat(c),ptLng(c),0.02);const r=el.getBoundingClientRect();let x=r.left+sc.x+24,y=r.top+sc.y-60;
+ term.style.display='block';const w=term.offsetWidth;const rd=$('#reader');const qp=document.querySelector('#queue.show,#mkt.show');const limit=qp?qp.getBoundingClientRect().left-14:(rd.style.display==='block'&&readerLay==='side')?rd.getBoundingClientRect().left-14:innerWidth-70;if(x+w>limit)x=r.left+sc.x-w-24;if(x+w>limit)x=limit-w;if(x<60)x=60;const TOP=68,BOT=(typeof chat!=='undefined'&&chat.classList.contains('show'))?Math.round(innerHeight-chat.getBoundingClientRect().top)+10:48,maxH=Math.round(innerHeight*0.72);y=Math.min(Math.max(y,TOP),Math.max(TOP,innerHeight-BOT-maxH));term.style.left=x+'px';term.style.top=y+'px';term.style.maxHeight=(innerHeight-BOT-y)+'px';
+ if(matchMedia('(prefers-reduced-motion: reduce)').matches||params.get('select')){body.innerHTML=fullHTML;return}
+ const toks=tokenize(t.text);const sparkAt=t.text.indexOf('[[SPARK]]');let n=0,buf='',chars=toks.filter(x=>x.ch).length;const per=Math.max(1,Math.ceil(chars/(2000/16)));clearInterval(typing);
+ typing=setInterval(()=>{let k=0;while(k<per&&n<toks.length){const tk=toks[n++];buf+=tk.tag||tk.ch;if(tk.ch)k++}if(k)click();body.innerHTML=buf.replace('[[SPARK]]',t.spark)+'<span class="cur"></span>';if(n>=toks.length){clearInterval(typing);typing=null;body.innerHTML=fullHTML+'<span class="cur"></span>'}},16)}
+function skip(){if(typing){clearInterval(typing);typing=null;body.innerHTML=fullHTML+'<span class="cur"></span>'}}
+function closeTerm(){skip();term.style.display='none';state.sel=null;renderPoints();renderArcs()}
+term.addEventListener('click',e=>{e.stopPropagation();if(typing)skip()});
+$('#termX').onclick=e=>{e.stopPropagation();closeTerm()};
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;const op=document.querySelector('.pop.show');if(op){op.classList.remove('show');return}if(chat.classList.contains('show')&&(chat.contains(document.activeElement)||(term.style.display!=='block'&&$('#reader').style.display!=='block'))){chatFinish?finishTyping():closeChat();return}const mm=$('#mkt');if(mm.classList.contains('show')&&!e.target.closest('input')&&(mm.contains(document.activeElement)||term.style.display!=='block')){closeMkt();return}const qq=$('#queue');if(qq.classList.contains('show')&&!e.target.closest('input')&&(qq.contains(document.activeElement)||term.style.display!=='block')){closeQueue();return}if($('#reader').style.display==='block'){readerTyping?skipReader():closeReader();return}if(term.style.display==='block'){typing?skip():closeTerm()}});
+/* arrastar (girar o globo, selecionar texto) não conta como "clique fora" */
+let downPt=null;document.addEventListener('pointerdown',e=>{downPt={x:e.clientX,y:e.clientY}},true);
+const wasDrag=e=>downPt&&Math.hypot(e.clientX-downPt.x,e.clientY-downPt.y)>5;
+document.addEventListener('click',e=>{if(opening||wasDrag(e))return;if(term.style.display==='block'&&!term.contains(e.target)&&!e.target.closest('.rail,.pop,#views,#legend,#ticker,#reader,#feed,#chat,#queue,#mkt'))closeTerm();if($('#reader').style.display==='block'&&!e.target.closest('#reader,#term,#feed,.nitem,.rail,.pop,#chat,#queue,#mkt'))closeReader();if(!e.target.closest('.pop,#bRel,#bTheme,#bSoundMore'))document.querySelectorAll('.pop').forEach(p=>p.classList.remove('show'))},true);
+/* ---------- table ---------- */
+let sortK='iq',sortD=-1;
+const cost=m=>m.pin==null||m.pout==null?null:(2000*m.pin+1000*m.pout)/1e6;
+function money(v,d=2){return v==null?'—':'$'+fmt(v,d)}
+function renderTable(){const rows=[...MODELS].filter(m=>[...state.mIn].every(t=>m.io.split('→')[0].includes(t))).sort((a,b)=>{const va=sortK==='cost'?cost(a):a[sortK],vb=sortK==='cost'?cost(b):b[sortK];if(va==null)return 1;if(vb==null)return -1;return (va>vb?1:va<vb?-1:0)*sortD});
+ document.querySelector('#tbl tbody').innerHTML=rows.map(m=>{const lab=C.find(c=>c.name===m.lab||shortName(c)===m.lab);const col=lab?layerColor(lab.layer):css('--mu');const c=cost(m);return `<tr${state.mHl.has(m.model)?' class="hl"':''}><td><b>${esc(m.model)}</b>${m.reason?'<span class="tag">raciocínio</span>':''}</td><td><span class="mono" style="background:${col};display:inline-grid;vertical-align:middle;margin-right:6px">${esc(m.lab.slice(0,2).toUpperCase())}</span>${esc(m.lab)}</td><td>${m.date.split('-').reverse().join('/')}</td><td><span class="num">${fmt(m.iq,1)}</span><span class="bar" style="width:${Math.round(m.iq*1.4)}px"></span></td><td><span class="num">${c==null?'—':(m.reason?'≈ ':'')+'$'+fmt(c,4)}</span></td><td>${money(m.pin)}</td><td>${money(m.pout)}</td><td>${money(m.cache)}</td><td>${m.ctx>=1e6?fmt(m.ctx/1e6,0)+'M':fmt(m.ctx/1e3,0)+'k'}</td><td>${fmt(m.ttft,1)} s</td><td>${m.tps}</td><td style="color:var(--mu)">${esc(m.io)}</td></tr>`}).join('')}
+document.querySelectorAll('#tbl th').forEach(th=>th.onclick=()=>{const k=th.dataset.k;sortD=sortK===k?-sortD:-1;sortK=k;renderTable()});
+/* ---------- init ---------- */
+/* ---------- leitor ---------- */
+const LONG={
+ 'alibaba|0':{sum:'A Alibaba apresentou o Qwen 4, nova geração da sua família de modelos de linguagem, com janela de contexto de 2 milhões de tokens e suporte nativo a texto e imagem. Segundo a empresa, o modelo supera a versão anterior em programação, matemática e uso de ferramentas, e chega em versões abertas e fechadas. A versão de pesos abertos foi publicada no Hugging Face sob licença permissiva; a versão maior fica disponível pela Alibaba Cloud. Analistas destacam que o lançamento acirra a disputa com DeepSeek e Moonshot no mercado chinês e pressiona preços: o custo por milhão de tokens de saída ficou abaixo de US$ 2,50.',pts:['Janela de contexto de 2 milhões de tokens','Pesos abertos no Hugging Face; versão maior via Alibaba Cloud','Ganhos em programação, matemática e uso de ferramentas','Preço agressivo pressiona concorrentes chineses'],cos:['alibaba','deepseek','moonshot']},
+ 'anthropic|0':{sum:'A Anthropic lançou o Claude Haiku 5.5, o modelo mais rápido e barato da linha Claude 5.5, voltado a tarefas de alto volume como atendimento, classificação e agentes simples. A empresa afirma que o Haiku 5.5 se aproxima do desempenho do Sonnet anterior em programação, com latência menor e preço reduzido. O modelo chega com janela de 1 milhão de tokens e cache de prompt, disponível na API e nas nuvens parceiras.',pts:['Modelo mais rápido e barato da linha 5.5','Desempenho próximo ao Sonnet anterior em programação','Janela de 1 milhão de tokens e cache de prompt','Disponível na API e em nuvens parceiras'],cos:['anthropic','amazon','google']},
+ 'nvidia|0':{sum:'A NVIDIA anunciou sua próxima geração de chips para data centers, com foco em inferência de modelos de raciocínio. A empresa promete ganho expressivo de desempenho por watt e memória HBM de maior capacidade, fornecida por SK Hynix e Samsung. A fabricação ficará com a TSMC em processo de última geração. Os primeiros sistemas devem chegar a provedores de nuvem no próximo ano.',pts:['Foco em inferência de modelos de raciocínio','Memória HBM de SK Hynix e Samsung','Fabricação na TSMC','Entregas a provedores de nuvem no próximo ano'],cos:['nvidia','tsmc','skhynix','samsung']}};
+function longFor(c,ni){const k=c.id+'|'+ni;if(LONG[k])return LONG[k];const n=(NEWS[c.id]||defNews(c))[ni];return {sum:`${n[1]}. Este é um resumo estendido gerado pelo Agente de notícias a partir da matéria original, com cerca de 150 a 250 palavras, preservando nomes, números e citações da fonte. Em caso de dúvida, consulte a matéria original pelo link abaixo, que abre em uma nova guia.`,pts:['Ponto-chave 1 extraído da matéria','Ponto-chave 2 extraído da matéria','Ponto-chave 3 extraído da matéria'],cos:[c.id]}}
+/* layout do Leitor: savedLay = preferência salva (só muda por clique em FLUTUANTE/LATERAL); readerLay = layout em uso agora.
+   ?reader= é override de sessão (não persiste). Chave versionada (mg4-) para que o padrão novo 'side' apareça para quem usou a v3. */
+const LAYS=['side','float'];
+let savedLay=pref('reader','mg4-reader',LAYS,'side');
+let readerLay=savedLay;
+function setLay(l,persist){l=pick(l,LAYS,'side');readerLay=l;if(persist){savedLay=l;store.set('mg4-reader',l)}const r=$('#reader');r.className=l;document.querySelectorAll('#reader .lay button').forEach(b=>b.classList.toggle('sel',b.dataset.lay===l));placeReader()}
+function placeReader(){const r=$('#reader');if(readerLay==='side'){r.style.left='';r.style.top='';r.style.maxHeight='';requestAnimationFrame(()=>{const t=$('#term');if(t.style.display==='block'){const lim=r.getBoundingClientRect().left-14,tr=t.getBoundingClientRect();if(tr.right>lim)t.style.left=Math.max(60,lim-tr.width)+'px'}});return}const t=$('#term');if(t.style.display==='block'){const tr=t.getBoundingClientRect();let x=tr.right+14;if(x+440>innerWidth-60)x=Math.max(60,tr.left-454);const y=Math.max(68,tr.top);r.style.left=x+'px';r.style.top=y+'px';r.style.maxHeight=(innerHeight-48-y)+'px'}else{r.style.left=Math.max(60,innerWidth/2-220)+'px';r.style.top='90px';r.style.maxHeight=(innerHeight-48-90)+'px'}}
+let readerTyping=null,readerHTML='',readerBind=null;
+/* Esc/clique durante a digitação: mostra o conteúdo COMPLETO e liga os chips (antes: texto ficava cortado) */
+function skipReader(){if(!readerTyping)return;clearInterval(readerTyping);readerTyping=null;$('#readerBody').innerHTML=readerHTML;if(readerBind)readerBind()}
+function openReader(c,ni,lay){const n=(NEWS[c.id]||defNews(c))[ni];const L=longFor(c,ni);const src=['Reuters','Bloomberg','TechCrunch','The Verge','CNBC','Nikkei Asia'][(C.indexOf(c)+ni)%6];
+ const html=`<div class="meta">${esc(n[0])} · ${esc(src)} · <span style="color:${layerColor(c.layer)}">${esc(c.name)}</span></div><h3>${esc(n[1])}</h3><div class="orig">"${esc(n[2])}"</div><div class="sec">Resumo em português</div><div>${esc(L.sum)}</div><div class="sec">Pontos-chave</div><ul>${L.pts.map(p=>`<li>${esc(p)}</li>`).join('')}</ul><div class="sec">Empresas citadas</div><div class="cos">${L.cos.filter(id=>byId[id]).map(id=>`<span data-go="${esc(id)}" style="border-color:${layerColor(byId[id].layer)}">◍ ${esc(byId[id].name)}</span>`).join('')}</div><a class="open" href="https://${esc(c.site)}" target="_blank" rel="noopener">↗ Abrir matéria original (nova guia)</a><div class="note hud">Resumo gerado por IA a partir da fonte · <span class="nlink" style="text-decoration:underline">marcar como irrelevante</span></div>`;
+ if(document.querySelector('#queue.show'))closeQueue();if(document.querySelector('#mkt.show'))closeMkt();const r=$('#reader');r.style.display='block';r.scrollTop=0;setLay(lay||savedLay);const b=$('#readerBody');
+ const bind=()=>b.querySelectorAll('[data-go]').forEach(s=>s.onclick=e=>{e.stopPropagation();goTo(byId[s.dataset.go])});
+ readerHTML=html;readerBind=bind;
+ clearInterval(readerTyping);readerTyping=null;if(matchMedia('(prefers-reduced-motion: reduce)').matches||params.get('select')){b.innerHTML=html;bind();return}
+ const toks=tokenize(html);let i=0,buf='';const per=Math.max(2,Math.ceil(toks.length/110));readerTyping=setInterval(()=>{let k=0;while(k<per&&i<toks.length){const t=toks[i++];buf+=t.tag||t.ch;if(t.ch)k++}if(k)click();b.innerHTML=buf+'<span class="cur"></span>';$('#reader').scrollTop=0;if(i>=toks.length){clearInterval(readerTyping);readerTyping=null;b.innerHTML=html;bind()}},16)}
+function closeReader(){clearInterval(readerTyping);readerTyping=null;$('#reader').style.display='none'}
+document.querySelectorAll('#reader .lay button').forEach(b=>b.onclick=e=>{e.stopPropagation();setLay(b.dataset.lay,true)});
+$('#readerX').onclick=e=>{e.stopPropagation();closeReader()};
+$('#reader').addEventListener('click',e=>{e.stopPropagation();skipReader()});
+term.addEventListener('click',e=>{const l=e.target.closest('[data-rd]');if(l){const [id,ni]=l.dataset.rd.split('|');openReader(byId[id],+ni)}});
+/* ---------- abas ---------- */
+function setTab(t){state.tab=t;document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('sel',b.dataset.tab===t));$('#vModels').classList.toggle('show',t==='models');$('#vNews').classList.toggle('show',t==='news');document.body.classList.toggle('v-models',t==='models');document.body.classList.toggle('v-news',t==='news');if(t!=='globo'&&term.style.display==='block')closeTerm();if(t==='news')renderNews()}
+document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;if(e.key==='1')setTab('globo');if(e.key==='2')setTab('models');if(e.key==='3')setTab('news')});
+/* ---------- notícias globais ---------- */
+const ALL=[];C.forEach((c,ci)=>(NEWS[c.id]||defNews(c)).forEach((n,i)=>{const [dd,mm]=n[0].split('/');ALL.push({c,ni:i,date:n[0],sort:+mm*100+ +dd-(i*0.01),h:`${String(8+((ci*7+i*5)%14)).padStart(2,'0')}:${String((ci*13+i*17)%60).padStart(2,'0')}`,pt:n[1],en:n[2],src:['Reuters','Bloomberg','TechCrunch','The Verge','CNBC','Nikkei Asia','SCMP','Les Echos'][(ci+i)%8]})}));
+ORIGINAL_NEWS.forEach(source=>{const c=byId[source.company];if(!c)return;const entries=NEWS[c.id]||(NEWS[c.id]=defNews(c));const ni=entries.length;entries.push([source.date,source.title,'']);ALL.push({c,ni,date:source.date,h:source.time,pt:source.title,en:'',src:source.source,original:source})});
+ALL.forEach(n=>{const [dd,mm]=n.date.split('/');n.sort=+mm*100+ +dd+(+n.h.slice(0,2))/100+(+n.h.slice(3,5))/10000});ALL.sort((a,b)=>b.sort-a.sort);
+function feedItem(n,isNew){return `<div class="fi${isNew?' new':''}" data-id="${esc(n.c.id)}" data-ni="${n.ni||0}"><div class="t">[${esc(n.date)} ${esc(n.h)}] ${isLab(n.c)?'<span class="lb">◆</span>':''}<span class="co" style="color:${layerColor(n.c.layer)}">${esc(n.c.name)}</span></div>${esc(n.pt)}</div>`}
+const feedPass=n=>feedF==='all'||isLab(n.c);
+function renderFeed(){const L=$('#feedList');L.innerHTML=ALL.filter(feedPass).slice(0,14).map(n=>feedItem(n)).join('');updateFeedN();bindFeed()}
+function bindFeed(){$('#feedList').querySelectorAll('.fi').forEach(f=>f.onclick=e=>{e.stopPropagation();const c=byId[f.dataset.id];const ni=+(f.dataset.ni||0);goTo(c);setTimeout(()=>openReader(c,ni),1500)})}
+function goTo(c){setTab('globo');ctl.autoRotate=false;G.pointOfView({lat:c.lat-4,lng:c.lng+22,altitude:1.8},1100);setTimeout(()=>openTerm(c),1150)}
+$('#feedMin').onclick=e=>{e.stopPropagation();$('#feed').classList.toggle('min')};
+let feedIdx=0;const FRESH=[['anthropic','Anthropic libera Claude Opus 5.5 para todos os planos','Anthropic rolls out Claude Opus 5.5 to all plans'],['deepseek','DeepSeek publica relatório técnico do R3','DeepSeek publishes R3 technical report'],['alibaba','Qwen 4 entra no ranking do Artificial Analysis em 4º lugar','Qwen 4 enters Artificial Analysis leaderboard at No. 4'],['tsmc','TSMC antecipa produção de 2 nm para clientes de IA','TSMC pulls forward 2nm output for AI customers'],['oracle','Oracle confirma novo campus de data center no Texas','Oracle confirms new Texas data center campus'],['constellation','Constellation fecha contrato nuclear com hyperscaler','Constellation signs nuclear deal with hyperscaler']];
+setInterval(()=>{if(document.body.dataset.template==='aa'||params.get('select'))return;const f=FRESH[feedIdx++%FRESH.length];const d=new Date();const n={c:byId[f[0]],date:'09/10',h:d.toISOString().slice(11,16),pt:f[1],en:f[2],src:'Reuters',sort:9999+feedIdx};ALL.unshift(n);const L=$('#feedList');if(feedPass(n)){L.insertAdjacentHTML('afterbegin',feedItem(n,true));if(L.children.length>14)L.lastElementChild.remove()}updateFeedN();bindFeed();if(state.tab==='news')renderNews()},9000);
+function renderNewsFilters(){$('#nFilters').innerHTML=LAYERS.map(l=>`<span class="chip ${state.nLayers.has(l.k)?'':'off'}" data-l="${l.k}"><i style="background:${layerColor(l.k)}"></i>${l.n}</span>`).join('')+`<select id="nCo" aria-label="Filtrar notícias por empresa"><option value="">Todas as Empresas</option>${C.map(c=>`<option value="${esc(c.id)}" ${state.nCo===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select>`;
+ $('#nFilters').querySelectorAll('.chip').forEach(ch=>ch.onclick=()=>{const k=ch.dataset.l;state.nLayers.has(k)?state.nLayers.delete(k):state.nLayers.add(k);renderNews()});$('#nCo').onchange=e=>{state.nCo=e.target.value;renderNews()}}
+function yfArt(n,compact=false){const source=n.original;return `<div class="yf-art yf-photo${compact?' compact':''}">${source?.image?`<img src="${esc(source.image)}" alt="${esc(source.imageAlt)}" loading="${compact?'lazy':'eager'}" decoding="async" referrerpolicy="no-referrer"><small>${esc(source.credit)}</small>`:''}<div class="yf-image-fallback" ${source?.image?'hidden':''}><span aria-hidden="true">▧</span><span>Imagem indisponível</span><small>${source?'A imagem da fonte não carregou':'Notícia demo · sem imagem original'}</small></div></div>`}
+function yfMeta(n){return `<div class="yf-meta">${esc(n.src)} · ${esc(n.date)} · ${esc(n.h)} · ${n.original?'Matéria original':'Notícia demo'}</div>`}
+function yfHeadline(n,cls=''){return `<button class="yf-headline ${cls}" data-rd="${esc(n.c.id)}|${n.ni||0}">${esc(n.pt)}</button>`}
+function yfBadge(n){return `<button class="yf-company" data-go="${esc(n.c.id)}">${esc(n.c.ticker?n.c.ticker.split(' · ')[0]:shortName(n.c))} <span aria-hidden="true">↗</span></button>${n.original?` <a class="yf-source" href="${esc(n.original.url)}" target="_blank" rel="noopener noreferrer">Ler na fonte ↗</a>`:''}`}
+function stockCurrency(c){return c.ticker.split(' · ')[1]==='KRX'?'KRW':'USD'}
+function stockPrice(c){return `${stockCurrency(c)==='KRW'?'₩':'US$'} ${fmt(c.price,stockCurrency(c)==='KRW'?0:2)}`}
+function yfStock(c){return `<article class="yf-stock" data-stock="${esc(c.id)}"><div class="yf-stock-top"><button class="yf-trending" data-yf-market="${esc(sym(c))}"><span><b>${esc(sym(c))}</b><small>${esc(c.name)}</small><small>${esc(c.ticker.split(' · ')[1])} · ${stockCurrency(c)}</small></span><span><b>${stockPrice(c)}</b><small>${pct(c.chg)}</small></span></button><button class="yf-favorite" data-yf-star="${esc(c.id)}" aria-label="${watch.has(c.id)?'Remover':'Adicionar'} ${esc(sym(c))} ${watch.has(c.id)?'dos':'aos'} favoritos" aria-pressed="${watch.has(c.id)}">${watch.has(c.id)?'★':'☆'}</button></div><div class="yf-spark" aria-label="Gráfico ilustrativo, sem histórico real">${sparkS(c.id.length+c.price%7,c.chg>=0)}<small>Gráfico ilustrativo</small></div><button class="yf-agent-button" data-finance="${esc(c.id)}">✧ Conversar sobre ${esc(sym(c))}</button></article>`}
+function yfFinancialSidebar(stocks){const sorted=[...stocks].sort((a,b)=>b.chg-a.chg),up=stocks.filter(c=>c.chg>=0).length,hi=sorted[0],lo=sorted.at(-1),fav=stocks.filter(c=>watch.has(c.id));return `<aside class="yf-sidebar" aria-label="Todas as informações financeiras do projeto"><section class="yf-breadth"><h2>Mercado de IA</h2><p class="yf-meta">${stocks.length} ações monitoradas · cotações demo</p><div class="yf-breadth-count"><span class="up">${up} em alta</span><span class="dn">${stocks.length-up} em baixa</span></div><div class="yf-breadth-bar" aria-hidden="true"><i style="width:${up/stocks.length*100}%"></i></div><div class="yf-extremes"><button data-yf-market="${esc(sym(hi))}">Maior alta <b>${esc(sym(hi))}</b> ${pct(hi.chg)}</button><button data-yf-market="${esc(sym(lo))}">Maior baixa <b>${esc(sym(lo))}</b> ${pct(lo.chg)}</button></div></section><section class="yf-finance-section"><h2>Meus favoritos <small>(${fav.length})</small></h2><div id="yfFavorites">${fav.length?fav.map(c=>`<button class="yf-company" data-yf-market="${esc(sym(c))}">${esc(sym(c))}</button>`).join(' '):'<p class="yf-meta">Marque ☆ em uma ação para acompanhá-la aqui.</p>'}</div></section><section class="yf-finance-section"><h2>Empresas em foco</h2>${stocks.slice(0,6).map(yfStock).join('')}</section><section class="yf-finance-section"><h2>Demais ações monitoradas</h2><p class="yf-meta">${stocks.length-6} ações por setor</p>${LAYERS.map(l=>{const xs=stocks.slice(6).filter(c=>c.layer===l.k);return xs.length?`<h3 class="yf-sector"><i style="background:${layerColor(l.k)}"></i>${esc(l.n)} <span>${xs.length}</span></h3>${xs.map(yfStock).join('')}`:''}).join('')}</section><section class="yf-finance-section"><h2>Índices mundiais</h2>${WORLD.map(([region,rows])=>`<h3 class="yf-sector">${esc(region)}</h3>${rows.map(x=>`<button class="yf-world" data-world="${esc(x[0])}" data-yf-market="${esc(x[0])}"><span><b>${esc(x[1])}</b><small>${esc(x[0])}</small></span><span>${pfmt(x[2])}<small>${pct(x[3])}</small></span></button>`).join('')}`).join('')}</section><button class="yf-market-more" data-yf-market="">Abrir painel de mercados →</button><p class="yf-meta">Valores do protótipo, sem atualização ao vivo. As fotos e os links das matérias originais são da fonte indicada.</p><section class="yf-coverage"><h2>Explore a cobertura</h2>${LAYERS.map(l=>`<button data-yf-layer="${l.k}"><i style="background:${layerColor(l.k)}"></i>${esc(l.n)} <span>→</span></button>`).join('')}</section></aside>`}
+function bindNewsImages(root){root.querySelectorAll('.yf-photo img').forEach(img=>{img.onerror=()=>{img.hidden=true;img.parentElement.querySelector('small').hidden=true;img.parentElement.querySelector('.yf-image-fallback').hidden=false};if(img.complete&&!img.naturalWidth)img.onerror()})}
+function renderNews(){renderNewsFilters();const items=ALL.filter(n=>(state.nLayers.has(n.c.layer)||n.c.tags.some(t=>state.nLayers.has(t)))&&(!state.nCo||n.c.id===state.nCo));$('#newsCount').textContent=items.length+' notícias · em português';
+ const stocks=C.filter(c=>c.ticker);$('#yfMarketStrip').innerHTML=MACRO.map(m=>`<button class="yf-quote" data-macro="${esc(m[0])}" data-yf-market="${esc(m[0])}"><b>${esc(m[1])}</b><span>${pfmt(m[2],m[4])}</span><strong>${pct(m[3])}</strong></button>`).join('')+'<span class="yf-strip-label">Panorama financeiro<br>Dados demo</span>';
+ const featured=items.find(n=>n.original)||items.find(n=>LONG[n.c.id+'|'+(n.ni||0)])||items[0],others=items.filter(n=>n!==featured),related=others.slice(0,4),rest=others.slice(4);let main='';
+ if(featured){main=`<div class="yf-lead-grid"><article class="yf-lead"><button class="yf-art-button" data-rd="${esc(featured.c.id)}|${featured.ni||0}" aria-label="Ler ${esc(featured.pt)}">${yfArt(featured)}</button>${yfHeadline(featured,'lead')}<p class="yf-summary">${esc(featured.original?.summary||(LONG[featured.c.id+'|'+(featured.ni||0)]?longFor(featured.c,featured.ni||0).sum.split('. ').slice(0,2).join('. '):featured.en))}</p>${yfMeta(featured)}${yfBadge(featured)}</article><section class="yf-top-stories" aria-labelledby="yfTopTitle"><h2 id="yfTopTitle">Principais notícias <span aria-hidden="true">›</span></h2>${related.map(n=>`<article><button class="yf-art-button" data-rd="${esc(n.c.id)}|${n.ni||0}" aria-label="Ler ${esc(n.pt)}">${yfArt(n,true)}</button>${yfHeadline(n)}${yfMeta(n)}${yfBadge(n)}</article>`).join('')}</section></div><section class="yf-latest" aria-labelledby="yfLatestTitle"><h2 id="yfLatestTitle">Últimas notícias</h2>${rest.length?rest.map(n=>`<article class="yf-row"><div>${yfHeadline(n)}<p class="yf-original">${esc(n.en)}</p>${yfMeta(n)}${yfBadge(n)}</div><button class="yf-art-button" data-rd="${esc(n.c.id)}|${n.ni||0}" aria-label="Ler ${esc(n.pt)}">${yfArt(n,true)}</button></article>`).join(''):'<p class="yf-meta">Todas as notícias deste filtro aparecem nos destaques acima.</p>'}</section>`}else{main='<div class="yf-empty"><h2>Nenhuma notícia neste filtro</h2><p>Escolha outras camadas ou uma empresa diferente.</p><button id="yfReset">Mostrar todas as notícias</button></div>'}
+ $('#newsList').innerHTML=`<div class="yf-layout"><main class="yf-main">${main}</main>${yfFinancialSidebar(stocks)}</div>`;
+ bindNewsImages($('#newsList'));
+ $('#vNews').querySelectorAll('[data-go]').forEach(a=>a.onclick=()=>goTo(byId[a.dataset.go]));$('#newsList').querySelectorAll('[data-rd]').forEach(b=>b.onclick=()=>{const [id,ni]=b.dataset.rd.split('|');openReader(byId[id],+ni,'side')});
+ $('#vNews').querySelectorAll('[data-yf-market]').forEach(b=>b.onclick=()=>{mktTab='all';document.querySelectorAll('.mtabs button').forEach(x=>x.classList.toggle('sel',x.dataset.mt==='all'));openMkt();if(b.dataset.yfMarket){const c=C.find(c=>c.ticker&&sym(c)===b.dataset.yfMarket);const row=c?$('#mktBody').querySelector('[data-id="'+c.id+'"]'):$('#mktBody').querySelector('[data-sym="'+b.dataset.yfMarket+'"]');if(row){row.classList.add('yf-picked');row.scrollIntoView({block:'center'});row.focus({preventScroll:true})}}});
+ $('#newsList').querySelectorAll('[data-finance]').forEach(b=>b.onclick=()=>openFinanceAgent(byId[b.dataset.finance],b));
+ $('#newsList').querySelectorAll('[data-yf-star]').forEach(b=>b.onclick=()=>{const id=b.dataset.yfStar;watch.has(id)?watch.delete(id):watch.add(id);store.set('mg4-watch',JSON.stringify([...watch]));const scroll=$('#vNews').scrollTop;renderNews();if(MK.classList.contains('show'))renderMkt();$('#vNews').scrollTop=scroll;$('#newsList').querySelector('[data-yf-star="'+id+'"]').focus({preventScroll:true})});
+ $('#newsList').querySelectorAll('[data-yf-layer]').forEach(b=>b.onclick=()=>{state.nLayers=new Set([b.dataset.yfLayer]);state.nCo='';renderNews();$('#vNews').scrollTo({top:0})});const reset=$('#yfReset');if(reset)reset.onclick=()=>{state.nLayers=new Set(LAYERS.map(l=>l.k));state.nCo='';renderNews()};
+}
+/* Diálogo independente: interface para o futuro agente especialista em ações. */
+let financeCompany=null,financeOrigin=null;
+function openFinanceAgent(c,origin){financeCompany=c;financeOrigin=origin;$('#financeStock').innerHTML=`<b>${esc(c.name)} · ${esc(sym(c))}</b><span>${esc(c.ticker.split(' · ')[1])} · ${stockCurrency(c)} · ${stockPrice(c)} · ${pct(c.chg)}</span><small>${esc(LAYERS.find(l=>l.k===c.layer).n)} · ${esc(c.city)} · cotação demo</small>`;$('#financeMessages').innerHTML='<p class="finance-welcome">Converse com o futuro especialista sobre fundamentos, resultados, riscos e notícias desta ação.</p>';$('#financeQuestion').value='';$('#financeAgent').showModal();$('#financeQuestion').focus()}
+function submitFinanceQuestion(question){const q=question.trim();if(!q||!financeCompany)return;const c=financeCompany;const messages=$('#financeMessages');messages.insertAdjacentHTML('beforeend',`<p class="finance-user"><b>Você</b><br>${esc(q)}</p><p class="finance-reply"><b>Especialista · demonstração</b><br>Sua pergunta sobre ${esc(sym(c))} foi registrada nesta conversa local. O futuro agente analisará fundamentos, resultados, riscos e notícias com fontes.<br><small>Contexto disponível: ${stockPrice(c)} (${stockCurrency(c)}), ${esc(c.ticker.split(' · ')[1])}, variação demo ${fmt(c.chg,2)}%. A integração de IA ainda não está ativa.</small></p>`);$('#financeQuestion').value='';messages.scrollTop=messages.scrollHeight;$('#financeQuestion').focus()}
+$('#financeClose').onclick=()=>$('#financeAgent').close();
+$('#financeAgent').addEventListener('close',()=>{financeOrigin?.focus({preventScroll:true})});
+$('#financeForm').onsubmit=e=>{e.preventDefault();submitFinanceQuestion($('#financeQuestion').value)};
+$('#financeSuggestions').querySelectorAll('button').forEach(b=>b.onclick=()=>submitFinanceQuestion(b.textContent));
+/* ---------- estilos da tabela ---------- */
+const TSTYLES=['hib','term','ana'];
+function setTStyle(st,persist){st=pick(st,TSTYLES,'hib');state.tstyle=st;document.querySelectorAll('.styleSw button').forEach(b=>b.classList.toggle('sel',b.dataset.st===st));if(persist)store.set('mg4-tstyle',st);const t=st!=='ana';$('#tbl').className=st==='hib'?'tbl-term tbl-hib':(t?'tbl-term':'tbl-ana');$('#tblWrap').className=t?'tbl-term-wrap':'ana-wrap';$('#prompt').style.display=t?'block':'none'}
+document.querySelectorAll('.styleSw button').forEach(b=>b.onclick=()=>setTStyle(b.dataset.st,true));
+function renderMFilters(){$('#mFilters').innerHTML='<span class="hud" style="color:var(--mu)">entradas:</span>'+['texto','imagem','vídeo','áudio','arquivo'].map(t=>`<span class="chip ${state.mIn.has(t)?'':'off'}" data-t="${t}">${t}</span>`).join('');$('#mFilters').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{const t=c.dataset.t;state.mIn.has(t)?state.mIn.delete(t):state.mIn.add(t);renderMFilters();renderTable()})}
+/* ===================== v5 ===================== */
+/* --- espalhamento de pontos próximos (em pixels de tela, recalculado ao mudar zoom/vista) --- */
+function cang(a1,o1,a2,o2){const r=Math.PI/180;return Math.acos(Math.max(-1,Math.min(1,Math.sin(a1*r)*Math.sin(a2*r)+Math.cos(a1*r)*Math.cos(a2*r)*Math.cos((o1-o2)*r))))/r}
+let lastPov=null;
+function spread(force){const pv=G.pointOfView();if(!force&&lastPov&&Math.abs(pv.altitude-lastPov.altitude)/lastPov.altitude<0.06&&cang(pv.lat,pv.lng,lastPov.lat,lastPov.lng)<20)return;lastPov={...pv};
+ const pts=C.filter(visible).filter(c=>cang(c.lat,c.lng,pv.lat,pv.lng)<78).map(c=>{const sc=G.getScreenCoords(c.lat,c.lng,0.004);return {c,x:sc.x,y:sc.y}});
+ C.forEach(c=>{c.dlat=null;c.dlng=null});
+ const TH=16,left=new Set(pts);
+ while(left.size){const seed=left.values().next().value;left.delete(seed);const g=[seed];for(let k=0;k<g.length;k++){for(const q of [...left]){if(Math.hypot(g[k].x-q.x,g[k].y-q.y)<TH){g.push(q);left.delete(q)}}}
+  if(g.length<2)continue;
+  const cx=g.reduce((a,p)=>a+p.x,0)/g.length,cy=g.reduce((a,p)=>a+p.y,0)/g.length;
+  g.sort((a,b)=>Math.atan2(a.y-cy,a.x-cx)-Math.atan2(b.y-cy,b.x-cx));
+  const R=Math.max(13,g.length*17/(2*Math.PI)),a0=-Math.PI/2;
+  g.forEach((p,i)=>{const a=a0+i*2*Math.PI/g.length;const geo=G.toGlobeCoords(cx+R*Math.cos(a),cy+R*Math.sin(a));if(geo){p.c.dlat=geo.lat;p.c.dlng=geo.lng}})}
+ G.htmlLat(ptLat).htmlLng(ptLng);G.ringLat(ptLat).ringLng(ptLng);renderArcs()}
+setInterval(()=>{if(state.tab==='globo')spread(false)},500);
+/* --- rótulos fixos dos Laboratórios, sem sobreposição (prioridade: selecionado > lançamento recente) --- */
+function declutter(){if(state.tab!=='globo')return;const kept=[];
+ C.filter(c=>isLab(c)&&visible(c)).sort((a,b)=>(state.sel===a?-1:state.sel===b?1:0)||((a.launch??99)-(b.launch??99))).forEach(c=>{const w=elMap[c.id];if(!w||!w.isConnected)return;const l=w.querySelector('.lbl');if(!l)return;l.classList.remove('hide');if(w.style.display==='none')return;const r=l.getBoundingClientRect();if(!r.width)return;
+  if(kept.some(k=>!(r.right<k.left||r.left>k.right||r.bottom<k.top||r.top>k.bottom)))l.classList.add('hide');else kept.push(r)})}
+setInterval(declutter,300);
+/* --- painel esquerdo: LABS · FLUXO --- */
+const REGION=c=>{const p=c.city.split(', ').pop();return p==='EUA'?'EUA':p==='China'?'CHINA':['França','Países Baixos','Reino Unido','Alemanha'].includes(p)?'EUROPA':'OUTROS'};
+let ftab=pick(store.get('mg4-ftab'),['labs','feed'],'feed');
+let feedF=pick(store.get('mg4-feedf'),['all','lab'],'all');
+function updateFeedN(){$('#feedN').textContent=ftab==='labs'?C.filter(isLab).length+' labs':ALL.filter(feedPass).length+' itens'}
+function setFeedF(f,persist){feedF=f;if(persist)store.set('mg4-feedf',f);document.querySelectorAll('#fflt button').forEach(b=>b.classList.toggle('sel',b.dataset.ff===f));renderFeed()}
+document.querySelectorAll('#fflt button').forEach(b=>b.onclick=e=>{e.stopPropagation();setFeedF(b.dataset.ff,true)});
+function renderLabs(){const labs=C.filter(isLab).sort((a,b)=>((a.launch??99)-(b.launch??99))||a.name.localeCompare(b.name));
+ $('#labsList').innerHTML=['EUA','CHINA','EUROPA','OUTROS'].map(g=>{const ls=labs.filter(c=>REGION(c)===g);if(!ls.length)return '';return `<div class="lgrp hud">${g} · ${ls.length}</div>`+ls.map(c=>{const nw=c.launch!=null&&c.launch<=7;return `<div class="lr" data-id="${esc(c.id)}" tabindex="0" role="button"><span class="dm" style="--pc:${layerColor(c.layer)}"></span><div><div class="n">${esc(shortName(c).toUpperCase())}</div><div class="s">${esc(c.models[0]||'—')} · ${esc(c.city.split(',')[0])}</div><span class="ex" data-ex="${esc(c.id)}">▸ ${(NEWS[c.id]||defNews(c)).slice(0,3).length} notícias</span></div><div class="p ${nw?'':'old'}">${nw?'◉ '+(c.launch===0?'HOJE':'HÁ '+c.launch+' DIA'+(c.launch>1?'S':'')):c.models.length+' MODELO'+(c.models.length>1?'S':'')}</div></div>`}).join('')}).join('');
+ $('#labsList').querySelectorAll('.lr').forEach(r=>{const c=byId[r.dataset.id];const hl=on=>{const w=elMap[c.id];if(w)w.querySelector('.pt').classList.toggle('hl',on)};r.onmouseenter=()=>hl(true);r.onmouseleave=()=>hl(false);r.onclick=e=>{e.stopPropagation();if(e.target.closest('.ex'))return toggleLabNews(r,c);hl(false);goTo(c)};r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();goTo(c)}};if(labOpen.has(c.id)){labOpen.delete(c.id);toggleLabNews(r,c)}})}
+const labOpen=new Set();
+function toggleLabNews(r,c){const ex=r.querySelector('.ex'),nx=r.nextElementSibling;if(nx&&nx.classList.contains('lnews')){nx.remove();labOpen.delete(c.id);ex.textContent=ex.textContent.replace('▾','▸');return}
+ labOpen.add(c.id);ex.textContent=ex.textContent.replace('▸','▾');const nw=(NEWS[c.id]||defNews(c)).slice(0,3);
+ r.insertAdjacentHTML('afterend',`<div class="lnews">${nw.map((n,i)=>`<div data-ni="${i}"><span class="t">${esc(n[0])}</span>${esc(n[1])}</div>`).join('')}</div>`);
+ r.nextElementSibling.querySelectorAll('[data-ni]').forEach(d=>d.onclick=e=>{e.stopPropagation();const ni=+d.dataset.ni;goTo(c);setTimeout(()=>openReader(c,ni),1500)})}
+function setFTab(t,persist){ftab=t;if(persist)store.set('mg4-ftab',t);document.querySelectorAll('.ftabs button').forEach(b=>b.classList.toggle('sel',b.dataset.ft===t));$('#feedList').style.display=t==='feed'?'':'none';$('#fflt').style.display=t==='feed'?'':'none';$('#labsList').style.display=t==='labs'?'':'none';$('#feed').classList.remove('min');updateFeedN()}
+document.querySelectorAll('.ftabs button').forEach(b=>b.onclick=e=>{e.stopPropagation();setFTab(b.dataset.ft,true)});
+/* --- console do Agente especialista em LLMs (respostas simuladas) --- */
+const chat=$('#chat'),clog=$('#chatLog');let chatTyping=null,chatFinish=null;
+const norm=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const SUGS=['Compare Claude Opus 5.5 e GPT-6','Quais lançamentos desta semana?','Onde fica a Mistral?','Modelo mais barato com inteligência acima de 50','Últimas notícias da NVIDIA','Quem fornece chips para a NVIDIA?'];
+const HIST=[['Custo de raciocínio: GPT-6 vs DeepSeek V4','ONTEM 18:42'],['Quem fornece chips para a NVIDIA?','07/10'],['Modelos com contexto acima de 1M','05/10']];
+const MALIAS={'Claude Opus 5.5':['opus'],'GPT-6':['gpt-6','gpt6','gpt 6'],'Gemini 3.5 Pro':['gemini'],'Qwen 4':['qwen'],'DeepSeek V4':['deepseek v4','deepseek'],'Grok 5':['grok'],'Mistral Large 3':['mistral large'],'Llama 5':['llama']};
+function openChat(){chat.classList.add('show');$('#bChat').classList.add('act');document.body.classList.add('chat-open');$('#chatSugs').innerHTML=SUGS.map(q=>`<span>${esc(q)}</span>`).join('');$('#chatSugs').querySelectorAll('span').forEach(x=>x.onclick=e=>{e.stopPropagation();ask(x.textContent)});
+ if(!clog.children.length)agentSay([{t:'Olá, Andre. Sou o agente especialista em LLMs do painel. Respondo com os dados do painel (Modelos, preços, benchmarks, Notícias, Relações, cotações), pesquiso na web citando as fontes e posso agir no painel: voar até uma Empresa, abrir a Tabela filtrada, abrir Terminal e Leitor.'}],true);setTimeout(()=>$('#chatIn').focus(),30)}
+function closeChat(){finishTyping();chat.classList.remove('show','h','max');$('#bChat').classList.remove('act');document.body.classList.remove('chat-open')}
+function finishTyping(){if(chatFinish)chatFinish()}
+$('#chatHist').innerHTML=HIST.map(h=>`<div>${esc(h[0])}<small>${esc(h[1])}</small></div>`).join('');
+$('#chatHist').querySelectorAll('div').forEach((d,i)=>d.onclick=e=>{e.stopPropagation();ask(HIST[i][0])});
+$('#chatHistB').onclick=e=>{e.stopPropagation();chat.classList.toggle('h')};
+$('#chatMax').onclick=e=>{e.stopPropagation();chat.classList.toggle('max')};
+$('#chatX').onclick=e=>{e.stopPropagation();closeChat()};
+$('#bChat').onclick=e=>{e.stopPropagation();chat.classList.contains('show')?closeChat():openChat()};
+$('#chatForm').onsubmit=e=>{e.preventDefault();const v=$('#chatIn').value.trim();if(v){$('#chatIn').value='';ask(v)}};
+chat.addEventListener('click',()=>{if(chatFinish)finishTyping()});
+document.addEventListener('keydown',e=>{if(e.key==='/'&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&!e.target.closest('input,textarea,select,[contenteditable]')){e.preventDefault();openChat()}});
+function ask(q){finishTyping();const u=document.createElement('div');u.className='u';u.textContent=q;clog.appendChild(u);clog.scrollTop=clog.scrollHeight;setTimeout(()=>agentSay(answer(q)),350)}
+function agentSay(parts,instant){const box=document.createElement('div');box.className='a';clog.appendChild(box);const tx=document.createElement('div');box.appendChild(tx);
+ const text=parts.filter(p=>p.t).map(p=>p.t).join('\n');
+ const tail=()=>{parts.forEach(p=>{if(p.act){const d=document.createElement('div');d.className='act';d.textContent='⟶ '+p.act;box.appendChild(d);if(p.run)setTimeout(()=>{chat.classList.remove('max');p.run()},300)}if(p.src){const d=document.createElement('div');d.className='src';d.innerHTML='fontes: '+p.src.map((x,i)=>`<a href="${esc(x[1])}" target="_blank" rel="noopener">[${i+1}] ${esc(x[0])}</a>`).join(' · ');box.appendChild(d)}});if(!instant){const d=document.createElement('div');d.className='sim';d.textContent='resposta simulada · protótipo';box.appendChild(d)}clog.scrollTop=clog.scrollHeight};
+ if(instant||matchMedia('(prefers-reduced-motion: reduce)').matches){tx.textContent=text;tail();return}
+ let i=0;const cur=document.createElement('span');cur.className='cur';
+ chatFinish=()=>{clearInterval(chatTyping);chatTyping=null;chatFinish=null;tx.textContent=text;tail()};
+ chatTyping=setInterval(()=>{i=Math.min(text.length,i+5);tx.textContent=text.slice(0,i);tx.appendChild(cur);click();clog.scrollTop=clog.scrollHeight;if(i>=text.length)chatFinish()},16)}
+const ctxTxt=v=>v>=1e6?fmt(v/1e6,v%1e6?1:0)+'M':fmt(v/1e3,0)+'k';
+const costTxt=m=>{const c=cost(m);return c==null?'—':(m.reason?'≈ ':'')+'$'+fmt(c,4)};
+const SRC_AA=['Artificial Analysis','https://artificialanalysis.ai/'],SRC_OR=['OpenRouter','https://openrouter.ai/models'];
+function answer(q){const n=norm(q);
+ const words=n.split(/[^a-z0-9-]+/);const cos=C.filter(c=>{const k=norm(shortName(c)),w1=k.split(' ')[0];return n.includes(k)||words.includes(c.id)||(w1.length>2&&words.includes(w1))||(c.id==='spacex'&&words.includes('xai'))});
+ const ms=MODELS.filter(m=>(MALIAS[m.model]||[norm(m.model)]).some(a=>n.includes(a)));
+ const showModels=list=>()=>{state.mHl=new Set(list.map(m=>m.model));setTab('models');renderTable()};
+ if(/mercado|humor|bolsa|acoes|acao de ia/.test(n)&&!cos.length){const st=C.filter(c=>c.ticker);const up=st.filter(c=>c.chg>=0),dn=st.filter(c=>c.chg<0);const srt=[...st].sort((a,b)=>b.chg-a.chg);const sox=IDX.find(i=>i[0]==='SOX');
+  const avg=LAYERS.map(l=>{const xs=st.filter(c=>c.layer===l.k);return xs.length?{n:l.n,v:xs.reduce((a,c)=>a+c.chg,0)/xs.length,k:xs.length}:null}).filter(Boolean);const byL=avg.map(x=>`  ${x.n}: ${x.v>=0?'+':''}${fmt(x.v,1)}% em média (${x.k} ações)`);const bL=[...avg].sort((x,y)=>y.v-x.v);
+  return [{t:`Humor do mercado de IA hoje (cotações com atraso):\n  ${up.length} ações de IA sobem e ${dn.length} caem. SOX ${sox[3]>=0?'+':''}${fmt(sox[3],1)}%.\n  Maiores altas: ${srt.slice(0,3).map(c=>shortName(c)+' '+(c.chg>=0?'+':'')+fmt(c.chg,1)+'%').join(' · ')}\n  Maiores quedas: ${srt.slice(-3).reverse().map(c=>shortName(c)+' '+fmt(c.chg,1)+'%').join(' · ')}\nPor Camada:\n${byL.join('\n')}\nLeitura: ${bL[0].n} lidera (${bL[0].v>=0?'+':''}${fmt(bL[0].v,1)}%) e ${bL[bL.length-1].n} fica para trás (${bL[bL.length-1].v>=0?'+':''}${fmt(bL[bL.length-1].v,1)}%); SOX ${sox[3]>=0?'sobe':'recua'} ${fmt(Math.abs(sox[3]),1)}%.`},{act:'destacando as maiores variações no painel Mercados',run:()=>{openMkt();[...document.querySelectorAll('#mktBody .mrow')].filter(r=>[srt[0].id,srt[srt.length-1].id].includes(r.dataset.id)).forEach(r=>{r.classList.add('hl');setTimeout(()=>r.classList.remove('hl'),4000)})}},{src:[['Yahoo Finance','https://finance.yahoo.com/'],['Notícias do painel','#']]}]}
+ if(/onde|fica|sede|localiza|mostra/.test(n)&&cos.length){const c=cos[0];const l=LAYERS.find(x=>x.k===c.layer).n;const nr=REL.filter(r=>r.a===c||r.b===c).length;
+  return [{t:`${c.name} fica em ${c.city}. Camada principal: ${l}${c.tags.length?' (também '+c.tags.map(t=>LAYERS.find(x=>x.k===t).n).join(', ')+')':''}.${c.models.length?'\nModelos no painel: '+c.models.join(', ')+'.':''}${nr?'\nTem '+nr+' Relação(ões) no globo — acendem quando o Terminal abre.':''}`},{act:`voando até ${shortName(c)} no globo e abrindo o Terminal`,run:()=>goTo(c)},{src:[['Cadastro do painel','#'],[c.site,'https://'+c.site]]}]}
+ if(/fornece|fornecedor|parceir|relac|investid/.test(n)&&cos.length){const c=cos[0];const rs=REL.filter(r=>r.a===c||r.b===c);
+  return [{t:`Relações de ${c.name} no painel:\n`+rs.map(r=>`  ${r.a===c?'→ '+r.b.name:'← '+r.a.name} · ${RELTYPES.find(t=>t.k===r.t).n.toLowerCase()}`).join('\n')+(c.id==='nvidia'?'\nResumo: a TSMC fabrica os chips; SK Hynix e Samsung fornecem a memória HBM.':'')},{act:`abrindo o Terminal de ${shortName(c)} (Relações acesas no globo)`,run:()=>goTo(c)},{src:[['Cadastro do painel · Relações','#'],['Reuters','https://www.reuters.com/technology/']]}]}
+ if(/notic|news/.test(n)&&cos.length){const c=cos[0];const nw=(NEWS[c.id]||defNews(c)).slice(0,3);
+  return [{t:`Últimas Notícias de ${c.name} (traduzidas):\n`+nw.map(x=>`  [${x[0]}] ${x[1]}`).join('\n')},{act:'abrindo a mais recente no Leitor',run:()=>{goTo(c);setTimeout(()=>openReader(c,0),1500)}},{src:[['Reuters','https://www.reuters.com/technology/'],['Bloomberg','https://www.bloomberg.com/technology']]}]}
+ if(ms.length>=2||(/compar| vs | x |versus|diferen/.test(' '+n+' ')&&ms.length)){const two=ms.length>=2?ms.slice(0,3):[ms[0],...MODELS.filter(m=>m!==ms[0]).sort((a,b)=>b.iq-a.iq).slice(0,1)];
+  const lines=two.map(m=>`  ${m.model} (${m.lab})\n    inteligência ${fmt(m.iq,1)} · custo/tarefa ${costTxt(m)} · entrada $${m.pin==null?'—':fmt(m.pin)} / saída $${m.pout==null?'—':fmt(m.pout)} por 1M\n    contexto ${ctxTxt(m.ctx)} · ${m.tps} tokens/s · ${m.reason?'raciocínio':'sem raciocínio'}`);
+  const sm=[...two].sort((a,b)=>b.iq-a.iq),ch=two.filter(m=>cost(m)!=null).sort((a,b)=>cost(a)-cost(b));
+  let sum=`${sm[0].model} tem a maior inteligência (+${fmt(sm[0].iq-sm[sm.length-1].iq,1)} pontos sobre ${sm[sm.length-1].model}).`;if(ch.length>1&&ch[0]!==sm[0])sum+=`\n${ch[0].model} sai ~${fmt(cost(ch[ch.length-1])/cost(ch[0]),1)}× mais barato por Tarefa padrão.`;
+  if(two.some(m=>m.reason))sum+='\n≈ Em Modelos de raciocínio o custo real é maior: tokens de raciocínio não entram na estimativa.';
+  return [{t:'Comparação (dados do painel, Tarefa padrão 2.000 + 1.000 tokens):\n'+lines.join('\n')+'\n\n'+sum},{act:'abrindo a Tabela de modelos com os Modelos destacados',run:showModels(two)},{src:[SRC_AA,SRC_OR]}]}
+ if(/lanc|novo|novidade|semana|recente/.test(n)){const ls=C.filter(c=>c.launch!=null&&c.launch<=7).sort((a,b)=>a.launch-b.launch);
+  return [{t:`Lançamentos dos últimos 7 dias (${ls.length}):\n`+ls.map(c=>`  ◉ ${shortName(c)} — ${c.models[0]} · ${c.launch===0?'hoje':'há '+c.launch+' dia'+(c.launch>1?'s':'')}`).join('\n')+'\nNo globo, o Pulso marca esses Laboratórios por 7 dias.'},{act:'destacando no globo',run:()=>{setTab('globo');ls.forEach(c=>{const w=elMap[c.id];if(w){w.querySelector('.pt').classList.add('hl');setTimeout(()=>w.querySelector('.pt').classList.remove('hl'),3500)}})}},{src:[SRC_AA,['Hugging Face','https://huggingface.co/models']]}]}
+ if(/barat|custo|preco|economi/.test(n)){const th=+(n.match(/(\d+)/)||[0,0])[1];const top=MODELS.filter(m=>cost(m)!=null&&m.iq>=th).sort((a,b)=>cost(a)-cost(b)).slice(0,3);
+  return [{t:`Mais baratos por Tarefa padrão${th?' com inteligência ≥ '+th:''}:\n`+top.map((m,i)=>`  ${i+1}. ${m.model} (${m.lab}) · ${costTxt(m)} · inteligência ${fmt(m.iq,1)}`).join('\n')},{act:'abrindo a Tabela ordenada por custo',run:()=>{sortK='cost';sortD=1;showModels(top)()}},{src:[SRC_AA,SRC_OR]}]}
+ if(/contexto|janela/.test(n)){const top=MODELS.filter(m=>m.ctx>=1e6).sort((a,b)=>b.ctx-a.ctx);
+  return [{t:'Modelos com contexto ≥ 1M tokens:\n'+top.map(m=>`  ${m.model} · ${ctxTxt(m.ctx)} · ${m.lab}`).join('\n')},{act:'abrindo a Tabela ordenada por contexto',run:()=>{sortK='ctx';sortD=-1;showModels(top)()}},{src:[SRC_AA]}]}
+ return [{t:`Pesquisei na web e nos dados do painel sobre "${q}".\nNo protótipo esta resposta é ilustrativa: na versão final eu resumiria em português o que as fontes dizem, cruzando com Modelos, Notícias e Relações do painel, e citaria cada fonte numerada.`},{src:[['arxiv.org','https://arxiv.org/'],['huggingface.co','https://huggingface.co/papers'],SRC_AA]}]}
+/* --- BACKBONES (cabos submarinos + estações de pouso, TeleGeography) e detalhe OpenStreetMap ao aproximar --- */
+let BB=null,bbOn=false,bbHover=null,osmOn=false;const OSM_ALT=0.55;
+async function loadBB(){if(BB)return BB;const [c,l]=await Promise.all([fetch('assets/cables.json').then(r=>r.json()),fetch('assets/landing-points.json').then(r=>r.json())]);BB={paths:c.paths,pts:l.points,n:c.cables};return BB}
+function renderBB(){const d1=css('--d1'),acc=css('--acc');
+ G.pathsData(bbOn&&BB?BB.paths:[]).pathPoints('p').pathPointLat(q=>q[0]).pathPointLng(q=>q[1]).pathPointAlt(0.0015).pathResolution(1).pathStroke(null)
+  .pathColor(x=>bbHover&&x.id===bbHover.id?acc:hexA(d1,.5)).pathLabel(x=>`<div class="bbt">≋ ${esc(x.n)}</div>`).pathTransitionDuration(0)
+  .onPathHover(x=>{if((x&&x.id)===(bbHover&&bbHover.id))return;bbHover=x;G.pathColor(G.pathColor())});
+ G.pointsData(bbOn&&BB?BB.pts:[]).pointLat('lat').pointLng('lng').pointAltitude(0.002).pointRadius(0.09).pointColor(()=>hexA(d1,.9)).pointResolution(6)
+  .pointLabel(x=>`<div class="bbt">⊙ Estação de pouso · ${esc(x.n)}</div>`).pointsTransitionDuration(0);
+ updateAttr()}
+function updateAttr(){const a=[];if(osmOn)a.push('© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors');if(bbOn)a.push(`Cabos: <a href="https://www.submarinecablemap.com/" target="_blank" rel="noopener">TeleGeography</a> (CC BY-NC-SA)${BB?' · '+BB.n+' cabos · '+BB.pts.length+' estações':''}`);const el2=$('#attr');el2.innerHTML=a.join(' · ');el2.style.display=a.length?'':'none'}
+$('#bBB').onclick=async e=>{e.stopPropagation();bbOn=!bbOn;$('#bBB').classList.toggle('act',bbOn);if(bbOn)await loadBB();renderBB()};
+function osmCheck(){if(state.tab!=='globo')return;const want=G.pointOfView().altitude<OSM_ALT;if(want===osmOn)return;osmOn=want;
+ if(want)G.globeTileEngineUrl((x,y,l)=>`https://tile.openstreetmap.org/${l}/${x}/${y}.png`);else{G.globeTileEngineUrl(null);const alt=state.view==='mapa';G.globeImageUrl('assets/'+(alt?TEX_ALT[theme]:(mode==='escuro'?'earth-night-8k.jpg':TEX[theme][mode])))}updateAttr()}
+setInterval(osmCheck,400);
+/* --- painel MERCADOS --- */
+const MACRO=[['SPX','S&P 500',6795.3,0.1],['NDX','Nasdaq-100',24812.4,-0.6],['COMP','Nasdaq Composite',22406.1,-0.4],['SOX','PHLX Semicond.',6120.8,-1.9],['VIX','VIX',16.42,4.1],['US10Y','US 10Y',4.21,0.7,'%'],['DXY','Dólar (DXY)',98.7,-0.2],['GOLD','Ouro',3982,0.8],['WTI','Petróleo WTI',61.4,-1.2],['BTC','Bitcoin',121400,2.3]];
+const WORLD=[['Américas',[['SPX','S&P 500',6795.3,0.1],['NDX','Nasdaq 100',24812.4,-0.6],['IBOV','Ibovespa',142310,0.4]]],['Europa',[['DAX','DAX',24310.2,-0.3],['UKX','FTSE 100',9420.5,0.2],['SX5E','Euro Stoxx 50',5612.8,-0.1],['CAC','CAC 40',8012.4,0.3]]],['Ásia',[['N225','Nikkei 225',47210.6,-1.1],['HSI','Hang Seng',26840.2,0.9],['KOSPI','KOSPI',3612.4,1.4],['TAIEX','TAIEX',26430.8,1.7]]]];
+let mktTab='all';let watch=new Set((()=>{try{return JSON.parse(store.get('mg4-watch')||'[]')}catch(e){return []}})());
+const sym=c=>c.ticker.split(' · ')[0];
+const pct=v=>`<span class="${v>=0?'up':'dn'}">${v>=0?'▲':'▼'} ${fmt(Math.abs(v),v<10&&v>-10?2:1)}%</span>`;
+const pfmt=(v,unit)=>unit==='%'?fmt(v,2)+'%':fmt(v,v>=1000?(v>=10000?0:1):2);
+function sparkS(seed,up){let v=50,pts=[];for(let i=0;i<30;i++){v+=Math.sin(i*1.7+seed)*3+(up?0.6:-0.6)+Math.cos(i*0.7+seed*2)*2;pts.push(v)}const mn=Math.min(...pts),mx=Math.max(...pts);return `<svg width="64" height="16" viewBox="0 0 120 22" preserveAspectRatio="none"><polyline fill="none" stroke="${up?css('--up'):css('--dn')}" stroke-width="2" points="${pts.map((q,i)=>`${i*4},${20-(q-mn)/(mx-mn||1)*18}`).join(' ')}"/></svg>`}
+function stockRow(c){const cur=stockCurrency(c)==='KRW'?'₩':'US$ ';return `<div class="mrow" data-id="${esc(c.id)}" role="button" tabindex="0"><span class="st ${watch.has(c.id)?'on':''}" data-star="${esc(c.id)}" title="Favoritar">${watch.has(c.id)?'★':'☆'}</span><span class="tk">${esc(sym(c))}</span><span class="nm">${esc(shortName(c))}</span><span class="pr">${cur}${fmt(c.price,stockCurrency(c)==='KRW'?0:2)}</span><span class="ch">${pct(c.chg)}</span><span>${sparkS(c.id.length+c.price%7,c.chg>=0)}</span></div>`}
+function renderMkt(){const st=C.filter(c=>c.ticker);let h='';
+ if(mktTab==='watch'){const ws=st.filter(c=>watch.has(c.id));h=ws.length?ws.map(stockRow).join(''):'<div class="mwatch-empty">☆ Marque ações na Visão geral para acompanhá-las aqui</div>'}
+ else{h+=`<div class="mcards">${MACRO.map(m=>`<div class="mcard" data-sym="${m[0]}"><div class="l">${esc(m[1])}</div><div class="v">${pfmt(m[2],m[4])}</div><div class="c">${pct(m[3])}</div></div>`).join('')}</div>`;
+  const up=st.filter(c=>c.chg>=0).length,dn=st.length-up,srt=[...st].sort((a,b)=>b.chg-a.chg),hi=srt[0],lo=srt[srt.length-1];
+  h+=`<div class="mbreadth"><div class="top hud"><span style="color:var(--mu)">Amplitude IA</span><span class="up">${up}▲</span><span class="dn">${dn}▼</span><span class="bar"><i style="width:${up/st.length*100}%;background:var(--up)"></i><i style="width:${dn/st.length*100}%;background:var(--dn)"></i></span></div><div class="ext"><span class="up">▲ ${esc(sym(hi))} +${fmt(hi.chg,1)}%</span><span class="dn">▼ ${esc(sym(lo))} ${fmt(lo.chg,1)}%</span></div></div>`;
+  LAYERS.forEach(l=>{const xs=st.filter(c=>c.layer===l.k);if(!xs.length)return;h+=`<div class="msec"><i style="background:${layerColor(l.k)}"></i>Ações de IA · ${esc(l.n)} · ${xs.length}</div>`+xs.map(stockRow).join('')});
+  h+=`<div class="msec" style="margin-top:16px">Índices mundiais</div>`;
+  WORLD.forEach(([reg,xs])=>{h+=`<div class="msec" style="color:var(--mu);margin-top:6px">${esc(reg)}</div>`+xs.map(x=>`<div class="mrow idx" data-sym="${x[0]}"><span></span><span class="tk">${esc(x[0])}</span><span class="nm">${esc(x[1])}</span><span class="pr">${pfmt(x[2])}</span><span class="ch">${pct(x[3])}</span><span>${sparkS(x[0].length*3+x[2]%5,x[3]>=0)}</span></div>`).join('')})}
+ $('#mktBody').innerHTML=h;
+ $('#mktBody').querySelectorAll('.mrow[data-id]').forEach(r=>{const c=byId[r.dataset.id];r.onclick=e=>{e.stopPropagation();const s=e.target.closest('[data-star]');if(s){watch.has(c.id)?watch.delete(c.id):watch.add(c.id);store.set('mg4-watch',JSON.stringify([...watch]));if(state.tab==='news')renderNews();return renderMkt()}goTo(c)};r.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();goTo(c)}}})}
+const MK=$('#mkt');
+function openMkt(){if($('#reader').style.display==='block')closeReader();if(document.querySelector('#queue.show'))closeQueue();MK.classList.add('show');$('#bMkt').classList.add('act');renderMkt();MK.focus({preventScroll:true})}
+function closeMkt(){MK.classList.remove('show');$('#bMkt').classList.remove('act');$('#mktMsg').textContent=''}
+$('#bMkt').onclick=e=>{e.stopPropagation();MK.classList.contains('show')?closeMkt():openMkt()};
+$('#mktX').onclick=e=>{e.stopPropagation();closeMkt()};
+MK.addEventListener('click',e=>e.stopPropagation());
+document.querySelectorAll('.mtabs button').forEach(b=>b.onclick=e=>{e.stopPropagation();mktTab=b.dataset.mt;document.querySelectorAll('.mtabs button').forEach(x=>x.classList.toggle('sel',x===b));renderMkt()});
+$('#mktF').onsubmit=e=>{e.preventDefault();const v=norm($('#mktIn').value.trim());$('#mktMsg').textContent='';if(!v)return;
+ const c=C.find(c=>c.ticker&&norm(sym(c))===v)||C.find(c=>c.ticker&&(norm(shortName(c))===v||c.id===v));
+ if(c){$('#mktIn').value='';return goTo(c)}
+ const card=[...MK.querySelectorAll('[data-sym]')].find(x=>norm(x.dataset.sym)===v);
+ if(card){card.scrollIntoView({block:'center'});card.classList.add('hl');setTimeout(()=>card.classList.remove('hl'),3000);return}
+ $('#mktMsg').textContent=`Ticker "${$('#mktIn').value.trim()}" não está no Cadastro nem nos índices.`};
+$('#mktAI').onclick=e=>{e.stopPropagation();openChat();ask('Resumo do humor do mercado de IA hoje')};
+/* --- Fila de revisão (propostas simuladas dos agentes) --- */
+const QUEUE=[
+ {id:'q1',type:'new',name:'Reflection AI',city:'Nova York, EUA',lat:40.7128,lng:-74.0060,site:'reflection.ai',contact:'press@reflection.ai',why:'Publicou pesos abertos próprios (Asimov-1 · 42 mil downloads em 30 dias no Hugging Face) e atende ao critério de Laboratório.',src:{nome:'huggingface.co/reflection-ai',cidade:'reflection.ai/about',site:'reflection.ai',contato:'reflection.ai/press'},when:'há 2 h',agent:'Agente de descoberta'},
+ {id:'q2',type:'fix',co:'moonshot',field:'Contato',key:'contact',from:'—',to:'press@moonshot.cn',why:'Contato de imprensa publicado no site oficial.',src:{contato:'moonshot.cn/contact'},when:'ontem',agent:'Agente de descoberta'},
+ {id:'q3',type:'rel',a:'amazon',b:'openai',t:'infra',why:'Acordo plurianual de computação anunciado: a AWS passa a fornecer nuvem para a OpenAI.',src:{fonte:'reuters.com/technology'},when:'ontem',agent:'Agente de descoberta'},
+ {id:'q4',type:'match',left:{src:'Artificial Analysis',id:'qwen-4-instruct'},right:{src:'OpenRouter',id:'qwen/qwen4-235b-a22b'},why:'Nomes parecidos, mas janelas de contexto diferentes (2M × 1M). Não uni automaticamente.',when:'07/10',agent:'Ligação entre Fontes'}];
+const QT={new:'◆ Laboratório novo',fix:'✎ Correção de dados',rel:'⟡ Relação nova',match:'⇄ Par de Modelos incerto'};
+const srcA=u=>u?` <a class="sa" href="https://${esc(u)}" target="_blank" rel="noopener" title="origem: ${esc(u)}">↗</a>`:'';
+const qrow=(k,v,u,edit,key)=>`<div class="qr"><span class="k">${esc(k)}</span><span class="v">${edit&&key?`<input data-k="${key}" value="${esc(v)}">`:esc(v)+srcA(u)}</span></div>`;
+const qLabel=q=>q.type==='new'?q.name:q.type==='fix'?`${byId[q.co].name} · ${q.field}`:q.type==='rel'?`${byId[q.a].name} → ${byId[q.b].name}`:`${q.left.id} ⇄ ${q.right.id}`;
+function qCard(q){let b='';
+ if(q.type==='new')b=qrow('Nome',q.name,q.src.nome,q.edit,'name')+qrow('Cidade',q.city,q.src.cidade,q.edit,'city')+qrow('Coordenadas',q.lat.toFixed(4)+', '+q.lng.toFixed(4),q.src.cidade)+qrow('Camada','Laboratórios')+qrow('Site',q.site,q.src.site,q.edit,'site')+qrow('Contato',q.contact,q.src.contato,q.edit,'contact')+qrow('Logo','monograma · logo candidata não encontrada');
+ if(q.type==='fix')b=qrow('Empresa',byId[q.co].name)+qrow('Campo',q.field)+`<div class="qr"><span class="k">Mudança</span><span class="v"><s>${esc(q.from)}</s> → ${q.edit?`<input data-k="to" value="${esc(q.to)}">`:esc(q.to)+srcA(q.src.contato)}</span></div>`;
+ if(q.type==='rel'){const t=RELTYPES.find(x=>x.k===q.t);b=qrow('De',byId[q.a].name)+qrow('Para',byId[q.b].name)+`<div class="qr"><span class="k">Tipo</span><span class="v"><i class="sw" style="background:${css(t.v)}"></i> ${esc(t.n)}${srcA(q.src.fonte)}</span></div>`}
+ if(q.type==='match')b=qrow(q.left.src,q.left.id)+qrow(q.right.src,q.right.id);
+ const btn=q.type==='match'?'<button data-a="same" class="ok">É O MESMO MODELO</button><button data-a="diff">SÃO DIFERENTES</button>':q.edit?'<button data-a="save" class="ok">SALVAR E APROVAR</button><button data-a="cancel">CANCELAR</button>':'<button data-a="ok" class="ok">✓ APROVAR</button><button data-a="edit">✎ EDITAR</button><button data-a="no" class="no">✕ REJEITAR</button>';
+ return `<div class="qc" data-q="${q.id}"><div class="qh"><span class="qt">${QT[q.type]}</span><span class="qw">${esc(q.when)} · ${esc(q.agent)}</span></div><div class="qwhy">${esc(q.why)}</div>${b}<div class="qa">${btn}${q.type!=='match'?'<button data-a="globe" class="gl">◍ VER NO GLOBO</button>':''}</div></div>`}
+function qDone(q){const ok=q.res==='ok';const note=q.type==='new'?(ok?'Entra no Cadastro; o Ponto aparece no Globo na próxima Atualização (no protótipo, já aparece).':'Não será proposto de novo até surgir um fato novo.'):q.type==='match'?(ok?'Unidos: um único Modelo na Tabela.':'Mantidos como Modelos separados.'):q.type==='rel'?(ok?'Relação adicionada à rede do Globo.':'Relação descartada.'):(ok?'Cadastro corrigido.':'Correção descartada.');
+ return `<div class="qc done" data-q="${q.id}"><span class="${ok?'r-ok':'r-no'}">${ok?'✓ Aprovado':'✕ Rejeitado'}</span><span>${esc(qLabel(q))}</span><button data-a="undo">DESFAZER</button><span class="note">${esc(note)}</span></div>`}
+function renderQueue(){const pend=QUEUE.filter(q=>!q.res).length;$('#qN').textContent=pend;const bd=$('#qBadge');bd.textContent=pend;bd.style.display=pend?'':'none';
+ $('#queueBody').innerHTML='<div class="sub">Nada muda no Cadastro sem a sua aprovação · ↗ = origem de cada dado</div>'+(pend?'':'<div class="qempty">✓ NADA PARA REVISAR</div>')+[...QUEUE.filter(q=>!q.res),...QUEUE.filter(q=>q.res)].map(q=>q.res?qDone(q):qCard(q)).join('')}
+function clearGhost(){if(GHOST.length||RELG.length){GHOST=[];RELG=[];renderPoints();renderArcs()}}
+function qPreview(q){clearGhost();setTab('globo');ctl.autoRotate=false;
+ if(q.type==='new'){GHOST=[{id:'ghost-'+q.id,name:q.name,city:q.city,lat:q.lat,lng:q.lng,layer:'lab',tags:[],ghost:true}];renderPoints();G.pointOfView({lat:q.lat-4,lng:q.lng+16,altitude:1.3},1000)}
+ if(q.type==='rel'){const a=byId[q.a],b=byId[q.b];RELG=[{a,b,t:q.t,ghost:true}];renderArcs();G.pointOfView({lat:(a.lat+b.lat)/2-6,lng:(a.lng+b.lng)/2+14,altitude:1.5},1000)}
+ if(q.type==='fix')goTo(byId[q.co])}
+function qApply(q){if(q.type==='new'&&!byId.reflection){const c={id:'reflection',name:q.name,city:q.city,lat:q.lat,lng:q.lng,layer:'lab',tags:[],ticker:null,price:0,chg:0,site:q.site,contact:q.contact,launch:null,models:['Asimov-1']};C.push(c);byId[c.id]=c;q._c=c}
+ if(q.type==='fix'){const c=byId[q.co];q._old=c[q.key];c[q.key]=q.to}
+ if(q.type==='rel'){q._r={a:byId[q.a],b:byId[q.b],t:q.t};REL.push(q._r)}
+ qRefresh()}
+function qRevert(q){if(q._c){C.splice(C.indexOf(q._c),1);delete byId[q._c.id];q._c=null}if(q.type==='fix'&&q._old!==undefined){byId[q.co][q.key]=q._old;q._old=undefined}if(q._r){REL.splice(REL.indexOf(q._r),1);q._r=null}qRefresh()}
+function qRefresh(){renderPoints();renderArcs();buildLeft();renderLabs();spread(true);$('#nEmp').textContent=C.length}
+function qAct(q,a,card){if(a==='globe')return qPreview(q);
+ if(a==='edit'){q.edit=true;return renderQueue()}if(a==='cancel'){q.edit=false;return renderQueue()}
+ if(a==='save'){card.querySelectorAll('input[data-k]').forEach(i=>{if(i.value.trim())q[i.dataset.k]=i.value.trim()});q.edit=false;a='ok'}
+ if(a==='undo'){if(q.res==='ok')qRevert(q);q.res=null;return renderQueue()}
+ q.res=(a==='ok'||a==='same')?'ok':'no';clearGhost();if(q.res==='ok')qApply(q);renderQueue()}
+const QP=$('#queue');
+function openQueue(){if($('#reader').style.display==='block')closeReader();if(document.querySelector('#mkt.show'))closeMkt();QP.classList.add('show');$('#bQueue').classList.add('act');renderQueue();QP.focus({preventScroll:true})}
+function closeQueue(){QP.classList.remove('show');$('#bQueue').classList.remove('act');clearGhost()}
+$('#bQueue').onclick=e=>{e.stopPropagation();QP.classList.contains('show')?closeQueue():openQueue()};
+$('#queueX').onclick=e=>{e.stopPropagation();closeQueue()};
+QP.addEventListener('click',e=>{e.stopPropagation();const b=e.target.closest('button[data-a]');if(!b)return;const card=b.closest('.qc');qAct(QUEUE.find(x=>x.id===card.dataset.q),b.dataset.a,card)});
+applyTheme();renderTable();renderMFilters();renderFeed();renderLabs();renderQueue();setFTab(ftab);setFeedF(feedF);syncSoundBtn();sizeGlobe();setTimeout(()=>spread(true),900);
+setTStyle(pref('tstyle','mg4-tstyle',TSTYLES,'ana'));
+{const tp=pick(params.get('tab'),['globo','models','news'],'models');setTab(tp)}
+if(params.get('reader')){const rc=byId[params.get('select')]||byId.alibaba;setTimeout(()=>openReader(rc,0),1800)}
+if(params.get('select')&&byId[params.get('select')]){const c=byId[params.get('select')];G.pointOfView({lat:c.lat-4,lng:c.lng+22,altitude:1.8},0);setTimeout(()=>openTerm(c),1500)}
+if(params.get('pov')==='asia')G.pointOfView({lat:28,lng:115,altitude:2.1},0);
+
+/* Composição editorial adicional. Dados/ações continuam demonstrativos. */
+function aaBuildTemplates(){
+  $('#themeList').innerHTML='<p class="aa-template-note">Artificial Analysis é o design padrão, com modos claro e escuro. Os seis temas originais continuam disponíveis.</p><a class="th" href="prototype-artificial-analysis.html?mode=claro">Artificial Analysis Light · padrão</a><a class="th" href="prototype-artificial-analysis.html?mode=escuro">Artificial Analysis Dark</a>'+THEMES.map(t=>['escuro','claro'].map(m=>'<a class="th" href="prototype-globe.html?theme='+t.k+'&mode='+m+'">'+esc(t.n)+' · '+m+'</a>').join('')).join('')+'<a class="th" href="templates.html">Ver a galeria de templates ↗</a>';
+}
+buildThemeList=aaBuildTemplates;aaBuildTemplates();
+document.querySelectorAll('#right .rb').forEach(b=>{if(!b.hasAttribute('aria-label'))b.setAttribute('aria-label',b.dataset.tip||b.textContent.trim())});
+$('#bMode').onclick=()=>{mode=mode==='escuro'?'claro':'escuro';applyTheme(true);aaRenderMetrics()};$('#bTheme').setAttribute('aria-label','Escolher template');
+const aaLabColors={'Google':'#34A853','OpenAI':'#50C971','Anthropic':'#CC785C','SpaceX (xAI)':'#1F1F1F','DeepSeek':'#0089F4','Meta':'#736CD3','Alibaba':'#FF6900','Mistral AI':'#2243E6'};
+const aaShort=m=>m.model.replace('Claude Opus ','Opus ').replace('Gemini ','Gemini ').replace('Mistral Large ','Mistral ').replace('DeepSeek ','DeepSeek ');
+function aaRenderMetrics(){
+  const specs=[{key:'iq',title:'Inteligência',caption:'Índice comparativo · maior é melhor',accent:'#8842FD',value:m=>m.iq,label:v=>fmt(v,1),dir:-1,foot:'Índice demonstrativo'},{key:'tps',title:'Velocidade',caption:'Tokens por segundo · maior é melhor',accent:'#FDE002',value:m=>m.tps,label:v=>fmt(v,0),dir:-1,foot:'Tokens por segundo'},{key:'cost',title:'Custo por tarefa',caption:'US$ · 2.000 tokens de entrada + 1.000 de saída',accent:'#FF7734',value:m=>cost(m),label:v=>'$'+fmt(v,3),dir:1,foot:'Estimativa demonstrativa'}];
+  $('#aaMetrics').innerHTML=specs.map(sp=>{const rows=MODELS.filter(m=>sp.value(m)!=null).sort((a,b)=>(sp.value(a)-sp.value(b))*sp.dir).slice(0,6);const max=Math.max(...rows.map(sp.value));return '<article class="aa-metric"><h2><span class="aa-accent" style="background:'+sp.accent+'" aria-hidden="true"></span>'+sp.title+'</h2><p class="aa-caption">'+sp.caption+'</p><div class="aa-chart" role="group" aria-label="'+sp.title+' de modelos demonstrativos">'+rows.map(m=>'<button class="aa-bar-col" data-aa-model="'+esc(m.model)+'" title="'+esc(m.model)+' · '+sp.label(sp.value(m))+' · destacar na tabela" aria-label="Destacar '+esc(m.model)+' na tabela, '+sp.title+' '+sp.label(sp.value(m))+'"><span class="aa-bar-value">'+sp.label(sp.value(m))+'</span><span class="aa-bar" style="height:'+Math.max(3,sp.value(m)/max*154)+'px;background:'+(aaLabColors[m.lab]||sp.accent)+'"></span></button>').join('')+'</div><div class="aa-chart-labels">'+rows.map(m=>'<span>'+esc(aaShort(m))+'</span>').join('')+'</div><div class="aa-chart-foot"><span>'+sp.foot+'</span><span>Dados demo</span></div></article>'}).join('');
+  document.querySelectorAll('[data-aa-model]').forEach(b=>b.onclick=()=>{state.mHl=new Set([b.dataset.aaModel]);renderTable();$('#aaTableTitle').scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})});
+}
+function aaUpdateGlobeTone(){
+ const tones=mode==='escuro'?{soft:'#25272D',original:'#1B1D22',white:'#08090B'}:{soft:'#ECEDEF',original:'#F1F2F4',white:'#FFFFFF'};
+ const control=$('#aaGlobeTone');const tone=pick(store.get('mg-aa-globe-tone-'+mode),Object.keys(tones),mode==='claro'?pick(store.get('mg-aa-globe-tone'),Object.keys(tones),'soft'):'soft');
+ control.value=tone;control.querySelector('[value=white]').textContent=mode==='escuro'?'Preto':'Branco';
+ document.body.style.setProperty('--globebg',tones[tone],'important');
+ control.onchange=e=>{document.body.style.setProperty('--globebg',tones[e.target.value],'important');store.set('mg-aa-globe-tone-'+mode,e.target.value)};
+}
+aaUpdateGlobeTone();
+aaRenderMetrics();
+$('#aaCompare').onclick=()=>$('#aaTableTitle').scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+$('#aaGlobe').onclick=()=>setTab('globo');
+$('#bCesium').onclick=()=>{location.href='prototype-cesium.html?mode='+mode+(state.sel?'&select='+encodeURIComponent(state.sel.id):'')};
+const aaBBClick=$('#bBB').onclick;$('#bBB').onclick=e=>{setTab('globo');return aaBBClick(e)};
+const aaRelClick=$('#bRel').onclick;$('#bRel').onclick=e=>{setTab('globo');return aaRelClick(e)};
+const aaSearch=$('#aaSearch');let aaSearchOrigin=null;
+function aaCloseSearch(){aaSearch.hidden=true;if(aaSearchOrigin)aaSearchOrigin.focus({preventScroll:true})}
+function aaSearchRows(){const q=norm($('#aaSearchIn').value.trim());const rows=[];if(q){C.filter(c=>norm(c.name+' '+c.city+' '+(c.ticker||'')).includes(q)).slice(0,5).forEach(c=>rows.push({title:c.name,kind:'Empresa · '+c.city,run:()=>goTo(c)}));MODELS.filter(m=>norm(m.model+' '+m.lab).includes(q)).slice(0,5).forEach(m=>rows.push({title:m.model,kind:'Modelo · '+m.lab,run:()=>{setTab('models');state.mHl=new Set([m.model]);renderTable();$('#aaTableTitle').scrollIntoView({block:'start'})}}));ALL.filter(n=>norm(n.pt+' '+n.c.name).includes(q)).slice(0,4).forEach(n=>rows.push({title:n.pt,kind:'Notícia demo · '+n.c.name,run:()=>openReader(n.c,n.ni||0,'side')}))}
+ $('#aaSearchResults').innerHTML=rows.length?rows.map((r,i)=>'<button class="aa-result" data-aa-res="'+i+'">'+esc(r.title)+'<small>'+esc(r.kind)+'</small></button>').join(''):'<p class="aa-muted">'+(q?'Nenhum resultado nos dados demo.':'Digite para encontrar modelos, empresas e notícias.')+'</p>';
+ $('#aaSearchResults').querySelectorAll('[data-aa-res]').forEach(b=>b.onclick=()=>{aaCloseSearch();rows[+b.dataset.aaRes].run()});
+}
+$('#bAASearch').onclick=e=>{e.stopPropagation();aaSearchOrigin=e.currentTarget;aaSearch.hidden=false;aaSearchRows();$('#aaSearchIn').focus()};$('#aaSearchClose').onclick=aaCloseSearch;$('#aaSearchIn').oninput=aaSearchRows;
+aaSearch.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();aaCloseSearch()}if(e.key==='Tab'){const f=[...aaSearch.querySelectorAll('button,input')];const first=f[0],last=f[f.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
+$('#aaSearchIn').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const first=$('#aaSearchResults button');if(first)first.click()}});
+/* Transformar filtros do protótipo em controles por teclado, preservando handlers originais. */
+function aaAccessibleChips(){document.querySelectorAll('.chip').forEach(c=>{c.tabIndex=0;c.setAttribute('role','button');c.setAttribute('aria-pressed',String(!c.classList.contains('off')));c.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();c.click()}}});document.querySelectorAll('#tbl th[data-k]').forEach(h=>{h.tabIndex=0;h.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();h.click()}}})}
+aaAccessibleChips();new MutationObserver(aaAccessibleChips).observe($('#vModels'),{childList:true,subtree:true});new MutationObserver(aaAccessibleChips).observe($('#vNews'),{childList:true,subtree:true});
+if(!params.has('tab')&&!params.has('select')&&!params.has('reader'))setTab('models');
+
+
+/* Mesmas ações da ficha/notícia, apresentação imediata nesta variante. */
+const aaOriginalTermData=termHTML;
+termHTML=function(c){const t=aaOriginalTermData(c);t.text=t.text.replace(/<span class="ascii">[\s\S]*?<\/span>\n\n/,'').replace(/^> /gm,'').replace('<b>'+esc(c.name.toUpperCase())+'</b> — '+esc(c.city.toUpperCase()),'<span class="aa-company-name">'+esc(c.name)+'</span>\n<span class="aa-company-location">'+esc(c.city)+'</span>');[['CAMADA:','Camada:'],['ETIQUETAS:','Etiquetas:'],['SITE:','Site:'],['CONTATO:','Contato:'],['COTAÇÃO:','Cotação:'],['MODELOS:','Modelos:'],['RELAÇÕES:','Relações:'],['NOTÍCIAS:','Notícias:']].forEach(([a,b])=>{t.text=t.text.replace(a,b)});return t};
+const aaOriginalOpenTerm=openTerm;openTerm=function(c){aaOriginalOpenTerm(c);skip();$('#termTitle').textContent='Empresa · '+shortName(c)};
+const aaOriginalOpenReader=openReader;openReader=function(c,ni,lay){aaOriginalOpenReader(c,ni,lay);skipReader();const n=ALL.find(n=>n.c===c&&n.ni===ni);if(n?.original){const source=n.original;$('#readerBody').innerHTML=`<div class="meta">${esc(n.date)} · ${esc(n.src)} · Matéria original</div><h3>${esc(n.pt)}</h3>${yfArt(n)}<div class="sec">Resumo em português</div><p>${esc(source.summary)}</p><a class="open" href="${esc(source.url)}" target="_blank" rel="noopener noreferrer">↗ Abrir matéria original (nova guia)</a><div class="note">Síntese editorial do preview · imagem e matéria da fonte indicada.</div>`;bindNewsImages($('#readerBody'))}else{const meta=$('#readerBody .meta');if(n&&meta)meta.textContent=n.date+' · Notícia demo · '+c.name;const link=$('#readerBody .open');if(link)link.textContent='↗ Visitar site da empresa (nova guia)';const note=$('#readerBody .note');if(note)note.textContent='Conteúdo demonstrativo, sem matéria original vinculada.'}};
+
+</script>
+</body>
+</html>
