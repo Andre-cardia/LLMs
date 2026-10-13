@@ -1,0 +1,17 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - nvm install 24
+        - nvm use 24
+        - node --version
+    build:
+      commands:
+        - npm run validate
+        - npm run build
+        - test -s dist/ui/index.html
+  artifacts:
+    baseDirectory: dist/ui
+    files:
+      - '**/*'

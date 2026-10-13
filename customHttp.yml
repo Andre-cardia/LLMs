@@ -1,0 +1,9 @@
+customHeaders:
+  - pattern: '/assets/cesium-config.json'
+    headers:
+      - key: 'Cache-Control'
+        value: 'no-store'
+  - pattern: '/prototype-cesium*'
+    headers:
+      - key: 'Referrer-Policy'
+        value: 'origin'
