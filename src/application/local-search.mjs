@@ -57,9 +57,10 @@ export class LocalSearch {
     try {
       const frame = await this.#view.frame(target);
       if (!this.#active(operation)) return this.#superseded(operation);
-      // O índice do reducer recebe exatamente a mesma revisão e supressão da revalidação.
+      // O índice do reducer recebe exatamente a mesma revisão e supressão da revalidação;
+      // a tabela de merges segue inteira, o reducer decide o que se aplica.
       requireSynchronous(this.#store.dispatch({schemaVersion:2,type:'advanceSnapshot',data:frame.data,
-        revision:frame.dataRevision,now:frame.now,hiddenNewsIds:frame.hiddenNewsIds,companyRemaps:[]}));
+        revision:frame.dataRevision,now:frame.now,hiddenNewsIds:frame.hiddenNewsIds,companyRemaps:frame.companyMergedInto}));
       operation.intentToken += 1;
       // Uma subscription síncrona pode ter emitido nova intenção durante o dispatch.
       if (!this.#active(operation)) return this.#superseded(operation);

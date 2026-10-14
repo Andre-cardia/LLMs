@@ -1,7 +1,7 @@
 import { AccessDeniedError } from '../contracts/access.mjs';
 import { createHash } from 'node:crypto';
 import { assertCatalog } from '../contracts/catalog.mjs';
-import { assertManifest, assertSnapshotData, SLICES } from '../contracts/snapshot.mjs';
+import { assertManifest, assertSnapshotData, assertCompanyMergedInto, MANIFEST_VERSION, SLICES } from '../contracts/snapshot.mjs';
 import { string, integer, utc, clone, canonicalJson, requireSynchronous } from '../contracts/primitives.mjs';
 export const sha256Text = text => createHash('sha256').update(text).digest('hex');
 export class MemorySnapshots {
@@ -10,7 +10,7 @@ export class MemorySnapshots {
     assertCatalog(catalog); this.#control = control; this.#clock = clock; this.#mayRead = authorizeRead; this.#mayUpdate = authorizeUpdate;
     control.transact(state => {
       if (state.snapshotRevision !== undefined) throw new Error('WORKSPACE_ALREADY_INITIALIZED');
-      Object.assign(state, { catalog: clone(catalog), curationRevision: 'curation-0', snapshotRevision: null, snapshotSequence: 0, leases: new Map(), fenceSequence: new Map(), publishedRuns: new Map(), lastPublishedInput: null });
+      Object.assign(state, { catalog: clone(catalog), curationRevision: 'curation-0', snapshotRevision: null, snapshotSequence: 0, companyMergedInto: [], leases: new Map(), fenceSequence: new Map(), publishedRuns: new Map(), lastPublishedInput: null });
     });
   }
   #now() { const value = this.#clock(); utc(value, 'clock'); return value; }
@@ -56,13 +56,17 @@ export class MemorySnapshots {
       const data = { catalog: state.catalog, models, news }; assertSnapshotData(data);
       const successTimes = clone(lastSuccessAt);
       if (state.lastPublishedInput === null || state.lastPublishedInput.curationRevision !== state.curationRevision) successTimes.catalog = publishedAt;
+      // A tabela só muda na transação de curadoria; o Publisher a emite validada contra o catálogo publicado,
+      // antes de gravar qualquer objeto de slice.
+      const companyMergedInto = clone(state.companyMergedInto);
+      assertCompanyMergedInto(companyMergedInto, { nextCompanyIds: state.catalog.companies.map(company => company.id) });
       const revision = `snapshot-${state.snapshotSequence + 1}`;
       const slices = Object.fromEntries(SLICES.map(slice => {
         const content = canonicalJson({ schemaVersion: 1, slice, data: data[slice] });
         const digest = sha256Text(content); this.#objects.set(digest, content);
         return [slice, { objectKey: digest, digest, lastSuccessAt: successTimes[slice] }];
       }));
-      const result = { schemaVersion: 1, revision, curationRevision: state.curationRevision, publishedAt, slices }; assertManifest(result);
+      const result = { schemaVersion: MANIFEST_VERSION, revision, curationRevision: state.curationRevision, publishedAt, slices, companyMergedInto }; assertManifest(result);
       const completion = complete(state, result);
       requireSynchronous(completion,'ASYNC_COMPLETION_FORBIDDEN');
       if (utc(active.expiresAt) <= utc(this.#now())) throw new Error('LEASE_EXPIRED_OR_FENCED');

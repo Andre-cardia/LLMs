@@ -1,5 +1,6 @@
 import {LAYERS} from '../contracts/catalog.mjs';
 import {EXPLORATION_VERSION, assertExplorationOptions, assertExplorationIntent, assertExplorationState} from '../contracts/exploration.mjs';
+import {assertCompanyMergedInto} from '../contracts/snapshot.mjs';
 import {clone, freeze, oneOf} from '../contracts/primitives.mjs';
 import {parseExplorationUrl} from './exploration-url.mjs';
 import {visibleNews} from './news-projections.mjs';
@@ -107,15 +108,14 @@ export function explorationReducer(previous, intent) {
       break;
     case 'advanceSnapshot': {
       const next = index(intent.data, intent.now, intent.hiddenNewsIds);
-      const remaps = new Map(intent.companyRemaps.map(r => [r.fromCompanyId,r.toCompanyId]));
-      if (remaps.size !== intent.companyRemaps.length) throw new Error('DUPLICATE_REMAP');
-      for (const [from,to] of remaps) {
-        if (!s.index.companyIds.includes(from) || from === to || next.companyIds.includes(from) || !next.companyIds.includes(to)) throw new Error('INVALID_REMAP');
-      }
+      const nextIds = new Set(next.companyIds), previousIds = new Set(s.index.companyIds);
+      assertCompanyMergedInto(intent.companyRemaps, {nextCompanyIds:nextIds});
+      // Tabela acumulada: só entradas cujo from estava no índice anterior se aplicam.
+      const remaps = new Map(intent.companyRemaps.filter(r => previousIds.has(r.fromCompanyId)).map(r => [r.fromCompanyId,r.toCompanyId]));
       // Cada origem é reconciliada separadamente; o link nunca vira preferência/sessão.
       const reconcile = id => {
-        const mapped = remaps.get(id) ?? id;
-        return next.companyIds.includes(mapped) ? mapped : null;
+        const mapped = remaps.has(id) ? remaps.get(id) : id;
+        return mapped !== null && nextIds.has(mapped) ? mapped : null;
       };
       const oldId = s.effectiveState.companyId;
       s.sessionState.companyId = reconcile(s.sessionState.companyId);
@@ -128,8 +128,11 @@ export function explorationReducer(previous, intent) {
       if (s.readerNewsId !== null) s.readerToken = s.intentToken;
       s.cameraOperation = null; s.index = next; s.snapshotRevision = intent.revision;
       if (s.selectedModel) {
-        const selected = {...s.selectedModel,companyId:remaps.get(s.selectedModel.companyId) ?? s.selectedModel.companyId};
-        if (next.modelTargets.some(m => ['companyId','modelId','variantId'].every(k => m[k] === selected[k]))) s.selectedModel = selected;
+        const companyId = remaps.has(s.selectedModel.companyId) ? remaps.get(s.selectedModel.companyId) : s.selectedModel.companyId;
+        const selected = {...s.selectedModel,companyId};
+        // Empresa retirada (to: null) já sinalizou company-unavailable; não sobrescrever com o aviso do Modelo.
+        if (companyId === null) s.selectedModel = null;
+        else if (next.modelTargets.some(m => ['companyId','modelId','variantId'].every(k => m[k] === selected[k]))) s.selectedModel = selected;
         else { s.selectedModel = null; s.warning = 'model-unavailable'; }
       }
       if (s.readerNewsId !== null && !next.newsTargets.some(n => n.newsId === s.readerNewsId)) {

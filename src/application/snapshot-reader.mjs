@@ -1,5 +1,5 @@
 import { AccessDeniedError } from '../contracts/access.mjs';
-import { assertManifest, assertEnvelope, assertSnapshotData, SLICES } from '../contracts/snapshot.mjs';
+import { assertManifest, assertEnvelope, assertSnapshotData, assertCompanyMergedInto, SLICES } from '../contracts/snapshot.mjs';
 import { clone, freeze } from '../contracts/primitives.mjs';
 export class SnapshotReader {
   #current = null; #intent = 0; #manifest; #slice; #digest;
@@ -15,6 +15,7 @@ export class SnapshotReader {
         const envelope = JSON.parse(bytes); assertEnvelope(envelope, slice); return [slice, envelope.data];
       }));
       const data = Object.fromEntries(entries); assertSnapshotData(data);
+      assertCompanyMergedInto(manifest.companyMergedInto, { nextCompanyIds: data.catalog.companies.map(company => company.id) });
       if (intent !== this.#intent) return { status: 'superseded', snapshot: this.#current };
       this.#current = freeze({ manifest, ...data }); return { status: 'updated', snapshot: this.#current };
     } catch (error) {

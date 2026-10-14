@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { evaluateCollection } from '../src/domain/collection-guard.mjs';
-import { assertSnapshotData } from '../src/contracts/snapshot.mjs';
+import { assertSnapshotData, assertManifest, assertCompanyMergedInto } from '../src/contracts/snapshot.mjs';
 import { MemoryControl } from '../src/adapters/memory-control.mjs';
 import { MemorySnapshots, sha256Text } from '../src/adapters/memory-snapshots.mjs';
 import { SnapshotReader } from '../src/application/snapshot-reader.mjs';
@@ -106,4 +106,114 @@ test('schema rejeita arrays esparsos/campos extras/versões e limites de coorden
   for (const mutate of [data => { data.models = Array(1); }, data => { data.catalog.companies[0].location.latitude = 91; }, data => { data.models[0].schemaVersion = 2; }, data => { data.news[0].tool = 'write'; }]) {
     const bad = clone(fixture); mutate(bad); assert.throws(() => assertSnapshotData(bad), TypeError);
   }
+});
+
+// Retira uma Empresa do catálogo curado e das slices, como faria a curadoria de um merge.
+function retire(state, data, id) {
+  state.catalog.companies = state.catalog.companies.filter(company => company.id !== id);
+  state.catalog.relations = state.catalog.relations.filter(r => r.fromCompanyId !== id && r.toCompanyId !== id);
+  return { models: data.models.filter(m => m.companyId !== id), news: data.news.filter(n => ![...n.relevantCompanyIds, ...n.citedCompanyIds].includes(id)),
+    lastSuccessAt: { catalog: data.now, models: data.now, news: data.now } };
+}
+
+test('manifesto v2: Publisher emite a tabela do controle e leitor a valida contra o catálogo', async () => {
+  const work = workspace(); const first = publish(work);
+  assert.equal(first.schemaVersion, 2); assert.deepEqual(first.companyMergedInto, []);
+  assert.deepEqual(work.control.read().companyMergedInto, []);
+  const merged = publish(work, 'run-2', state => { state.companyMergedInto = [{ fromCompanyId: 'company-1', toCompanyId: 'company-3' }]; return retire(state, work.data, 'company-1'); });
+  assert.deepEqual(merged.companyMergedInto, [{ fromCompanyId: 'company-1', toCompanyId: 'company-3' }]);
+  const loaded = await work.reader.refresh(); assert.equal(loaded.status, 'updated');
+  assert.deepEqual(loaded.snapshot.manifest.companyMergedInto, merged.companyMergedInto);
+  // Retirada do sobrevivente regrava a entrada com null; o Publisher aceita.
+  const retired = publish(work, 'run-3', state => { state.companyMergedInto = [{ fromCompanyId: 'company-1', toCompanyId: null }, { fromCompanyId: 'company-3', toCompanyId: null }];
+    const data = { ...work.data, models: work.data.models.filter(m => m.companyId !== 'company-1'), news: work.data.news.filter(n => ![...n.relevantCompanyIds, ...n.citedCompanyIds].includes('company-1')) };
+    return retire(state, data, 'company-3'); });
+  assert.deepEqual(retired.companyMergedInto.map(e => e.toCompanyId), [null, null]);
+});
+
+test('manifesto v2: Publisher não publica tabela incoerente e preserva o controle', () => {
+  const work = workspace(); publish(work); const before = work.control.read();
+  const tables = [
+    [{ fromCompanyId: 'company-1', toCompanyId: 'company-3' }],
+    [{ fromCompanyId: 'gone', toCompanyId: 'missing' }],
+    [{ fromCompanyId: 'gone-a', toCompanyId: 'gone-b' }, { fromCompanyId: 'gone-b', toCompanyId: 'company-3' }],
+    [{ fromCompanyId: 'gone', toCompanyId: 'company-3' }, { fromCompanyId: 'gone', toCompanyId: 'company-2' }],
+    [{ fromCompanyId: 'company-3', toCompanyId: 'company-3' }]
+  ];
+  for (const [i, table] of tables.entries()) {
+    assert.throws(() => publish(work, `bad-${i}`, state => { state.companyMergedInto = table; }), /INVALID_MERGE_TABLE/);
+    work.snapshots.releaseLease(work.control.read().leases.get('snapshot'), work.job);
+    const after = work.control.read();
+    assert.equal(after.snapshotRevision, before.snapshotRevision); assert.deepEqual(after.companyMergedInto, []); assert.deepEqual(after.catalog, before.catalog);
+  }
+});
+
+test('manifesto v1 é rejeitado pelo contrato e pelo leitor; tabela incoerente torna o leitor indisponível', async () => {
+  const work = workspace(); publish(work); const manifest = work.snapshots.readManifest(work.owner);
+  assert.equal(assertManifest(clone(manifest)).schemaVersion, 2);
+  const v1 = clone(manifest); v1.schemaVersion = 1; delete v1.companyMergedInto;
+  const v1WithTable = { ...clone(manifest), schemaVersion: 1 };
+  const missing = clone(manifest); delete missing.companyMergedInto;
+  for (const bad of [v1, v1WithTable, missing]) assert.throws(() => assertManifest(bad), TypeError);
+  const readSlice = (revision, slice) => work.snapshots.readSlice(revision, slice, work.owner);
+  for (const bad of [v1, v1WithTable]) {
+    const reader = new SnapshotReader({ readManifest: () => bad, readSlice, digest: sha256Text });
+    const result = await reader.refresh(); assert.equal(result.status, 'unavailable'); assert.equal(reader.current, null);
+  }
+  let current = manifest; const reader = new SnapshotReader({ readManifest: () => current, readSlice, digest: sha256Text });
+  assert.equal((await reader.refresh()).status, 'updated'); const good = reader.current;
+  const incoherent = [
+    [{ fromCompanyId: 'company-1', toCompanyId: 'company-3' }],
+    [{ fromCompanyId: 'gone', toCompanyId: 'missing' }],
+    [{ fromCompanyId: 'gone-a', toCompanyId: 'gone-b' }, { fromCompanyId: 'gone-b', toCompanyId: 'company-3' }]
+  ];
+  for (const table of [...incoherent, null]) {
+    current = { ...clone(manifest), companyMergedInto: table };
+    const result = await reader.refresh(); assert.equal(result.status, 'kept-last-good'); assert.equal(reader.current, good);
+  }
+  current = v1; assert.equal((await reader.refresh()).status, 'kept-last-good'); assert.equal(reader.current, good);
+});
+
+test('validador único: forma, compactação, limite e coerência com o catálogo novo', () => {
+  const ok = [{ fromCompanyId: 'a', toCompanyId: 'c' }, { fromCompanyId: 'b', toCompanyId: 'c' }, { fromCompanyId: 'd', toCompanyId: null }];
+  assert.equal(assertCompanyMergedInto(ok), ok); assert.equal(assertCompanyMergedInto([]).length, 0);
+  assert.equal(assertCompanyMergedInto(ok, { nextCompanyIds: ['c'] }), ok);
+  assert.equal(assertCompanyMergedInto(ok, { nextCompanyIds: new Set(['c', 'x']) }), ok);
+  const limit = Array.from({ length: 10000 }, (_, i) => ({ fromCompanyId: `old-${i}`, toCompanyId: 'c' }));
+  assert.equal(assertCompanyMergedInto(limit).length, 10000);
+  const invalid = [null, {}, [null], [{ fromCompanyId: 'a' }], [{ fromCompanyId: 'a', toCompanyId: 'c', extra: 1 }], [{ fromCompanyId: '', toCompanyId: 'c' }],
+    [{ fromCompanyId: 'a', toCompanyId: 1 }], [{ fromCompanyId: 'a', toCompanyId: 'a' }], [{ fromCompanyId: 'a', toCompanyId: 'c' }, { fromCompanyId: 'a', toCompanyId: 'd' }],
+    [{ fromCompanyId: 'a', toCompanyId: 'b' }, { fromCompanyId: 'b', toCompanyId: 'c' }], [...limit, { fromCompanyId: 'extra', toCompanyId: 'c' }]];
+  for (const value of invalid) assert.throws(() => assertCompanyMergedInto(value), /INVALID_MERGE_TABLE/);
+  assert.throws(() => assertCompanyMergedInto(ok, { nextCompanyIds: ['c', 'a'] }), /INVALID_MERGE_TABLE: from presente/);
+  assert.throws(() => assertCompanyMergedInto(ok, { nextCompanyIds: [] }), /INVALID_MERGE_TABLE: to ausente/);
+});
+
+test('nenhum manifesto do repositório é v1: produzidos e literais', async () => {
+  const work = workspace(); const manifests = [publish(work), work.snapshots.readManifest(work.owner)];
+  const updated = workspace();
+  manifests.push((await new LocalUpdate(updated).run({ runId: 'scan', modelsSourceId: 'fake', scope: 'all', context: updated.job, fetchModels: () => clone(fixture.models), fetchNews: () => clone(fixture.news) })).manifest);
+  for (const manifest of manifests) { assert.equal(manifest.schemaVersion, 2); assertManifest(manifest); }
+  const { readdir, readFile } = await import('node:fs/promises');
+  const root = new URL('../', import.meta.url); const offenders = [];
+  async function walk(dir) {
+    for (const entry of await readdir(dir, { withFileTypes: true })) {
+      const url = new URL(entry.name + (entry.isDirectory() ? '/' : ''), dir);
+      if (entry.isDirectory()) await walk(url);
+      else if (/\.(mjs|json)$/.test(entry.name)) {
+        const text = await readFile(url, 'utf8');
+        if (entry.name.endsWith('.json')) {
+          const visit = value => { if (value && typeof value === 'object') {
+            if (!Array.isArray(value) && Object.hasOwn(value, 'slices') && Object.hasOwn(value, 'revision') && value.schemaVersion !== 2) offenders.push(url.pathname);
+            Object.values(value).forEach(visit); } };
+          visit(JSON.parse(text));
+        }
+        // Literal de manifesto: objeto com schemaVersion 1 e campo exclusivo do manifesto.
+        // Janela até o fim da instrução, para alcançar campos depois de objetos aninhados (slices:{...}).
+        if (/schemaVersion\s*:\s*1(?!\d)[^;]{0,600}?\b(curationRevision|publishedAt|companyMergedInto)\b/.test(text)) offenders.push(url.pathname);
+      }
+    }
+  }
+  for (const folder of ['src/', 'scripts/', 'tests/']) await walk(new URL(folder, root));
+  assert.deepEqual(offenders, []);
 });

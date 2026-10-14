@@ -1,7 +1,7 @@
 import {object, oneOf, boolean, string, list, integer, utc, fail, canonicalJson} from './primitives.mjs';
 import {LAYERS} from './catalog.mjs';
 import {assertNavigationTarget} from './navigation.mjs';
-import {assertSnapshotData} from './snapshot.mjs';
+import {assertSnapshotData, assertCompanyMergedInto} from './snapshot.mjs';
 
 export const EXPLORATION_VERSION = 2;
 export const BASES = Object.freeze(['MAPA', 'SAT']);
@@ -135,10 +135,7 @@ export function assertExplorationIntent(intent) {
     case 'advanceSnapshot':
       string(intent.revision, 'revision'); utc(intent.now, 'now');
       list(intent.hiddenNewsIds, string, 'hiddenNewsIds', {unique:true});
-      list(intent.companyRemaps, r => {
-        object(r, ['fromCompanyId','toCompanyId'], 'remap');
-        string(r.fromCompanyId, 'fromCompanyId'); string(r.toCompanyId, 'toCompanyId');
-      }, 'companyRemaps');
+      assertCompanyMergedInto(intent.companyRemaps);
       assertExplorationSnapshot(intent.data); break;
   }
   return intent;

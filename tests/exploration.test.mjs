@@ -76,11 +76,15 @@ test('review: câmera fora do Globo é recusada sem mudar contexto', () => {
   assert.deepEqual(state,before);
  }
 });
-test('review: lote de remaps é atômico e aceita merge many-to-one explícito', () => {
+test('review: lote de remaps é atômico, ignora from fora do índice anterior e aceita merge many-to-one explícito', () => {
  const state=reduce(start(),{type:'company',companyId:'company-1'}),before=clone(state),data=clone(fixture);
  data.catalog.companies=[{...data.catalog.companies[0],id:'merged'}];data.catalog.relations=[];data.models=[];data.news=[];
  const action={type:'advanceSnapshot',data,revision:'two',now:fixture.now,hiddenNewsIds:[],companyRemaps:[{fromCompanyId:'company-1',toCompanyId:'merged'},{fromCompanyId:'missing',toCompanyId:'merged'}]};
- assert.throws(()=>explorationReducer(state,action),/INVALID_REMAP/);assert.deepEqual(state,before);
+ // Tabela acumulada: 'missing' nunca esteve no índice anterior e é ignorada, sem lançar.
+ const ignored=explorationReducer(state,action);
+ assert.equal(ignored.state.effectiveState.companyId,'merged');assert.deepEqual(state,before);
+ // Entrada inválida pelo validador único rejeita o lote inteiro.
+ assert.throws(()=>explorationReducer(state,{...action,companyRemaps:[...action.companyRemaps,{fromCompanyId:'company-1',toCompanyId:'merged'}]}),/INVALID_MERGE_TABLE/);assert.deepEqual(state,before);
  action.companyRemaps[1].fromCompanyId='company-2';const result=explorationReducer(state,action);
  assert.equal(result.state.effectiveState.companyId,'merged');assert.equal(result.state.terminal.companyId,'merged');assert.deepEqual(result.effects,[]);assert.deepEqual(state,before);
 });
@@ -352,12 +356,37 @@ test('AC4: remap explícito conserva Modelo e Leitor numa única revisão e reno
   const late=explorationReducer(state,stale);assert.equal(late.state,state);assert.deepEqual(late.effects,[]);
   state=reduce(state,{...stale,token:state.readerToken,snapshotRevision:'two'});assert.equal(state.readerTyping,false);
 });
-test('AC4: remaps exigem origem anterior e destino novo, sem alterações parciais',()=>{
+test('AC4: tabela incoerente é rejeitada pelo validador único sem alterações parciais; from fora do índice anterior é ignorado',()=>{
  const s=reduce(start(),{type:'company',companyId:'company-1'}),before=clone(s);
  const action={type:'advanceSnapshot',data:fixture,revision:'two',now:fixture.now,hiddenNewsIds:[],companyRemaps:[]};
- for(const companyRemaps of [[{fromCompanyId:'missing',toCompanyId:'company-2'}],[{fromCompanyId:'company-1',toCompanyId:'missing'}],[{fromCompanyId:'company-1',toCompanyId:'company-1'}],[{fromCompanyId:'company-1',toCompanyId:'company-2'}],[{fromCompanyId:'company-1',toCompanyId:'company-2'},{fromCompanyId:'company-1',toCompanyId:'company-2'}]]){
-  assert.throws(()=>reduce(s,{...action,companyRemaps}),/REMAP/);assert.deepEqual(s,before);
+ const many=Array.from({length:10001},(_,i)=>({fromCompanyId:`gone-${i}`,toCompanyId:'company-2'}));
+ for(const companyRemaps of [[{fromCompanyId:'company-1',toCompanyId:'missing'}],[{fromCompanyId:'company-1',toCompanyId:'company-1'}],[{fromCompanyId:'company-1',toCompanyId:'company-2'}],[{fromCompanyId:'company-1',toCompanyId:'company-2'},{fromCompanyId:'company-1',toCompanyId:'company-2'}],[{fromCompanyId:'gone-a',toCompanyId:'gone-b'},{fromCompanyId:'gone-b',toCompanyId:'company-2'}],[{fromCompanyId:'gone-a',toCompanyId:''}],[{fromCompanyId:'gone-a'}],many]){
+  assert.throws(()=>reduce(s,{...action,companyRemaps}),/INVALID_MERGE_TABLE/);assert.deepEqual(s,before);
  }
+ assert.equal(reduce(s,{...action,companyRemaps:many.slice(0,10000)}).effectiveState.companyId,'company-1');
+ const ignored=reduce(s,{...action,companyRemaps:[{fromCompanyId:'missing',toCompanyId:'company-2'}]});
+ assert.equal(ignored.effectiveState.companyId,'company-1');assert.equal(ignored.warning,null);assert.deepEqual(s,before);
+});
+test('AD-22: salto de revisões aplica só from do índice anterior; sobrevivente retirado vira company-unavailable',()=>{
+ const data=clone(fixture);
+ data.catalog.companies=data.catalog.companies.filter(c=>c.id!=='company-1');data.catalog.relations=[];
+ data.models=data.models.filter(m=>m.companyId!=='company-1');data.news=data.news.filter(n=>![...n.relevantCompanyIds,...n.citedCompanyIds].includes('company-1'));
+ // A em r1 selecionada; tabela acumulada A→C e B→C, B nunca esteve no índice.
+ const s=reduce(start(),{type:'company',companyId:'company-1'}),before=clone(s);
+ const merged=explorationReducer(s,{type:'advanceSnapshot',data,revision:'three',now:fixture.now,hiddenNewsIds:[],companyRemaps:[{fromCompanyId:'company-1',toCompanyId:'company-3'},{fromCompanyId:'never-indexed',toCompanyId:'company-3'}]});
+ assert.equal(merged.state.effectiveState.companyId,'company-3');assert.equal(merged.state.terminal.companyId,'company-3');assert.equal(merged.state.warning,null);
+ assert.equal(explorationQuery(merged.state),'?layers=labs%2Cchips%2Ccloud%2Cenergy%2Csoftware&base=MAPA&tab=globe&company=company-3');
+ const retired=explorationReducer(s,{type:'advanceSnapshot',data,revision:'three',now:fixture.now,hiddenNewsIds:[],companyRemaps:[{fromCompanyId:'company-1',toCompanyId:null}]});
+ assert.equal(retired.state.effectiveState.companyId,null);assert.equal(retired.state.terminal,null);assert.equal(retired.state.warning,'company-unavailable');
+ assert.deepEqual(s,before);
+ // Modelo da Empresa retirada selecionado: o aviso continua sendo da Empresa.
+ const model=fixture.models.find(m=>m.companyId==='company-1');
+ if(model){
+  const withModel=reduce(start(),{type:'navigate',target:{schemaVersion:1,type:'model',companyId:'company-1',modelId:model.modelId,variantId:model.variants[0].variantId}});
+  assert.equal(withModel.selectedModel.companyId,'company-1');
+  const gone=explorationReducer(withModel,{type:'advanceSnapshot',data,revision:'three',now:fixture.now,hiddenNewsIds:[],companyRemaps:[{fromCompanyId:'company-1',toCompanyId:null}]});
+  assert.equal(gone.state.selectedModel,null);assert.equal(gone.state.warning,'company-unavailable');
+ } else assert.fail('fixture sem Modelo de company-1');
 });
 test('AC4: snapshot renova tokens mesmo na mesma revisão e conserva callbacks atuais de Terminal',()=>{
  let s=reduce(start(),{type:'company',companyId:'company-1'});

@@ -1,6 +1,7 @@
 import {object, integer, list, string, utc, clone} from '../contracts/primitives.mjs';
 import {assertNews} from '../contracts/news.mjs';
 import {assertExplorationSnapshot} from '../contracts/exploration.mjs';
+import {assertCompanyMergedInto} from '../contracts/snapshot.mjs';
 import {assertNavigationTarget} from '../contracts/navigation.mjs';
 import {assertSearchContext} from '../contracts/search.mjs';
 import {newsProjection, visibleNews} from '../domain/news-projections.mjs';
@@ -29,13 +30,15 @@ export class LocalNewsView {
     assertExplorationSnapshot(snapshot);
     // Capturar antes de outra espera, inclusive para portas que devolvem objetos mutáveis.
     const data = clone(snapshot), feedback = await this.#feedback();
+    // A tabela vem da mesma revisão capturada; o frame a repassa sem filtrar (AD-22).
+    const companyMergedInto = assertCompanyMergedInto(clone(data.manifest?.companyMergedInto), {nextCompanyIds:data.catalog.companies.map(c => c.id)});
     object(feedback, ['feedbackRevision','items','hiddenNewsIds'], 'NewsFeedbackView');
     integer(feedback.feedbackRevision, 'feedbackRevision'); assertNews(feedback.items);
     list(feedback.hiddenNewsIds, string, 'hiddenNewsIds', {unique:true});
     const now = this.#clock(); utc(now);
     const context = {dataRevision:data.manifest.revision,feedbackRevision:feedback.feedbackRevision};
     assertSearchContext(context);
-    return freeze({data,now,hiddenNewsIds:clone(feedback.hiddenNewsIds),...context});
+    return freeze({data,now,hiddenNewsIds:clone(feedback.hiddenNewsIds),companyMergedInto,...context});
   }
   async #alias(target) {
     assertNavigationTarget(target);

@@ -58,3 +58,15 @@ Origem: [Review Findings da Story 4.1](spec-4-1-store-bases-preferencias.md#revi
 - source_spec: `spec-7-1-busca-url-local.md`
   summary: BH5 — verificar transporte e ordenação de evidências de remap de Empresa junto aos snapshots no controlador futuro.
   evidence: Maybe-false, impacto potencial medium não verificado. Probe envia remoção sem remap e depois um remap cuja origem já foi removida; INVALID_REMAP está conforme o reducer. Falta caller/fonte integrada que comprove entrega legítima nesse fluxo. O coordenador não inventa correspondências e não transporta mapas ausentes do frame; provar que o proprietário dos remaps os aplica antes de outro consumidor consolidar remoções.
+- source_spec: `_bmad-output/implementation-artifacts/spec-manifest-v2-company-merged-into.md`
+  summary: Contrato e comando MergeDecision em src/contracts/curation.mjs e MemoryCuration, única fonte de companyMergedInto (merge, DESFAZER compensatório, retirada do sobrevivente, recovery).
+  evidence: Andre escolheu em 14/10 entregar só o encanamento do manifesto v2; sem esse comando nenhum caminho de produto cria merges (AD-2, AD-3, AD-4).
+- source_spec: `_bmad-output/implementation-artifacts/spec-manifest-v2-company-merged-into.md`
+  summary: Curadoria que readiciona um ID já presente como `from` em `companyMergedInto`, ou tabela acima de 10 000 entradas, faz todo `publish` lançar `INVALID_MERGE_TABLE`, inclusive Atualizações de Modelos e Notícias.
+  evidence: Maybe-false hoje (só testes alteram a tabela); torna-se real com o comando `MergeDecision`, que precisa recusar o readicionamento ou reescrever a tabela na mesma transação e definir a poda antes do teto.
+- source_spec: `_bmad-output/implementation-artifacts/spec-manifest-v2-company-merged-into.md`
+  summary: Selecionar na Busca um resultado antigo de Empresa mesclada move o store para o sobrevivente, mas `LocalSearch.select` devolve e publica `unavailable`.
+  evidence: Pré-existente (o alvo é validado contra a revisão nova, onde A não existe); resolver o alvo pela tabela é decisão de produto ligada à extensão de Q11.
+- source_spec: `_bmad-output/implementation-artifacts/spec-manifest-v2-company-merged-into.md`
+  summary: BH5 (acima) está superado: `INVALID_REMAP` foi removido e a tabela acumulada `companyMergedInto` transporta remaps independentemente da ordem de revisões.
+  evidence: `src/domain/exploration-state.mjs` aplica só entradas cujo `from` está no índice anterior; teste AD-22 cobre o salto de revisões.

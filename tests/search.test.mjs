@@ -8,6 +8,7 @@ import {LocalSearch} from '../src/application/local-search.mjs';
 import {LocalNewsView} from '../src/application/local-news-view.mjs';
 import {globalSearch} from '../src/domain/global-search.mjs';
 import {createExploration, explorationReducer} from '../src/domain/exploration-state.mjs';
+import {explorationQuery} from '../src/domain/exploration-url.mjs';
 import {MemoryNews} from '../src/adapters/memory-news.mjs';
 import {LocalUpdate} from '../src/application/local-update.mjs';
 import {AccessDeniedError} from '../src/contracts/access.mjs';
@@ -23,10 +24,10 @@ function store(data = fixture) {
   }};
 }
 function setup(data = clone(fixture)) {
-  const source = {data,revision:'one',feedbackRevision:0,hiddenNewsIds:[],allowed:true,now:fixture.now};
+  const source = {data,revision:'one',companyMergedInto:[],feedbackRevision:0,hiddenNewsIds:[],allowed:true,now:fixture.now};
   const check = () => { if (!source.allowed) throw new AccessDeniedError(); };
   const view = new LocalNewsView({
-    readSnapshot:() => { check(); return {...source.data,manifest:{revision:source.revision}}; },
+    readSnapshot:() => { check(); return {...source.data,manifest:{revision:source.revision,companyMergedInto:source.companyMergedInto}}; },
     readFeedback:() => { check(); return {feedbackRevision:source.feedbackRevision,items:source.data.news,hiddenNewsIds:source.hiddenNewsIds}; },
     resolveAlias:id => { check(); return source.data.news.find(n => n.newsId === id) ?? null; },
     clock:() => source.now
@@ -168,7 +169,7 @@ test('7.1 AC3: negação/falha em snapshot, feedback ou alias limpa dados sem na
   for (const stage of ['snapshot','feedback','alias']) for (const error of [new AccessDeniedError(),new Error('segredo privado')]) {
     const w = setup(), result = (await w.search.search('noticia ficticia 1')).results[0];
     const fail = () => {throw error;};
-    const view = new LocalNewsView({readSnapshot:stage === 'snapshot' ? fail : () => ({...fixture,manifest:{revision:'two'}}),
+    const view = new LocalNewsView({readSnapshot:stage === 'snapshot' ? fail : () => ({...fixture,manifest:{revision:'two',companyMergedInto:[]}}),
       readFeedback:stage === 'feedback' ? fail : () => ({feedbackRevision:1,items:fixture.news,hiddenNewsIds:[]}),
       resolveAlias:stage === 'alias' ? fail : () => fixture.news[0],clock:() => fixture.now});
     const search = new LocalSearch({view,store:w.store});
@@ -238,7 +239,7 @@ test('7.1 AC2: intenção reentrante no refresh impede o segundo dispatch de nav
 
 test('7.1 frame: alias aguardado antes do feedback; mutação de snapshot não mistura revisões', async () => {
   const data=clone(fixture), alias=deferred(), feedback=deferred(), captured=deferred();
-  const view=new LocalNewsView({readSnapshot:() => ({...data,manifest:{revision:'one'}}),
+  const view=new LocalNewsView({readSnapshot:() => ({...data,manifest:{revision:'one',companyMergedInto:[]}}),
     readFeedback:() => {captured.resolve();return feedback.promise;},resolveAlias:() => alias.promise,clock:() => fixture.now});
   const promise=view.frame(cases.results[3].target);
   alias.resolve(fixture.news[0]); await captured.promise;
@@ -304,8 +305,8 @@ test('7.1 review BH4: congelamento do frame é limitado por identidade compartil
 test('7.1 review BH8: dados malformados nas portas limpam resultados sem navegar', async () => {
   const faults=[
     {readSnapshot:() => null},
-    {readSnapshot:() => ({...clone(fixture),catalog:null,manifest:{revision:'two'}})},
-    {readSnapshot:() => ({...clone(fixture),manifest:{revision:''}})},
+    {readSnapshot:() => ({...clone(fixture),catalog:null,manifest:{revision:'two',companyMergedInto:[]}})},
+    {readSnapshot:() => ({...clone(fixture),manifest:{revision:'',companyMergedInto:[]}})},
     {readFeedback:() => ({feedbackRevision:-1,items:fixture.news,hiddenNewsIds:[]})},
     {readFeedback:() => ({feedbackRevision:0,items:fixture.news,hiddenNewsIds:[null]})},
     {readFeedback:() => ({feedbackRevision:0,items:[{}],hiddenNewsIds:[]})},
@@ -313,7 +314,7 @@ test('7.1 review BH8: dados malformados nas portas limpam resultados sem navegar
     {resolveAlias:() => ({newsId:123})}
   ];
   for(const fault of faults) {
-    const w=setup(), options={readSnapshot:() => ({...clone(fixture),manifest:{revision:'two'}}),
+    const w=setup(), options={readSnapshot:() => ({...clone(fixture),manifest:{revision:'two',companyMergedInto:[]}}),
       readFeedback:() => ({feedbackRevision:0,items:fixture.news,hiddenNewsIds:[]}),
       resolveAlias:() => fixture.news[0],clock:() => fixture.now,...fault};
     let invalid=false;
@@ -327,7 +328,7 @@ test('7.1 review BH8: dados malformados nas portas limpam resultados sem navegar
 
 test('7.1 review VG1: supressão durante espera do alias prevalece na seleção', async () => {
   const w=setup(), alias=deferred(), entered=deferred(); let blocked=false, feedbackRevision=0, hiddenNewsIds=[], lastFrame;
-  const view=new LocalNewsView({readSnapshot:() => ({...fixture,manifest:{revision:'one'}}),
+  const view=new LocalNewsView({readSnapshot:() => ({...fixture,manifest:{revision:'one',companyMergedInto:[]}}),
     readFeedback:() => ({feedbackRevision,items:fixture.news,hiddenNewsIds:[...hiddenNewsIds]}),
     resolveAlias:() => {if(blocked){entered.resolve();return alias.promise;}return fixture.news[0];},clock:() => fixture.now});
   const search=new LocalSearch({store:w.store,view:{frame:async t => {lastFrame=await view.frame(t);return lastFrame;}}});
@@ -351,7 +352,7 @@ test('7.1 review BH9: merge de grupos distintos suprimidos protege snapshot pré
     sourceRefs:[{...fixture.news[0].sourceRefs[0],sourceRecordId:'distinct',sourceUrl:'https://example.invalid/distinct'}]};
   const items=[fixture.news[0],other];
   w.control.transact(state => news.ingest(state,items,w.job));
-  const data={...clone(fixture),news:clone(items)}, snapshot={...data,manifest:{revision:'before-merge'}};
+  const data={...clone(fixture),news:clone(items)}, snapshot={...data,manifest:{revision:'before-merge',companyMergedInto:[]}};
   const view=new LocalNewsView({readSnapshot:() => snapshot,readFeedback:() => news.read(w.owner),resolveAlias:id => news.resolve(id,w.owner),clock:w.clock});
   const s=store(data), search=new LocalSearch({view,store:s});
   const results=(await search.search('noticia ficticia 1')).results;assert.equal(results.length,2);
@@ -363,4 +364,59 @@ test('7.1 review BH9: merge de grupos distintos suprimidos protege snapshot pré
   assert.equal((await search.search('noticia ficticia 1')).status,'empty');
   for(const result of results) assert.deepEqual(await search.select(result),{status:'unavailable'});
   assert.equal(s.getState().readerNewsId,null);assert.equal(s.getState().snapshotRevision,'before-merge');
+});
+
+test('7.1 critério 4: merge publicado duas revisões depois é seguido de Publisher a LocalSearch', async () => {
+  const w=workspace(), news=new MemoryNews({...w,authorizeOwner:c => c===w.owner,authorizeIngest:c => c===w.job});
+  w.control.transact(state => news.ingest(state,fixture.news,w.job));
+  const publish=(runId, prepare = () => {}) => {
+    const lease=w.snapshots.acquireLease('snapshot',runId,60000,w.job);
+    return w.snapshots.publish({expectedRevision:w.control.read().snapshotRevision,lease,models:w.data.models,news:w.data.news,
+      lastSuccessAt:{catalog:w.clock(),models:w.clock(),news:w.clock()}},w.job,prepare);
+  };
+  const r1=publish('r1');
+  const view=new LocalNewsView({readSnapshot:async () => (await w.reader.refresh()).snapshot,readFeedback:() => news.read(w.owner),
+    resolveAlias:id => news.resolve(id,w.owner),clock:w.clock});
+  const first=await w.reader.refresh();
+  let state=createExploration({data:first.snapshot,revision:r1.revision,now:fixture.now,config});
+  const intents=[], s={getState:() => state,dispatch(intent) {const result=explorationReducer(state,intent);state=result.state;intents.push(intent);return result;}};
+  const search=new LocalSearch({view,store:s});
+  const stale=(await search.search('Laboratório fictício A')).results.find(r => r.target.type==='company');
+  assert.equal((await search.select(stale)).status,'available'); assert.equal(state.effectiveState.companyId,'company-1');
+  // r2 sem merge; r3 retira A e declara A→C. O store continua no índice de r1.
+  publish('r2');
+  const table=[{fromCompanyId:'company-1',toCompanyId:'company-3'}];
+  const r3=publish('r3', control => {
+    control.catalog.companies=control.catalog.companies.filter(c => c.id!=='company-1');
+    control.catalog.relations=control.catalog.relations.filter(r => r.fromCompanyId!=='company-1' && r.toCompanyId!=='company-1');
+    control.companyMergedInto=table;
+    return {models:w.data.models.filter(m => m.companyId!=='company-1'),
+      news:w.data.news.filter(n => ![...n.relevantCompanyIds,...n.citedCompanyIds].includes('company-1')),
+      lastSuccessAt:{catalog:w.clock(),models:w.clock(),news:w.clock()}};
+  });
+  assert.equal(r3.revision,'snapshot-3'); assert.deepEqual(r3.companyMergedInto,table); assert.equal(state.snapshotRevision,'snapshot-1');
+  // O resultado antigo de A é escolhido: a seleção segue para C em vez de virar indisponível.
+  const outcome=await search.select(stale);
+  const advance=intents.at(-1);
+  assert.equal(advance.type,'advanceSnapshot'); assert.equal(advance.revision,'snapshot-3'); assert.deepEqual(advance.companyRemaps,table);
+  assert.equal(state.snapshotRevision,'snapshot-3'); assert.equal(state.effectiveState.companyId,'company-3');
+  assert.equal(state.terminal.companyId,'company-3'); assert.equal(state.warning,null);
+  assert.equal(new URLSearchParams(explorationQuery(state)).get('company'),'company-3');
+  // O alvo antigo não é reescrito pela tabela (fora do escopo); a seleção, sim.
+  assert.equal(outcome.status,'unavailable');
+  // Escolher um resultado atual de C mantém C e a URL canônica.
+  const fresh=(await search.search('Chip fictício C')).results.find(r => r.target.type==='company');
+  assert.equal((await search.select(fresh)).status,'available');
+  assert.equal(state.effectiveState.companyId,'company-3'); assert.equal(new URLSearchParams(explorationQuery(state)).get('company'),'company-3');
+  assert.deepEqual(intents.at(-2).companyRemaps,table);
+});
+
+test('7.1 frame expõe companyMergedInto e rejeita tabela incoerente com o catálogo', async () => {
+  const w=setup(); w.source.companyMergedInto=[{fromCompanyId:'gone',toCompanyId:'company-2'}];
+  const frame=await w.view.frame(); assert.deepEqual(frame.companyMergedInto,w.source.companyMergedInto);
+  assert.equal(Object.isFrozen(frame.companyMergedInto),true);
+  for (const table of [[{fromCompanyId:'company-1',toCompanyId:'company-2'}],[{fromCompanyId:'gone',toCompanyId:'missing'}],null]) {
+    w.source.companyMergedInto=table; await assert.rejects(w.view.frame(),/INVALID_MERGE_TABLE/);
+  }
+  w.source.companyMergedInto=undefined; await assert.rejects(w.view.frame(),TypeError);
 });
