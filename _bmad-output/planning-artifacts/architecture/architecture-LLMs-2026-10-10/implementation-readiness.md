@@ -30,7 +30,7 @@ O contrato permite prosseguir com fundações em fixtures: identidade/valores, p
 | ID | Decisão/evidência necessária | Dono | Bloqueia |
 | --- | --- | --- | --- |
 | Q1 | Verba adicional e limite de suspensão do chat/busca | Andre | Stories de chat e ativação |
-| Q2 | Provedor final/IdP, custo infra, quota e prova de auth/CAS/lease/recovery | Andre + arquitetura | Infra real, autenticação integrada, publicação |
+| Q2 | Provedor e camada autenticada decididos em 14/10 (AWS, AD-9). Faltam persistência de controle com CAS/lease/fencing, agendador, IaC, região, custo/quota, isolamento por ambiente e provas de auth/CAS/recovery | Andre + arquitetura | Infra real, autenticação integrada, publicação, dado real no navegador |
 | Q3 | Globo sempre 3D com bases MAPA/SAT é decisão do PRD; UX fecha controles móveis, ordem/foco por muitos Pontos, legibilidade/contraste, teclado/toque, leitor de tela, reduzir movimento e detalhes pendentes de Leitor/horários | UX | Stories do Globo e superfícies afetadas |
 | Q4 | Proveniência/licença/atualização e vínculos cabo-estação | Arquitetura + Andre | Escolher fonte/habilitar/publicar BACKBONES |
 | Q5 | Matriz de instrumentos, symbols, unidade/moeda, calendários, fallback e histórico | Arquitetura | Stories MERCADOS/cotações reais |

@@ -22,7 +22,25 @@ Verificações web e locais para arquitetura, sem criação de recurso ou chamad
 | Artificial Analysis | addendum §A, verificação datada 07/10 | Foto anterior, não revalidada operacionalmente aqui. Não chamar com chave nesta etapa; API e crédito, sem scraping |
 | OpenRouter/HF/news/quotes | addendum §A | Providers são candidatos de dados; aliases, schemas, preços/coverage e calendários exigem fixtures/live probes autorizados na story pertinente |
 
-## Escolha proposta e tradeoffs
+## Emenda de 14/10/2026 — AWS escolhida (AD-9)
+
+Andre escolheu AWS: o Amplify Hosting serve só o código, e os dados ficam atrás de Cognito → API Gateway HTTP API (JWT authorizer) → Lambda → S3 privado. A Cloudflare deixa de ser seed; as linhas acima sobre Worker, Access, D1 e R2 ficam como registro histórico.
+
+| Item | Evidência primária (14/10) | Consequência |
+| --- | --- | --- |
+| JWT authorizer | [API Gateway HTTP API JWT authorizer](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-jwt-authorizer.html): valida `kid`, `iss`, `aud` ou `client_id`, `exp`, `nbf`, `iat` e scopes via `jwks_uri`; só RSA; chave em cache por até 2h; recomenda exigir scopes | Toda rota exige escopo, e a rotação de chave precisa de um período de graça. A allowlist do dono fica na Lambda, porque o authorizer não a aplica |
+| Runtime Lambda | [Lambda runtimes](https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html): `nodejs24.x` em Amazon Linux 2023, depreciação prevista para 30/04/2028 | Mesmo major do Node do projeto (`engines` >=24, `amplify.yml`) |
+| Amplify access control | [Amplify access control](https://docs.aws.amazon.com/amplify/latest/userguide/access-control.html): só senha básica, por branch ou global | Não satisfaz o AD-9 para dados; por isso o Amplify serve só código |
+| Domínio padrão | [Amplify + AWS WAF](https://docs.aws.amazon.com/amplify/latest/userguide/getting-started-using-waf.html): `amplifyapp.com` não pode ser removido, mas a opção "Restrict access to amplifyapp.com" o bloqueia (custo do WAF) | Não bloqueado: essa origem só serve código. Com domínio próprio, ela não é aceita pela API (AD-26) |
+| Cognito: token e escopos | [Access token](https://docs.aws.amazon.com/cognito/latest/developerguide/amazon-cognito-user-pools-using-the-access-token.html): traz `client_id` e só tem `aud` com resource binding; [resource servers](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-define-resource-servers.html): escopos custom só pelos endpoints OAuth com domínio | `Audience` = client id sem resource binding; escopo `llms-api/*` obrigatório por rota recusa ID token; a Lambda confere `token_use` |
+| Cognito: login | [Authorize endpoint](https://docs.aws.amazon.com/cognito/latest/developerguide/authorization-endpoint.html): PKCE só `S256`; implicit desativável; `prompt=none` faz autenticação silenciosa com a sessão do managed login (não no hosted UI clássico). [App clients](https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-settings-client-apps.html): client público sem secret, não mutável depois. [AdminCreateUserConfig](https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_AdminCreateUserConfigType.html): `AllowAdminCreateUserOnly` | Tokens só em memória com reautenticação silenciosa na recarga; usar managed login, não o hosted UI clássico |
+| S3 privado | [Block Public Access](https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html) não impede URL presigned assinada pelo papel; [condições SigV4](https://docs.aws.amazon.com/AmazonS3/latest/API/bucket-policy-s3-sigv4-conditions.html): `s3:authType` | Bucket policy nega `REST-QUERY-STRING`; prova negativa em Q2. A chave foi confirmada por trecho de busca, a página redirecionou |
+| CORS e streaming | [HTTP API CORS](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-cors.html): o gateway responde ao preflight e ignora CORS da Lambda; com authorizer em `$default` é preciso rota `OPTIONS` sem auth. [Response streaming](https://docs.aws.amazon.com/apigateway/latest/developerguide/response-transfer-mode.html): só REST API | CORS só no gateway (AD-26). O transporte do streaming do chat fica em Q1/Q7 |
+| Alternativa rejeitada | [aws-samples/cloudfront-authorization-at-edge](https://github.com/aws-samples/cloudfront-authorization-at-edge): Cognito + Lambda@Edge protegendo também o código | Exigiria sair do Amplify Hosting; rejeitada por Andre. O exemplo CloudFormation da página do JWT authorizer usa implicit, token em query e `nodejs18.x`: não copiar |
+
+Nenhuma conta, recurso, região ou custo foi verificado. Persistência de controle, agendador e IaC continuam sob o Q2.
+
+## Escolha proposta e tradeoffs (histórico, 12/10)
 
 Cloudflare Workers + Access + D1 + R2 reúne gateway privado, agendamento e persistência em poucas peças e mantém contratos em JavaScript. Risco: quotas de CPU/subrequests, configuração real de IdP/origens, transação conjunta de controle e provider gráfico. É seed `[ASSUMPTION]`, sem conta/plano/recursos configurados e sem promessa de custo zero.
 

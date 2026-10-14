@@ -1,6 +1,13 @@
-# Contratos entre módulos — versão 1
+# Contratos entre módulos
 
 Complemento normativo da [spine](ARCHITECTURE-SPINE.md). São contratos, sem endpoints implementados nesta etapa.
+
+| Contrato | `schemaVersion` vigente |
+| --- | --- |
+| Manifesto (`PublishedManifest`, `ManifestResponse`) | 2 |
+| Estado e intents de exploração (`EXPLORATION_VERSION`) | 2 |
+| Busca (`SEARCH_VERSION`) | 1 |
+| Envelopes de slice, entidades, comandos, ledger, streaming | 1 |
 
 ## Identidade, dinheiro e tempo
 
@@ -17,20 +24,28 @@ Cada valor dinâmico inclui `source`, `sourceRecordId`, `sourceUrl`, `observedAt
 
 `GET /api/v1/snapshot` devolve manifesto privado. `GET /api/v1/snapshots/:revision/:slice` só devolve objeto alcançável daquela revisão autorizada, com digest/schema validados. O registro executável em `src/contracts/` define chaves de slices, envelopes/projeções, formatos de `location`, sourceRefs, status, requests/responses, patches e cada payload do streaming. Domain/Contracts é autor único; stories consumidoras aguardam esses schemas e fixtures. O exemplo acima não dá permissão para inferir os demais formatos. Leitor mantém última revisão completa se algum fetch novo falhar; não combina catálogo novo com Modelo/Relação antigos não reconciliados.
 
-Manifesto:
+Manifesto interno (`PublishedManifest`, versão 2, AD-2):
 
 ```json
 {
-  "schemaVersion": 1,
-  "revision": "opaque",
+  "schemaVersion": 2,
+  "revision": "r-2026-10-10T12.00Z",
   "publishedAt": "2026-10-10T12:00:00Z",
   "curationRevision": "opaque",
   "slices": {
     "catalog": {"objectKey": "private-key", "digest": "sha256", "lastSuccessAt": "2026-10-10T12:00:00Z"},
     "models": {"objectKey": "private-key", "digest": "sha256", "lastSuccessAt": "2026-10-10T11:00:00Z"}
-  }
+  },
+  "companyMergedInto": [
+    {"fromCompanyId": "opaque-a", "toCompanyId": "opaque-c"},
+    {"fromCompanyId": "opaque-b", "toCompanyId": "opaque-c"}
+  ]
 }
 ```
+
+`companyMergedInto` é acumulada e compactada: lista todo ID de Empresa já retirado com o sobrevivente atual (ou `null`, se o sobrevivente foi retirado), e nenhum `to` aparece como `from`. Muda só por `MergeDecision` humana, DESFAZER compensatório (remove e recompacta), retirada do sobrevivente (`to: null`) ou recovery (recalculada contra o catálogo restaurado). É `[]` enquanto não houver merge. O validador único `assertCompanyMergedInto(entries, {nextCompanyIds})` exige `from` ausente do catálogo novo, `to` presente ou `null`, `from` único, `from ≠ to`, compactação e no máximo 10 000 entradas; o reducer indexa a tabela num `Map`/`Set`. Publisher, `SnapshotReader` e reducer o chamam; o reducer aplica só entradas cujo `from` está no índice anterior. Manifesto v1 é rejeitado; não há leitor dual. `revision` casa com `^[A-Za-z0-9._-]{1,128}$`.
+
+`GET /api/v1/snapshot` devolve `ManifestResponse`: o mesmo objeto sem `objectKey`. Cada slice é lida por nome na rota de slice, que devolve os bytes gravados sem reserialização. As três últimas revisões continuam legíveis (AD-27). Inventário de migração, a cargo da story Domain/Contracts: `assertManifest` v2 com fixtures válidas e inválidas; `MemorySnapshots` passa a emitir v2; testes que montam manifesto à mão migram; `src/ui/fixture-source.mjs` gera o manifesto pelo mesmo helper, nunca por literal; um teste falha se houver manifesto v1 em qualquer lugar. No domínio e na aplicação: o reducer troca a checagem própria (`exploration-state.mjs`, `INVALID_REMAP` para `from` fora do índice anterior) pelo validador único com filtro pelo índice anterior; os testes que exigem esse lançamento (`tests/exploration.test.mjs`) passam a exigir que a entrada seja ignorada; `LocalNewsView` expõe `companyMergedInto` no frame e `LocalSearch` deixa de enviar `companyRemaps: []` fixo. O formato do intent não muda, então `EXPLORATION_VERSION` continua 2.
 
 O exemplo é formato, não dado operacional. Publisher valida todos os IDs referenciados contra a revisão curada. Uma slice antiga só é preservada quando suas referências continuam válidas; exclusão/merge de entidade exige remapeamento curado ou impede publicar até resolução. Objetos gravados sem ponteiro concluído são órfãos privados; limpeza posterior usa retenção e nunca torna públicos.
 
