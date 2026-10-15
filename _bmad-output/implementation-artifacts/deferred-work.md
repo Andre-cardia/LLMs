@@ -88,3 +88,12 @@ Origem: [Review Findings da Story 4.1](spec-4-1-store-bases-preferencias.md#revi
 - source_spec: `_bmad-output/implementation-artifacts/spec-web-digest-port.md`
   summary: Gate estático em scripts/check-local.mjs que falha se algum módulo alcançável a partir de src/ui/ importar src/adapters/ ou node:*, conforme o próprio texto do AD-25.
   evidence: Achado 7 da revisão (medium); hoje a garantia é só por inspeção manual nas specs 1-4 do shell. Pertence à spec 5 (build/headers, AD-25), ainda não escrita nesta sequência.
+- source_spec: `_bmad-output/implementation-artifacts/spec-browser-shell.md`
+  summary: Spec 5b do shell (AD-25): build copia src/contracts, src/domain, src/application e src/ui para dist/ui/app/ e src/ui/index.html; npm run check falha se módulo alcançável de src/ui importar src/adapters ou node:; headers de /app/** no customHttp.yml (CSP default-src 'self', Content-Type text/javascript para .mjs, Cache-Control no-store nas fixtures); mockups e gate dist/ui/index.html intactos.
+  evidence: Andre dividiu a spec 5 em 15/10; a 5b muda o artefato publicado no próximo push e é revisada à parte. Inclui o gate estático diferido pela spec do web-digest.
+- source_spec: `_bmad-output/implementation-artifacts/spec-browser-shell.md`
+  summary: Mesma revisão de dados com feedback novo (feedbackRevision/hiddenNewsIds) não reindexa o store; `refreshSnapshot` devolve `unchanged`.
+  evidence: Achado 17 da revisão (low). A fonte sintética nunca muda feedback; reavaliar quando a fonte autenticada existir (Q2).
+- source_spec: `_bmad-output/implementation-artifacts/spec-browser-shell.md`
+  summary: `src/ui/main.mjs` não tem verificação automatizada (agrupamento de replace por quadro, contexto seguro, fim de sessão, bfcache).
+  evidence: Achado 19 (medium). DOM ficou fora de `node --test` pela spec; acrescentar um smoke test do artefato servido na spec 5b.

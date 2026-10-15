@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IRIS Global — shell</title>
+</head>
+<body>
+  <header>
+    <h1>IRIS Global</h1>
+    <p>Procedência: <strong id="provenance" data-testid="provenance">…</strong></p>
+  </header>
+  <p id="notice" role="alert" hidden></p>
+  <main>
+    <section aria-labelledby="search-heading">
+      <h2 id="search-heading">Busca</h2>
+      <form id="search-form" role="search">
+        <label for="query">Consulta</label>
+        <input id="query" name="query" type="search" maxlength="256" autocomplete="off">
+        <button type="submit">Buscar</button>
+      </form>
+      <p>Status: <span id="search-status" aria-live="polite">idle</span></p>
+      <ul id="results"></ul>
+    </section>
+    <section aria-labelledby="selected-heading">
+      <h2 id="selected-heading">Empresa selecionada</h2>
+      <p><span id="selected">nenhuma</span> — aba <span id="tab">globe</span></p>
+      <p id="warning" aria-live="polite"></p>
+    </section>
+  </main>
+  <!-- Caminho relativo ao artefato publicado (AD-25): este arquivo vira dist/ui/app/index.html e src/ui vira dist/ui/app/ui/. -->
+  <script type="module" src="./ui/main.mjs"></script>
+</body>
+</html>
