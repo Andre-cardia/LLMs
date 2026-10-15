@@ -79,3 +79,9 @@ Origem: [Review Findings da Story 4.1](spec-4-1-store-bases-preferencias.md#revi
 - source_spec: `_bmad-output/implementation-artifacts/spec-merge-decision-curadoria.md`
   summary: Entradas `toCompanyId: null` não são reescritas por `applyCompanyMerges`; Modelos ou Notícias que ainda citem a Empresa retirada sem sobrevivente fariam a publicação falhar.
   evidence: Maybe-false hoje, nenhum caminho cria `to: null`; definir a regra (remover das Notícias, descartar ou colocar Modelos em quarentena) junto da story de retirada do sobrevivente.
+- source_spec: `_bmad-output/implementation-artifacts/spec-exploration-store-wrapper.md`
+  summary: Shell de navegador completo em src/ui/ (raiz de composição browser-shell.mjs, escritor de endereço address-writer.mjs AD-19, digest web-digest.mjs AD-20, fixture-source.mjs AD-21, descarte AD-23, tabela de aliases do protótipo AD-24, build/headers AD-25) e a tabela INTENT_TYPES exportada por src/contracts/exploration.mjs.
+  evidence: Dividido do intent original ("comece o shell e tudo que precisa ser configurado na AWS") a pedido de Andre; depende do exploration-store (AD-18) estar pronto primeiro. Spec separada após esta.
+- source_spec: none
+  summary: IaC (CDK ou SAM) para a camada autenticada AWS do AD-9/AD-26/AD-27 do spine pai: Cognito user pool (managed login, PKCE S256, sem auto-cadastro), API Gateway HTTP API com JWT authorizer, Lambda nodejs24.x, bucket S3 privado com Block Public Access.
+  evidence: Dividido do intent original a pedido de Andre; a credencial AWS disponível nesta sessão (bedrock-claudecode) não tem permissão de provisionamento (ListApps/ListFunctions/ListUserPools/ListBuckets todos AccessDeniedException, verificado em 2026-10-15). Entregável é código de IaC versionado; Andre aplica com suas próprias credenciais.
