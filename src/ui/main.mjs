@@ -2,6 +2,11 @@
 // entrega tudo a createBrowserShell (a raiz de composição). Página mínima desta
 // sequência: Busca, resultados, Empresa selecionada e marcador de procedência,
 // sem o visual do UX. Não é coberto por `node --test`.
+// Login (AD-9): com AUTH_CONFIG.enabled === false nada de auth roda e a página
+// se comporta como antes; ligado, completeLogin() consome `#code=` antes do
+// shell.start() (e, portanto, antes de qualquer hydrateUrl).
+import {AUTH_CONFIG} from './auth/auth-config.mjs';
+import {createAuthSession} from './auth/auth-session.mjs';
 import {createBrowserShell} from './browser-shell.mjs';
 import {createFixtureSource, provenance} from './fixture-source.mjs';
 import {webDigest} from './web-digest.mjs';
@@ -28,13 +33,81 @@ function browserStorage() {
   }
 }
 
-function boot() {
+// Sem sessionStorage, verifier e marcador não sobrevivem ao redirect: o login
+// fica indisponível em vez de cair num laço de redirecionamento.
+function browserSessionStorage() {
+  try {
+    const storage = window.sessionStorage;
+    const probe = 'llms.auth.probe';
+    storage.setItem(probe, '1'); storage.removeItem(probe);
+    return {getItem: key => storage.getItem(key), setItem: (key, value) => storage.setItem(key, value), removeItem: key => storage.removeItem(key)};
+  } catch {
+    return null;
+  }
+}
+// O code do fragmento nunca fica na URL, mesmo se o login falhar ao montar.
+function dropCodeFragment() {
+  if (new URLSearchParams(window.location.hash.slice(1)).has('code')) window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+}
+
+// Só chamado com o login ligado: monta as portas reais e conclui/inicia a sessão.
+// Devolve a sessão, ou null quando a página saiu para o Cognito.
+async function bootAuth() {
+  const sessionStorage = browserSessionStorage();
+  if (sessionStorage === null) {
+    dropCodeFragment();
+    showNotice('Login indisponível: o navegador bloqueia o armazenamento de sessão.');
+    return undefined;
+  }
+  const auth = createAuthSession({
+    config: AUTH_CONFIG,
+    ports: {
+      fetch: (url, init) => window.fetch(url, init),
+      location: {
+        get pathname() { return window.location.pathname; },
+        get search() { return window.location.search; },
+        get hash() { return window.location.hash; },
+        assign: url => window.location.assign(url)
+      },
+      history: {replaceState: url => window.history.replaceState(null, '', url)},
+      sessionStorage,
+      crypto: window.crypto,
+      clock: () => Date.now()
+    }
+  });
+  let completed;
+  try { completed = await auth.completeLogin(); }
+  catch { completed = {status: 'failed'}; showNotice('Não foi possível concluir o login.'); }
+  if (completed.status === 'none') {
+    const silent = await auth.silentLogin().catch(() => ({status: 'unauthenticated'}));
+    if (silent.status === 'redirected') return null;
+  }
+  const button = $('auth-button');
+  const render = () => { button.textContent = auth.isAuthenticated() ? 'Sair' : 'Entrar'; };
+  render();
+  // Renovação recusada ou logout mudam o estado: o rótulo acompanha.
+  auth.onChange(render);
+  button.hidden = false;
+  button.addEventListener('click', () => {
+    if (auth.isAuthenticated()) auth.signOut().catch(() => showNotice('Não foi possível sair.'));
+    else auth.startLogin().catch(() => showNotice('Não foi possível iniciar o login.'));
+  });
+  return auth;
+}
+
+async function boot() {
   // O marcador fica visível mesmo quando o shell não pode operar.
   $('provenance').textContent = provenance;
   // crypto.subtle exige contexto seguro (AD-20): sem ele, nem compõe o shell.
   if (!window.isSecureContext) {
+    dropCodeFragment();
     showNotice('Este shell só opera sob HTTPS ou localhost (contexto seguro).');
     return;
+  }
+  if (AUTH_CONFIG.enabled) {
+    let auth;
+    try { auth = await bootAuth(); } catch { dropCodeFragment(); showNotice('Falha ao iniciar o login.'); }
+    if (auth === null) return; // redirecionando para o Cognito
   }
   let shell;
   try {
@@ -156,4 +229,4 @@ function boot() {
   }, () => showNotice('Falha ao iniciar o shell.'));
 }
 
-boot();
+boot().catch(() => showNotice('Falha ao iniciar o shell.'));

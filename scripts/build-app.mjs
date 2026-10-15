@@ -1,7 +1,8 @@
 // Artefato do shell de navegador (AD-25). Copia src/contracts, src/domain,
 // src/application e src/ui para `destination`, preservando os nomes das pastas
-// para que os imports relativos funcionem sem reescrita, e põe src/ui/index.html
-// na raiz de `destination`. Não usa bundler nem pacote (Q9); não faz deploy.
+// para que os imports relativos funcionem sem reescrita, e põe cada página de
+// APP_PAGES no seu caminho publicado (src/ui/index.html na raiz de
+// `destination`). Não usa bundler nem pacote (Q9); não faz deploy.
 // Também exporta o gate de imports de src/ui/ usado por scripts/check-local.mjs.
 import {cp, lstat, mkdir, readdir, readFile, realpath, rename, rm, stat, writeFile} from 'node:fs/promises';
 import {dirname, isAbsolute, join, relative, resolve, sep} from 'node:path';
@@ -10,7 +11,14 @@ export const APP_FOLDERS = Object.freeze(['contracts', 'domain', 'application', 
 // Marcador que identifica um diretório como artefato deste build: só um
 // diretório vazio, inexistente ou com este marcador pode ser substituído.
 export const APP_MARKER = '.llms-app-artifact';
-// O artefato só publica módulos `.mjs` e o index.html da raiz; qualquer outro
+// Páginas HTML do artefato, todas obrigatórias: origem em src/ e caminho
+// publicado em `destination`. A callback do login (AD-9) é /app/auth/callback.
+export const APP_PAGES = Object.freeze([
+  Object.freeze({source: 'ui/index.html', output: 'index.html'}),
+  Object.freeze({source: 'ui/auth/callback/index.html', output: 'auth/callback/index.html'}),
+]);
+const PAGE_OUTPUTS = new Set(APP_PAGES.map(page => page.output));
+// O artefato só publica módulos `.mjs` e as páginas de APP_PAGES; qualquer outro
 // arquivo (JSON, mapas, .env, backups de editor) reprova o build.
 const SKIPPED = new Set(['.DS_Store']);
 
@@ -120,18 +128,45 @@ async function files(dir) {
   return out.sort();
 }
 
+// Diretórios que só continham fontes de página (ex. ui/auth/callback/) não vão vazios ao artefato.
+async function pruneEmptyDirs(dir) {
+  for (const entry of await readdir(dir, {withFileTypes: true})) {
+    if (!entry.isDirectory()) continue;
+    const path = join(dir, entry.name);
+    await pruneEmptyDirs(path);
+    if ((await readdir(path)).length === 0) await rm(path, {recursive: true});
+  }
+}
+
 async function isFile(path) {
   try { return (await stat(path)).isFile(); } catch { return false; }
 }
 
+// Uma página: sem script/estilo inline (a CSP os bloquearia) e todo `<script src>`
+// relativo resolve, a partir do diretório da página, para um arquivo do artefato.
+async function verifyPage(destination, output) {
+  const page = join(destination, output);
+  if (!await isFile(page)) throw new Error(output === 'index.html' ? 'APP_INDEX_MISSING' : `APP_PAGE_MISSING: ${output}`);
+  const html = (await readFile(page, 'utf8')).replace(/<!--[\s\S]*?-->/g, '');
+  // Script inline seria bloqueado pela CSP (default-src 'self') e não é verificado.
+  if (/<script\b(?![^>]*\bsrc\s*=)[^>]*>\s*\S/i.test(html)) throw new Error(output === 'index.html' ? 'APP_INLINE_SCRIPT_NOT_ALLOWED' : `APP_INLINE_SCRIPT_NOT_ALLOWED: ${output}`);
+  if (/<style\b|\sstyle\s*=/i.test(html)) throw new Error(output === 'index.html' ? 'APP_INLINE_STYLE_NOT_ALLOWED' : `APP_INLINE_STYLE_NOT_ALLOWED: ${output}`);
+  const scripts = [...html.matchAll(/<script\b[^>]*?(?<![\w-])src\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s>]+))/gi)].map(match => match[1] ?? match[2] ?? match[3]);
+  if (scripts.length === 0) throw new Error(output === 'index.html' ? 'APP_INDEX_WITHOUT_SCRIPT' : `APP_PAGE_WITHOUT_SCRIPT: ${output}`);
+  for (const src of scripts) {
+    const target = resolve(dirname(page), src);
+    if (!isRelative(src) || !inside(destination, target) || !await isFile(target)) throw new Error(output === 'index.html' ? `APP_INDEX_SCRIPT_UNRESOLVED: ${output} → ${src}` : `APP_PAGE_SCRIPT_UNRESOLVED: ${output} → ${src}`);
+  }
+}
+
 // Verifica o artefato: nenhum JSON; todo import de todo `.mjs` é relativo e
-// resolve para um arquivo copiado dentro de `destination`; o `index.html` da raiz
-// aponta para módulos existentes.
+// resolve para um arquivo copiado dentro de `destination`; cada página de
+// APP_PAGES existe e aponta para módulos existentes.
 export async function verifyApp(destination) {
   const all = (await files(destination)).filter(path => relative(destination, path) !== APP_MARKER);
   const json = all.filter(path => /\.json[c5]?$/i.test(path));
   if (json.length > 0) throw new Error(`APP_JSON_NOT_ALLOWED: ${json.map(path => relative(destination, path)).join(', ')}`);
-  const other = all.filter(path => !path.endsWith('.mjs') && relative(destination, path) !== 'index.html');
+  const other = all.filter(path => !path.endsWith('.mjs') && !PAGE_OUTPUTS.has(relative(destination, path).split(sep).join('/')));
   if (other.length > 0) throw new Error(`APP_FILE_NOT_ALLOWED: ${other.map(path => relative(destination, path)).join(', ')}`);
   for (const file of all.filter(path => path.endsWith('.mjs'))) {
     const {specifiers, dynamic} = moduleSpecifiers(await readFile(file, 'utf8'));
@@ -143,18 +178,7 @@ export async function verifyApp(destination) {
       if (!inside(destination, target) || !await isFile(target)) throw new Error(`APP_IMPORT_UNRESOLVED: ${from} → ${specifier}`);
     }
   }
-  const index = join(destination, 'index.html');
-  if (!await isFile(index)) throw new Error('APP_INDEX_MISSING');
-  const html = (await readFile(index, 'utf8')).replace(/<!--[\s\S]*?-->/g, '');
-  // Script inline seria bloqueado pela CSP (default-src 'self') e não é verificado.
-  if (/<script\b(?![^>]*\bsrc\s*=)[^>]*>\s*\S/i.test(html)) throw new Error('APP_INLINE_SCRIPT_NOT_ALLOWED');
-  if (/<style\b|\sstyle\s*=/i.test(html)) throw new Error('APP_INLINE_STYLE_NOT_ALLOWED');
-  const scripts = [...html.matchAll(/<script\b[^>]*?(?<![\w-])src\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s>]+))/gi)].map(match => match[1] ?? match[2] ?? match[3]);
-  if (scripts.length === 0) throw new Error('APP_INDEX_WITHOUT_SCRIPT');
-  for (const src of scripts) {
-    const target = resolve(destination, src);
-    if (!isRelative(src) || !inside(destination, target) || !await isFile(target)) throw new Error(`APP_INDEX_SCRIPT_UNRESOLVED: index.html → ${src}`);
-  }
+  for (const page of APP_PAGES) await verifyPage(destination, page.output);
   return {files: all.map(path => relative(destination, path).split(sep).join('/'))};
 }
 
@@ -190,8 +214,11 @@ export async function buildApp({root, destination}) {
     const info = await lstat(join(src, folder)).catch(() => null);
     if (!info?.isDirectory()) throw new Error(`APP_SOURCE_MISSING: src/${folder}`);
   }
-  const uiIndex = join(src, 'ui', 'index.html');
-  if (!await isFile(uiIndex)) throw new Error('APP_INDEX_MISSING');
+  const pages = APP_PAGES.map(page => ({...page, from: join(src, ...page.source.split('/'))}));
+  for (const page of pages) {
+    if (!await isFile(page.from)) throw new Error(page.output === 'index.html' ? 'APP_INDEX_MISSING' : `APP_PAGE_MISSING: src/${page.source}`);
+  }
+  const pageSources = new Set(pages.map(page => page.from));
   // Constrói num diretório irmão e só troca depois de verificar: uma falha deixa
   // o artefato anterior intacto.
   const staging = `${destination}.staging-${process.pid}-${Date.now()}`;
@@ -202,12 +229,17 @@ export async function buildApp({root, destination}) {
       await files(join(src, folder)); // links simbólicos reprovam antes de copiar
       await cp(join(src, folder), join(staging, folder), {
         recursive: true,
-        // src/ui/index.html vai só para a raiz do artefato (abaixo), não para ui/.
-        filter: path => !SKIPPED.has(path.split(sep).pop()) && path !== uiIndex,
+        // As páginas vão só para o caminho publicado (abaixo), não para ui/.
+        filter: path => !SKIPPED.has(path.split(sep).pop()) && !pageSources.has(path),
       });
     }
-    await cp(uiIndex, join(staging, 'index.html'));
+    for (const page of pages) {
+      const target = join(staging, ...page.output.split('/'));
+      await mkdir(dirname(target), {recursive: true});
+      await cp(page.from, target);
+    }
     await writeFile(join(staging, APP_MARKER), '');
+    await pruneEmptyDirs(staging);
     const result = await verifyApp(staging);
     await rm(destination, {recursive: true, force: true});
     await mkdir(dirname(destination), {recursive: true});

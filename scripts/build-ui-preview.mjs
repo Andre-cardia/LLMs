@@ -35,7 +35,7 @@ await cp(source,destination,{
 await writeFile(resolve(destination,'assets/cesium-config.json'),JSON.stringify({ionAccessToken:token,appOrigin:origin},null,2)+'\n',{mode:0o600});
 // _headers espelha customHttp.yml para servidores que o leem; o Amplify lê customHttp.yml.
 const appCsp="default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
-await writeFile(resolve(destination,'_headers'),['/assets/cesium-config.json\n  Cache-Control: no-store\n','/prototype-cesium.html\n  Referrer-Policy: origin\n',`/app/*\n  Content-Security-Policy: ${appCsp}\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: no-referrer\n`,'/app/ui/fixtures/*\n  Cache-Control: no-store\n'].join('\n'));
+await writeFile(resolve(destination,'_headers'),['/assets/cesium-config.json\n  Cache-Control: no-store\n','/prototype-cesium.html\n  Referrer-Policy: origin\n',`/app/*\n  Content-Security-Policy: ${appCsp}\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: no-referrer\n`,'/app/ui/fixtures/*\n  Cache-Control: no-store\n',...['/app/auth/callback','/app/auth/callback/'].map(path=>`${path}\n  Content-Security-Policy: ${appCsp}\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: no-referrer\n  Cache-Control: no-store\n`)].join('\n'));
 const html=await readFile(resolve(destination,'prototype-cesium.html'),'utf8');
 if(!html.includes('name="referrer" content="origin"'))throw new Error('REFERRER_POLICY_MISSING');
 // Shell de navegador (AD-25): depois do preview, só dist/ui/app é limpo e recriado.

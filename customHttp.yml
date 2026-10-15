@@ -23,6 +23,26 @@ customHeaders:
         value: 'nosniff'
       - key: 'Referrer-Policy'
         value: 'no-referrer'
+  - pattern: '/app/auth/callback'
+    headers:
+      - key: 'Content-Security-Policy'
+        value: "default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+      - key: 'X-Content-Type-Options'
+        value: 'nosniff'
+      - key: 'Referrer-Policy'
+        value: 'no-referrer'
+      - key: 'Cache-Control'
+        value: 'no-store'
+  - pattern: '/app/auth/callback/'
+    headers:
+      - key: 'Content-Security-Policy'
+        value: "default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+      - key: 'X-Content-Type-Options'
+        value: 'nosniff'
+      - key: 'Referrer-Policy'
+        value: 'no-referrer'
+      - key: 'Cache-Control'
+        value: 'no-store'
   - pattern: '/app/**'
     headers:
       - key: 'Content-Security-Policy'

@@ -109,3 +109,6 @@ Origem: [Review Findings da Story 4.1](spec-4-1-store-bases-preferencias.md#revi
 - source_spec: `_bmad-output/implementation-artifacts/spec-auth-stack-iac.md`
   summary: Primeiro deploy real de `infra/auth-stack.yaml` em `preview` e ajuste da lista de permissões IAM do README a partir dos eventos do stack.
   evidence: O template passou no `cfn-lint`, mas nenhuma credencial desta sessão pode aplicá-lo; a lista de permissões foi montada pela documentação.
+- source_spec: `_bmad-output/implementation-artifacts/spec-shell-pkce-login.md`
+  summary: Ligar o login (`AUTH_CONFIG.enabled: true`) com os valores do stack aplicado, gerando a configuração pública e o `connect-src` da CSP para o Cognito a partir de uma fonte única (AD-26), e mover a decisão de boot de `main.mjs` para um helper testável.
+  evidence: Achados 16, 18 e 20 da revisão. Depende do primeiro deploy do `infra/auth-stack.yaml`; o fluxo já foi provado num navegador real contra um Cognito falso.

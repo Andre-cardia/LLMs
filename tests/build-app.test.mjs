@@ -4,7 +4,7 @@ import {mkdtemp, mkdir, readdir, readFile, rm, stat, writeFile} from 'node:fs/pr
 import {tmpdir} from 'node:os';
 import {dirname, join, relative, resolve, sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {APP_MARKER, buildApp, checkUiImports, moduleSpecifiers} from '../scripts/build-app.mjs';
+import {APP_MARKER, APP_PAGES, buildApp, checkUiImports, moduleSpecifiers} from '../scripts/build-app.mjs';
 
 const repo = fileURLToPath(new URL('../', import.meta.url));
 
@@ -43,6 +43,7 @@ const SYNTHETIC = Object.freeze({
   'src/ui/main.mjs': "import {c} from '../application/c.mjs';\nimport {x} from './fixtures/x.mjs';\nexport const m = c + x;\n",
   'src/ui/fixtures/x.mjs': 'export const x = 0;\n',
   'src/ui/index.html': '<!doctype html><script type="module" src="./ui/main.mjs"></script>\n',
+  'src/ui/auth/callback/index.html': '<!doctype html><script type="module" src="../../ui/main.mjs"></script>\n',
 });
 
 async function synthetic(t, extra = {}) {
@@ -59,7 +60,7 @@ test('build completo: artefato do repositório tem index.html, ui/, contracts/, 
   for (const path of ['index.html', 'ui/main.mjs', 'ui/browser-shell.mjs', 'contracts', 'domain', 'application']) {
     assert.ok(await exists(join(destination, path)), path);
   }
-  for (const path of ['adapters', 'tests', 'scripts', '_bmad-output', 'ui/index.html']) {
+  for (const path of ['adapters', 'tests', 'scripts', '_bmad-output', 'ui/index.html', 'ui/auth/callback/index.html']) {
     assert.equal(await exists(join(destination, path)), false, path);
   }
   const files = Object.keys(await tree(destination));
@@ -134,7 +135,7 @@ test('rebuild: duas execuções dão resultado idêntico e arquivo removido de s
   await buildApp({root, destination});
   assert.deepEqual(await tree(destination), first);
   assert.deepEqual(Object.keys(first).sort(), [
-    APP_MARKER, 'application/c.mjs', 'contracts/a.mjs', 'domain/b.mjs', 'index.html', 'ui/extra.mjs', 'ui/fixtures/x.mjs', 'ui/main.mjs'
+    APP_MARKER, 'application/c.mjs', 'auth/callback/index.html', 'contracts/a.mjs', 'domain/b.mjs', 'index.html', 'ui/extra.mjs', 'ui/fixtures/x.mjs', 'ui/main.mjs'
   ].sort());
   await rm(join(root, 'src/ui/extra.mjs'));
   await buildApp({root, destination});
@@ -209,7 +210,7 @@ test('gate: npm run check sai com código ≠ 0 e mostra a cadeia quando src/ui 
   assert.deepEqual((await checkUiImports({root: repo})).violations, []);
 });
 
-test('headers: customHttp.yml preserva as entradas antigas e cobre /app, /app/ e /app/**', async () => {
+test('headers: customHttp.yml preserva as entradas antigas e cobre /app, /app/, /app/auth/callback e /app/**', async () => {
   const text = await readFile(join(repo, 'customHttp.yml'), 'utf8');
   const blocks = Object.fromEntries(text.split(/\n(?=  - pattern: )/).slice(1).map(block => {
     const pattern = block.match(/pattern: '([^']+)'/)[1];
@@ -221,6 +222,8 @@ test('headers: customHttp.yml preserva as entradas antigas e cobre /app, /app/ e
     '/prototype-cesium*': {'Referrer-Policy': 'origin'},
     '/app': {'Content-Security-Policy': "default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'", 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer'},
     '/app/': {'Content-Security-Policy': "default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'", 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer'},
+    '/app/auth/callback': {'Content-Security-Policy': "default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'", 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'Cache-Control': 'no-store'},
+    '/app/auth/callback/': {'Content-Security-Policy': "default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'", 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'Cache-Control': 'no-store'},
     '/app/**': {'Content-Security-Policy': "default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'", 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer'},
     '/app/**/*.mjs': {'Content-Type': 'text/javascript; charset=utf-8'},
     '/app/ui/fixtures/**': {'Cache-Control': 'no-store'},
@@ -245,7 +248,7 @@ test('preview intacto: build completo numa cópia temporária gera dist/ui/index
   assert.equal(summary.status, 'built');
   assert.equal(summary.app.output, 'dist/ui/app');
   const dist = join(root, 'dist/ui');
-  for (const path of ['index.html', 'prototype-cesium.html', '_headers', 'assets/cesium-config.json', 'app/index.html', 'app/ui/main.mjs']) {
+  for (const path of ['index.html', 'prototype-cesium.html', '_headers', 'assets/cesium-config.json', 'app/index.html', 'app/ui/main.mjs', 'app/auth/callback/index.html', 'app/ui/auth/callback.mjs']) {
     assert.ok(await exists(join(dist, path)), path);
   }
   assert.equal(await exists(join(dist, 'app/stale.mjs')), false);
@@ -363,4 +366,44 @@ test('revisão: _headers do build espelha a CSP e o no-store de /app/', async t 
   const csp = yml.match(/Content-Security-Policy'\n\s+value: "([^"]+)"/)[1];
   assert.ok(text.includes(csp), 'a CSP de _headers precisa ser a mesma de customHttp.yml');
   assert.match(text, /\/app\/ui\/fixtures\/\*\\n {2}Cache-Control: no-store/);
+  assert.match(text, /\['\/app\/auth\/callback','\/app\/auth\/callback\/'\]/);
+  assert.match(text, /Referrer-Policy: no-referrer\\n {2}Cache-Control: no-store\\n`\)/);
+});
+
+test('callback: APP_PAGES inclui a página da callback, obrigatória', () => {
+  assert.deepEqual(APP_PAGES.map(page => page.output), ['index.html', 'auth/callback/index.html']);
+});
+
+test('callback: o artefato do repositório publica auth/callback/index.html e o script dela resolve a partir de /app/auth/callback/', async t => {
+  const destination = join(await temp(t), 'app');
+  await buildApp({root: repo, destination});
+  const html = await readFile(join(destination, 'auth/callback/index.html'), 'utf8');
+  assert.equal(html, await readFile(join(repo, 'src/ui/auth/callback/index.html'), 'utf8'));
+  const entries = [...html.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map(match => match[1]);
+  assert.deepEqual(entries, ['../../ui/auth/callback.mjs']);
+  const url = new URL(entries[0], 'http://localhost/app/auth/callback/');
+  assert.equal(url.pathname, '/app/ui/auth/callback.mjs');
+  assert.ok(await exists(join(destination, 'ui/auth/callback.mjs')));
+  assert.doesNotMatch(html.replace(/<!--[\s\S]*?-->/g, ''), /<script\b(?![^>]*\bsrc\s*=)[^>]*>\s*\S|<style\b|\sstyle\s*=/i);
+});
+
+test('callback: página ausente, com script que não resolve ou com inline reprova o build', async t => {
+  const missing = await temp(t);
+  const {['src/ui/auth/callback/index.html']: _omit, ...rest} = SYNTHETIC;
+  await write(missing, rest);
+  await assert.rejects(buildApp({root: missing, destination: join(missing, 'dist', 'app')}), /APP_PAGE_MISSING: src\/ui\/auth\/callback\/index\.html/);
+  const broken = await synthetic(t, {'src/ui/auth/callback/index.html': '<!doctype html><script type="module" src="../../ui/missing.mjs"></script>\n'});
+  await assert.rejects(buildApp({root: broken, destination: join(broken, 'dist', 'app')}), /APP_PAGE_SCRIPT_UNRESOLVED: auth\/callback\/index\.html → \.\.\/\.\.\/ui\/missing\.mjs/);
+  // Relativo à raiz do artefato (e não à página) não resolve: o navegador pediria /app/auth/callback/ui/main.mjs.
+  const rootRelative = await synthetic(t, {'src/ui/auth/callback/index.html': '<!doctype html><script type="module" src="./ui/main.mjs"></script>\n'});
+  await assert.rejects(buildApp({root: rootRelative, destination: join(rootRelative, 'dist', 'app')}), /APP_PAGE_SCRIPT_UNRESOLVED/);
+  const inline = await synthetic(t, {'src/ui/auth/callback/index.html': '<!doctype html><script type="module" src="../../ui/main.mjs"></script><script>alert(1)</script>\n'});
+  await assert.rejects(buildApp({root: inline, destination: join(inline, 'dist', 'app')}), /APP_INLINE_SCRIPT_NOT_ALLOWED: auth\/callback\/index\.html/);
+  const noScript = await synthetic(t, {'src/ui/auth/callback/index.html': '<!doctype html><p>x</p>\n'});
+  await assert.rejects(buildApp({root: noScript, destination: join(noScript, 'dist', 'app')}), /APP_PAGE_WITHOUT_SCRIPT: auth\/callback\/index\.html/);
+});
+
+test('callback: outro .html fora de APP_PAGES continua reprovando o build', async t => {
+  const root = await synthetic(t, {'src/ui/auth/other.html': '<!doctype html>\n'});
+  await assert.rejects(buildApp({root, destination: join(root, 'dist', 'app')}), /APP_FILE_NOT_ALLOWED: ui\/auth\/other\.html/);
 });
