@@ -97,3 +97,9 @@ Origem: [Review Findings da Story 4.1](spec-4-1-store-bases-preferencias.md#revi
 - source_spec: `_bmad-output/implementation-artifacts/spec-browser-shell.md`
   summary: `src/ui/main.mjs` não tem verificação automatizada (agrupamento de replace por quadro, contexto seguro, fim de sessão, bfcache).
   evidence: Achado 19 (medium). DOM ficou fora de `node --test` pela spec; acrescentar um smoke test do artefato servido na spec 5b.
+- source_spec: `_bmad-output/implementation-artifacts/spec-shell-build-headers.md`
+  summary: Acrescentar `test -s dist/ui/app/index.html` (e `dist/ui/app/ui/main.mjs`) ao `amplify.yml`, para o pipeline falhar se o shell não for gerado.
+  evidence: Achado 14 da revisão (medium). A spec congelada proibia mudar `amplify.yml`; hoje o pipeline só confere `dist/ui/index.html`, embora `buildApp` já lance quando o artefato é inválido.
+- source_spec: `_bmad-output/implementation-artifacts/spec-shell-build-headers.md`
+  summary: Confirmar no primeiro deploy que o Amplify aplica os padrões `/app`, `/app/`, `/app/**`, `/app/**/*.mjs` e `/app/ui/fixtures/**` de `customHttp.yml` (CSP, nosniff, Content-Type, no-store).
+  evidence: Verificado só localmente, com servidor que imita os headers; o casamento de padrões do Amplify não pode ser testado sem deploy.
