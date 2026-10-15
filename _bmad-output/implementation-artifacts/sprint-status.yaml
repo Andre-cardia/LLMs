@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-12-2026 20:32
-last_updated: 10-13-2026 12:13
+last_updated: 10-15-2026 10:02
 project: LLMs
 project_key: NOKEY
 tracking_system: file-system
@@ -99,7 +99,6 @@ development_status:
   epic-8: backlog
   8-1-validar-a-fonte-e-explorar-backbones-com-contexto: backlog
   epic-8-retrospective: optional
-
 planning_gate: CONCERNS
 full_product_ready: false
 # Produto completo continua gated; publicação do preview estático foi autorizada separadamente.
@@ -107,10 +106,15 @@ production_authorized: false
 preview_deployment_authorized: true
 preview_deployment_authorization: acceptance-7-1-local.md
 completion_scope: approved-local-contracts-only
-approval_record: ../planning-artifacts/approvals/story-approvals-reconciled-2026-10-12.json
-readiness_report: ../planning-artifacts/reviews/sprint-readiness-2026-10-12.md
+approval_record:
+  ../planning-artifacts/approvals/story-approvals-reconciled-2026-10-12.json
+readiness_report:
+  ../planning-artifacts/reviews/sprint-readiness-2026-10-13-continuacao-7-1.md
+previous_readiness_report:
+  ../planning-artifacts/reviews/sprint-readiness-2026-10-12.md
 scope_reconciliation: sprint-scope-reconciliation-2026-10-12.json
-execution_plan: sprint-plan-2026-10-12.md
+execution_plan: sprint-plan-2026-10-13-continuacao-7-1.md
+previous_execution_plan: sprint-plan-2026-10-12.md
 legacy_local_plan: local-plan.json
 legacy_local_plan_interpretation: historical-29-stories-use-reconciliation-map
 open_integration_gate_groups:
@@ -123,6 +127,26 @@ open_integration_gate_groups:
   - Q8
   - Q9
   - Q11-implementação
+integration_gate_state:
+  Q3:
+    decisions: documented-resolved-2026-10-13
+    implementation_evidence: pending
+    source: ../planning-artifacts/ux-designs/ux-LLMs-2026-10-09/EXPERIENCE.md
+    scope: Decisões UX registradas; matriz de browser/acessibilidade ainda
+      exigida para a entrega integrada
+  Q11-implementação:
+    local_contract_store_url: accepted
+    browser_consumer: pending
+    manifest_v2_company_remaps: implemented
+    prototype_url_aliases: pending
+    pre_merge_url_resolution_v3: pending
+    scope: Preservar base/URL v2; implementar AD-19/AD-24 no shell; extensão de
+      links anteriores a merge segue Q11/v3
+  Q2:
+    provider_and_access_architecture: decided-aws-ad9-2026-10-14
+    infrastructure_and_proofs: pending
+    scope: Amplify para código/fixtures; Cognito/API Gateway/Lambda/S3 para
+      dados reais, após implementação e provas
 story_4_1_acceptance: acceptance-4-1-local.md
 local_increment_7_1:
   status: accepted
@@ -131,13 +155,29 @@ local_increment_7_1:
 next_recommended_story:
   id: '7.1'
   key: 7-1-buscar-entidades-e-restaurar-o-contexto-da-url
-  skill: bmad-sprint-planning
-  scope: Avaliar a continuidade da Story 7.1 após aceite local; integração UI/acesso e diferidos ainda pendentes
-  completion_requires: Resolver gates aplicáveis antes da integração; não repetir o aceite local já registrado
+  skill: bmad-build
+  scope: Especificar o shell de navegador de 7.1 conforme AD-19 a AD-25; wrapper
+    AD-18 e manifesto v2 já implementados
+  completion_requires: Shell com fixtures e provas de UI; 7.1 integral continua
+    dependente de Q2/Q5/Q11 aplicáveis
+continuation_7_1:
+  planning_status: reviewed-with-concerns
+  plan: sprint-plan-2026-10-13-continuacao-7-1.md
+  local_increment: accepted
+  ui_integration_started: false
+  full_story_complete: false
+  architecture_handoff:
+    ../planning-artifacts/architecture/architecture-epic-7-2026-10-14/ARCHITECTURE-SPINE.md
+  exploration_store_spec: spec-exploration-store-wrapper.md
+  manifest_v2_spec: spec-manifest-v2-company-merged-into.md
+  merge_decision_spec: spec-merge-decision-curadoria.md
+  reviewed_commit: 278bf46feafe3f685fb14ae21b1752fb0ba4dde8
+  next_skill: bmad-build
 followup_local_story:
   id: '7.1'
   after: '4.1'
-  scope: Busca/projeção/URL em fixtures; interface e acesso real permanecem gated
+  scope: Busca/projeção/URL em fixtures; interface e acesso real permanecem
+    gated
 historical_done_local_scope:
   - '3.1'
   - '3.2'
