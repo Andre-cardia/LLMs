@@ -1,10 +1,11 @@
 import { assertCatalog } from './catalog.mjs';
 import { assertModels } from './models.mjs';
 import { assertNews } from './news.mjs';
-import { object, string, oneOf, nullable, list, utc, fail } from './primitives.mjs';
+import { object, string, oneOf, nullable, list, utc, fail, canonicalJson } from './primitives.mjs';
 export const SLICE_VALIDATORS = Object.freeze({ catalog: assertCatalog, models: assertModels, news: assertNews });
 export const SLICES = Object.freeze(Object.keys(SLICE_VALIDATORS));
 export const MANIFEST_VERSION = 2;
+export const ENVELOPE_VERSION = 1;
 export const MAX_COMPANY_MERGES = 10000;
 const MERGE_FIELD = 'INVALID_MERGE_TABLE';
 // Validador único da tabela acumulada e compactada (AD-2): Publisher, SnapshotReader e reducer.
@@ -42,9 +43,15 @@ export function assertManifest(value) {
   assertCompanyMergedInto(value.companyMergedInto);
   return value;
 }
+// Helper único dos bytes de envelope de slice: Publisher (MemorySnapshots) e
+// fonte sintética do navegador (src/ui/fixture-source.mjs) gravam/servem
+// exatamente esta saída, e o digest do manifesto é calculado sobre ela.
+export function envelopeBytes(slice, data) {
+  return canonicalJson({ schemaVersion: ENVELOPE_VERSION, slice, data });
+}
 export function assertEnvelope(value, expectedSlice) {
   object(value, ['schemaVersion', 'slice', 'data'], 'Envelope');
-  oneOf(value.schemaVersion, [1], 'schemaVersion'); oneOf(value.slice, SLICES, 'slice');
+  oneOf(value.schemaVersion, [ENVELOPE_VERSION], 'schemaVersion'); oneOf(value.slice, SLICES, 'slice');
   if (value.slice !== expectedSlice) fail('slice', 'fronteira divergente');
   SLICE_VALIDATORS[expectedSlice](value.data); return value;
 }

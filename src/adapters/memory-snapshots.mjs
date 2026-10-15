@@ -1,7 +1,7 @@
 import { AccessDeniedError } from '../contracts/access.mjs';
 import { createHash } from 'node:crypto';
 import { assertCatalog } from '../contracts/catalog.mjs';
-import { assertManifest, assertSnapshotData, assertCompanyMergedInto, MANIFEST_VERSION, SLICES } from '../contracts/snapshot.mjs';
+import { assertManifest, assertSnapshotData, assertCompanyMergedInto, envelopeBytes, MANIFEST_VERSION, SLICES } from '../contracts/snapshot.mjs';
 import { string, integer, utc, clone, canonicalJson, requireSynchronous } from '../contracts/primitives.mjs';
 import { applyCompanyMerges } from '../domain/company-merges.mjs';
 export const sha256Text = text => createHash('sha256').update(text).digest('hex');
@@ -65,7 +65,7 @@ export class MemorySnapshots {
       if (state.lastPublishedInput === null || state.lastPublishedInput.curationRevision !== state.curationRevision) successTimes.catalog = publishedAt;
       const revision = `snapshot-${state.snapshotSequence + 1}`;
       const slices = Object.fromEntries(SLICES.map(slice => {
-        const content = canonicalJson({ schemaVersion: 1, slice, data: data[slice] });
+        const content = envelopeBytes(slice, data[slice]);
         const digest = sha256Text(content); this.#objects.set(digest, content);
         return [slice, { objectKey: digest, digest, lastSuccessAt: successTimes[slice] }];
       }));

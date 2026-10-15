@@ -1,0 +1,458 @@
+// Gerado por scripts/gen-synthetic-workspace.mjs a partir de tests/fixtures/local-workspace.json.
+// Dataset sintético (Empresas fictícias, URLs só em example.invalid). Não editar à mão.
+import {SYNTHETIC_FIXTURE} from '../../contracts/provenance.mjs';
+import {freeze} from '../../contracts/primitives.mjs';
+
+export const SYNTHETIC_WORKSPACE = freeze({provenance: SYNTHETIC_FIXTURE, ...{
+  "catalog": {
+    "companies": [
+      {
+        "schemaVersion": 1,
+        "id": "company-1",
+        "name": "Laboratório fictício A",
+        "primaryLayer": "labs",
+        "tags": [],
+        "isLab": true,
+        "region": "US",
+        "location": {
+          "latitude": 10,
+          "longitude": 20
+        },
+        "website": null,
+        "contact": null,
+        "logo": null,
+        "listing": null,
+        "sourceRefs": [
+          {
+            "source": "Fixture sintética",
+            "sourceRecordId": "company-1",
+            "sourceUrl": "https://example.invalid/company-1",
+            "fetchedAt": "2026-10-10T12:00:00Z",
+            "observedAt": null
+          }
+        ]
+      },
+      {
+        "schemaVersion": 1,
+        "id": "company-2",
+        "name": "Nuvem fictícia B",
+        "primaryLayer": "cloud",
+        "tags": [
+          "labs",
+          "chips"
+        ],
+        "isLab": true,
+        "region": "CHINA",
+        "location": {
+          "latitude": 20,
+          "longitude": 40
+        },
+        "website": null,
+        "contact": null,
+        "logo": null,
+        "listing": null,
+        "sourceRefs": [
+          {
+            "source": "Fixture sintética",
+            "sourceRecordId": "company-2",
+            "sourceUrl": "https://example.invalid/company-2",
+            "fetchedAt": "2026-10-10T12:00:00Z",
+            "observedAt": null
+          }
+        ]
+      },
+      {
+        "schemaVersion": 1,
+        "id": "company-3",
+        "name": "Chip fictício C",
+        "primaryLayer": "chips",
+        "tags": [],
+        "isLab": false,
+        "region": "OTHER",
+        "location": {
+          "latitude": 30,
+          "longitude": 60
+        },
+        "website": null,
+        "contact": null,
+        "logo": null,
+        "listing": {
+          "symbol": "FAKE",
+          "exchange": "SIMULATED",
+          "currency": "USD"
+        },
+        "sourceRefs": [
+          {
+            "source": "Fixture sintética",
+            "sourceRecordId": "company-3",
+            "sourceUrl": "https://example.invalid/company-3",
+            "fetchedAt": "2026-10-10T12:00:00Z",
+            "observedAt": null
+          }
+        ]
+      }
+    ],
+    "relations": [
+      {
+        "schemaVersion": 1,
+        "id": "relation-1",
+        "fromCompanyId": "company-3",
+        "toCompanyId": "company-1",
+        "type": "chip-manufacturing",
+        "sourceRefs": [
+          {
+            "source": "Fixture sintética",
+            "sourceRecordId": "relation-1",
+            "sourceUrl": "https://example.invalid/relation-1",
+            "fetchedAt": "2026-10-10T12:00:00Z",
+            "observedAt": null
+          }
+        ]
+      }
+    ]
+  },
+  "models": [
+    {
+      "schemaVersion": 1,
+      "modelId": "modelo-ficticio-a",
+      "companyId": "company-1",
+      "name": "Modelo fictício 0",
+      "releaseDates": {
+        "artificialAnalysis": "2026-10-09T12:00:00Z",
+        "huggingFace": null,
+        "openRouter": null
+      },
+      "variants": [
+        {
+          "variantId": "variante-ficticia-a",
+          "name": "Variante fictícia 0",
+          "pricing": {
+            "schemaVersion": 1,
+            "modelId": "modelo-ficticio-a",
+            "variantId": "variante-ficticia-a",
+            "inputUsdPerMillion": "2",
+            "outputUsdPerMillion": "6",
+            "reasoning": false,
+            "source": "Fixture sintética — não é cotação comercial",
+            "sourceRecordId": "fixture-a",
+            "sourceUrl": "https://example.invalid/precos/a",
+            "fetchedAt": "2026-10-10T00:00:00Z",
+            "observedAt": "2026-10-09T00:00:00Z"
+          },
+          "intelligence": 70,
+          "programming": null,
+          "math": null,
+          "contextTokens": 200000,
+          "ttftSeconds": null,
+          "tokensPerSecond": null,
+          "cacheReadUsdPerMillion": null,
+          "cacheWriteUsdPerMillion": null,
+          "inputModalities": [
+            "text",
+            "image"
+          ],
+          "outputModalities": [
+            "text"
+          ],
+          "openWeights": true,
+          "license": null,
+          "reasoning": false,
+          "benchmarks": [],
+          "sourceRefs": [
+            {
+              "source": "Fixture sintética",
+              "sourceRecordId": "variant-0",
+              "sourceUrl": "https://example.invalid/variant-0",
+              "fetchedAt": "2026-10-10T12:00:00Z",
+              "observedAt": null
+            }
+          ]
+        }
+      ],
+      "sourceRefs": [
+        {
+          "source": "Fixture sintética",
+          "sourceRecordId": "model-0",
+          "sourceUrl": "https://example.invalid/model-0",
+          "fetchedAt": "2026-10-10T12:00:00Z",
+          "observedAt": null
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "modelId": "modelo-ficticio-b",
+      "companyId": "company-1",
+      "name": "Modelo fictício 1",
+      "releaseDates": {
+        "artificialAnalysis": "2026-09-01T00:00:00Z",
+        "huggingFace": null,
+        "openRouter": null
+      },
+      "variants": [
+        {
+          "variantId": "variante-ficticia-b",
+          "name": "Variante fictícia 1",
+          "pricing": {
+            "schemaVersion": 1,
+            "modelId": "modelo-ficticio-b",
+            "variantId": "variante-ficticia-b",
+            "inputUsdPerMillion": "0",
+            "outputUsdPerMillion": "0.00",
+            "reasoning": false,
+            "source": "Fixture sintética — não é cotação comercial",
+            "sourceRecordId": "fixture-b",
+            "sourceUrl": "https://example.invalid/precos/b",
+            "fetchedAt": "2026-10-10T00:00:00Z",
+            "observedAt": null
+          },
+          "intelligence": null,
+          "programming": null,
+          "math": null,
+          "contextTokens": 200000,
+          "ttftSeconds": null,
+          "tokensPerSecond": null,
+          "cacheReadUsdPerMillion": null,
+          "cacheWriteUsdPerMillion": null,
+          "inputModalities": [
+            "text"
+          ],
+          "outputModalities": [
+            "text"
+          ],
+          "openWeights": false,
+          "license": null,
+          "reasoning": false,
+          "benchmarks": [],
+          "sourceRefs": [
+            {
+              "source": "Fixture sintética",
+              "sourceRecordId": "variant-1",
+              "sourceUrl": "https://example.invalid/variant-1",
+              "fetchedAt": "2026-10-10T12:00:00Z",
+              "observedAt": null
+            }
+          ]
+        }
+      ],
+      "sourceRefs": [
+        {
+          "source": "Fixture sintética",
+          "sourceRecordId": "model-1",
+          "sourceUrl": "https://example.invalid/model-1",
+          "fetchedAt": "2026-10-10T12:00:00Z",
+          "observedAt": null
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "modelId": "modelo-ficticio-c",
+      "companyId": "company-2",
+      "name": "Modelo fictício 2",
+      "releaseDates": {
+        "artificialAnalysis": null,
+        "huggingFace": "2026-10-08T12:00:00Z",
+        "openRouter": null
+      },
+      "variants": [
+        {
+          "variantId": "variante-ficticia-c",
+          "name": "Variante fictícia 2",
+          "pricing": {
+            "schemaVersion": 1,
+            "modelId": "modelo-ficticio-c",
+            "variantId": "variante-ficticia-c",
+            "inputUsdPerMillion": null,
+            "outputUsdPerMillion": "1.5",
+            "reasoning": false,
+            "source": "Fixture sintética — não é cotação comercial",
+            "sourceRecordId": "fixture-c",
+            "sourceUrl": "https://example.invalid/precos/c",
+            "fetchedAt": "2026-10-10T00:00:00Z",
+            "observedAt": null
+          },
+          "intelligence": 10,
+          "programming": null,
+          "math": null,
+          "contextTokens": 200000,
+          "ttftSeconds": null,
+          "tokensPerSecond": null,
+          "cacheReadUsdPerMillion": null,
+          "cacheWriteUsdPerMillion": null,
+          "inputModalities": [
+            "text",
+            "image"
+          ],
+          "outputModalities": [
+            "text"
+          ],
+          "openWeights": true,
+          "license": null,
+          "reasoning": false,
+          "benchmarks": [],
+          "sourceRefs": [
+            {
+              "source": "Fixture sintética",
+              "sourceRecordId": "variant-2",
+              "sourceUrl": "https://example.invalid/variant-2",
+              "fetchedAt": "2026-10-10T12:00:00Z",
+              "observedAt": null
+            }
+          ]
+        }
+      ],
+      "sourceRefs": [
+        {
+          "source": "Fixture sintética",
+          "sourceRecordId": "model-2",
+          "sourceUrl": "https://example.invalid/model-2",
+          "fetchedAt": "2026-10-10T12:00:00Z",
+          "observedAt": null
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "modelId": "modelo-ficticio-d",
+      "companyId": "company-2",
+      "name": "Modelo fictício 3",
+      "releaseDates": {
+        "artificialAnalysis": "2026-10-11T00:00:00Z",
+        "huggingFace": null,
+        "openRouter": null
+      },
+      "variants": [
+        {
+          "variantId": "variante-ficticia-d",
+          "name": "Variante fictícia 3",
+          "pricing": {
+            "schemaVersion": 1,
+            "modelId": "modelo-ficticio-d",
+            "variantId": "variante-ficticia-d",
+            "inputUsdPerMillion": "0.25",
+            "outputUsdPerMillion": "1.75",
+            "reasoning": true,
+            "source": "Fixture sintética — não é cotação comercial",
+            "sourceRecordId": "fixture-d",
+            "sourceUrl": "https://example.invalid/precos/d",
+            "fetchedAt": "2026-10-10T00:00:00Z",
+            "observedAt": null
+          },
+          "intelligence": 80,
+          "programming": null,
+          "math": null,
+          "contextTokens": 200000,
+          "ttftSeconds": null,
+          "tokensPerSecond": null,
+          "cacheReadUsdPerMillion": null,
+          "cacheWriteUsdPerMillion": null,
+          "inputModalities": [
+            "text"
+          ],
+          "outputModalities": [
+            "text"
+          ],
+          "openWeights": false,
+          "license": null,
+          "reasoning": true,
+          "benchmarks": [],
+          "sourceRefs": [
+            {
+              "source": "Fixture sintética",
+              "sourceRecordId": "variant-3",
+              "sourceUrl": "https://example.invalid/variant-3",
+              "fetchedAt": "2026-10-10T12:00:00Z",
+              "observedAt": null
+            }
+          ]
+        }
+      ],
+      "sourceRefs": [
+        {
+          "source": "Fixture sintética",
+          "sourceRecordId": "model-3",
+          "sourceUrl": "https://example.invalid/model-3",
+          "fetchedAt": "2026-10-10T12:00:00Z",
+          "observedAt": null
+        }
+      ]
+    }
+  ],
+  "news": [
+    {
+      "schemaVersion": 1,
+      "newsId": "news-1",
+      "originalUrl": "https://example.invalid/news/1",
+      "titleOriginal": "Notícia fictícia 1",
+      "language": "en",
+      "publishedAt": "2026-10-10T10:00:00Z",
+      "fetchedAt": "2026-10-10T12:00:00Z",
+      "relevantCompanyIds": [
+        "company-1"
+      ],
+      "citedCompanyIds": [
+        "company-3"
+      ],
+      "summary": null,
+      "sourceRefs": [
+        {
+          "source": "Fixture sintética",
+          "sourceRecordId": "news-1",
+          "sourceUrl": "https://example.invalid/news/1",
+          "fetchedAt": "2026-10-10T12:00:00Z",
+          "observedAt": null
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "newsId": "news-2",
+      "originalUrl": "https://example.invalid/news/2",
+      "titleOriginal": "Notícia fictícia 2",
+      "language": "en",
+      "publishedAt": "2026-10-10T11:00:00Z",
+      "fetchedAt": "2026-10-10T12:00:00Z",
+      "relevantCompanyIds": [
+        "company-3"
+      ],
+      "citedCompanyIds": [
+        "company-1"
+      ],
+      "summary": null,
+      "sourceRefs": [
+        {
+          "source": "Fixture sintética",
+          "sourceRecordId": "news-2",
+          "sourceUrl": "https://example.invalid/news/2",
+          "fetchedAt": "2026-10-10T12:00:00Z",
+          "observedAt": null
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "newsId": "news-3",
+      "originalUrl": "https://example.invalid/news/3",
+      "titleOriginal": "Notícia fictícia 3",
+      "language": "en",
+      "publishedAt": "2026-09-01T00:00:00Z",
+      "fetchedAt": "2026-10-10T12:00:00Z",
+      "relevantCompanyIds": [
+        "company-2"
+      ],
+      "citedCompanyIds": [],
+      "summary": null,
+      "sourceRefs": [
+        {
+          "source": "Fixture sintética",
+          "sourceRecordId": "news-3",
+          "sourceUrl": "https://example.invalid/news/3",
+          "fetchedAt": "2026-10-10T12:00:00Z",
+          "observedAt": null
+        }
+      ]
+    }
+  ],
+  "now": "2026-10-10T12:00:00Z"
+}});
