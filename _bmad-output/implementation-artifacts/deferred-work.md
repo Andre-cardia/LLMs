@@ -85,3 +85,6 @@ Origem: [Review Findings da Story 4.1](spec-4-1-store-bases-preferencias.md#revi
 - source_spec: none
   summary: IaC (CDK ou SAM) para a camada autenticada AWS do AD-9/AD-26/AD-27 do spine pai: Cognito user pool (managed login, PKCE S256, sem auto-cadastro), API Gateway HTTP API com JWT authorizer, Lambda nodejs24.x, bucket S3 privado com Block Public Access.
   evidence: Dividido do intent original a pedido de Andre; a credencial AWS disponível nesta sessão (bedrock-claudecode) não tem permissão de provisionamento (ListApps/ListFunctions/ListUserPools/ListBuckets todos AccessDeniedException, verificado em 2026-10-15). Entregável é código de IaC versionado; Andre aplica com suas próprias credenciais.
+- source_spec: `_bmad-output/implementation-artifacts/spec-web-digest-port.md`
+  summary: Gate estático em scripts/check-local.mjs que falha se algum módulo alcançável a partir de src/ui/ importar src/adapters/ ou node:*, conforme o próprio texto do AD-25.
+  evidence: Achado 7 da revisão (medium); hoje a garantia é só por inspeção manual nas specs 1-4 do shell. Pertence à spec 5 (build/headers, AD-25), ainda não escrita nesta sequência.
