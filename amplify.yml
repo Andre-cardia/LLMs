@@ -11,6 +11,8 @@ frontend:
         - npm run validate
         - npm run build
         - test -s dist/ui/index.html
+        - test -s dist/ui/app/index.html
+        - test -s dist/ui/app/ui/main.mjs
   artifacts:
     baseDirectory: dist/ui
     files:

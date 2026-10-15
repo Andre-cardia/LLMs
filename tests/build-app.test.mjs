@@ -253,7 +253,11 @@ test('preview intacto: build completo numa cópia temporária gera dist/ui/index
   // Variáveis Cesium continuam exigidas: sem elas o build falha antes de tocar dist/.
   const failed = spawnSync(process.execPath, [join(root, 'scripts', 'build-ui-preview.mjs')], {encoding: 'utf8', env: {PATH: process.env.PATH}});
   assert.notEqual(failed.status, 0);
-  assert.match(await readFile(join(repo, 'amplify.yml'), 'utf8'), /test -s dist\/ui\/index\.html/);
+  const pipeline = await readFile(join(repo, 'amplify.yml'), 'utf8');
+  assert.match(pipeline, /test -s dist\/ui\/index\.html/);
+  // O pipeline falha se o shell não for gerado.
+  assert.match(pipeline, /test -s dist\/ui\/app\/index\.html/);
+  assert.match(pipeline, /test -s dist\/ui\/app\/ui\/main\.mjs/);
 });
 
 test('revisão: scanner não é enganado por marcadores de comentário dentro de strings', () => {
