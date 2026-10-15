@@ -70,3 +70,12 @@ Origem: [Review Findings da Story 4.1](spec-4-1-store-bases-preferencias.md#revi
 - source_spec: `_bmad-output/implementation-artifacts/spec-manifest-v2-company-merged-into.md`
   summary: BH5 (acima) está superado: `INVALID_REMAP` foi removido e a tabela acumulada `companyMergedInto` transporta remaps independentemente da ordem de revisões.
   evidence: `src/domain/exploration-state.mjs` aplica só entradas cujo `from` está no índice anterior; teste AD-22 cobre o salto de revisões.
+- source_spec: `_bmad-output/implementation-artifacts/spec-merge-decision-curadoria.md`
+  summary: O risco de uma curadoria readicionar um ID já presente como `from` em `companyMergedInto` (e bloquear toda publicação) foi fechado: a proposta de Empresa fica em conflito `merged-company` e a Atualização segue. Continuam abertos o teto de 10 000 entradas e a poda da tabela.
+  evidence: `MemoryCuration.preparePublish` aplica a proposta `kind: 'merge'` e recusa readicionar IDs mesclados; [testes de curadoria](../../tests/curation.test.mjs) cobrem `merged-company`. Nenhuma poda foi implementada; acima de 10 000 entradas o Publisher ainda lança `INVALID_MERGE_TABLE`.
+- source_spec: `_bmad-output/implementation-artifacts/spec-merge-decision-curadoria.md`
+  summary: Merge aprovado não verifica as versões de `company:from` e `company:to`; uma edição do sobrevivente publicada entre a aprovação e a publicação não invalida o merge.
+  evidence: `targetVersion` só cobre `merge:{id}`; corrigir exige registrar as versões das Empresas no staging e conflito `target-version-changed`.
+- source_spec: `_bmad-output/implementation-artifacts/spec-merge-decision-curadoria.md`
+  summary: Entradas `toCompanyId: null` não são reescritas por `applyCompanyMerges`; Modelos ou Notícias que ainda citem a Empresa retirada sem sobrevivente fariam a publicação falhar.
+  evidence: Maybe-false hoje, nenhum caminho cria `to: null`; definir a regra (remover das Notícias, descartar ou colocar Modelos em quarentena) junto da story de retirada do sobrevivente.

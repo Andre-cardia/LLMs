@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { assertCatalog } from '../contracts/catalog.mjs';
 import { assertManifest, assertSnapshotData, assertCompanyMergedInto, MANIFEST_VERSION, SLICES } from '../contracts/snapshot.mjs';
 import { string, integer, utc, clone, canonicalJson, requireSynchronous } from '../contracts/primitives.mjs';
+import { applyCompanyMerges } from '../domain/company-merges.mjs';
 export const sha256Text = text => createHash('sha256').update(text).digest('hex');
 export class MemorySnapshots {
   #control; #clock; #mayRead; #mayUpdate; #objects = new Map(); #history = new Map();
@@ -53,13 +54,15 @@ export class MemorySnapshots {
       const prepared = prepareCuration(state);
       requireSynchronous(prepared,'ASYNC_CURATION_FORBIDDEN');
       if (prepared && ['models','news','lastSuccessAt'].every(key=>Object.hasOwn(prepared,key))) ({ models, news, lastSuccessAt } = prepared);
-      const data = { catalog: state.catalog, models, news }; assertSnapshotData(data);
-      const successTimes = clone(lastSuccessAt);
-      if (state.lastPublishedInput === null || state.lastPublishedInput.curationRevision !== state.curationRevision) successTimes.catalog = publishedAt;
       // A tabela só muda na transação de curadoria; o Publisher a emite validada contra o catálogo publicado,
       // antes de gravar qualquer objeto de slice.
       const companyMergedInto = clone(state.companyMergedInto);
       assertCompanyMergedInto(companyMergedInto, { nextCompanyIds: state.catalog.companies.map(company => company.id) });
+      // Modelos e Notícias que ainda citam uma Empresa retirada são reescritos pela tabela, nunca bloqueiam (AD-2).
+      ({ models, news } = applyCompanyMerges({ models, news }, companyMergedInto));
+      const data = { catalog: state.catalog, models, news }; assertSnapshotData(data);
+      const successTimes = clone(lastSuccessAt);
+      if (state.lastPublishedInput === null || state.lastPublishedInput.curationRevision !== state.curationRevision) successTimes.catalog = publishedAt;
       const revision = `snapshot-${state.snapshotSequence + 1}`;
       const slices = Object.fromEntries(SLICES.map(slice => {
         const content = canonicalJson({ schemaVersion: 1, slice, data: data[slice] });
