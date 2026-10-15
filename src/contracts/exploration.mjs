@@ -111,6 +111,7 @@ export function assertExplorationOptions(options) {
   return options;
 }
 const INTENT_FIELDS = Object.freeze({hydrateUrl:['url'],preference:['field','value'],tab:['tab'],base:['base'],company:['companyId'],panel:['panel'],openNews:['newsId'],camera:['companyId'],callback:['token','snapshotRevision','target'],escape:[],advanceSnapshot:['data','revision','now','hiddenNewsIds','companyRemaps'],navigate:['target']});
+export const INTENT_TYPES = Object.freeze(Object.keys(INTENT_FIELDS));
 export function assertExplorationIntent(intent) {
   assertExplorationData(intent, 'intent');
   if (!intent || typeof intent !== 'object') fail('intent');
