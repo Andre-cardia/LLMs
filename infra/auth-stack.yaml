@@ -1,0 +1,389 @@
+# Gerado por scripts/render-auth-stack.mjs a partir de infra/auth-stack.template.yaml
+# e src/adapters/lambda/owner-gate.mjs. Não editar à mão.
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  LLMs - camada autenticada (AD-9/AD-26) de um ambiente: Cognito (managed login),
+  API Gateway HTTP API com JWT authorizer, Lambda owner-gate e S3 privado de snapshots.
+  Um stack por ambiente (preview, prod) a partir do mesmo template (AD-14).
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    AllowedValues:
+      - preview
+      - prod
+    Description: Ambiente isolado; entra no nome de todos os recursos.
+  AppOrigin:
+    Type: String
+    AllowedPattern: '^https://[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:[0-9]{1,5})?$'
+    ConstraintDescription: Origem HTTPS em minúsculas, sem caminho e sem barra final.
+    Description: >-
+      APP_ORIGIN única do ambiente (AD-26). Alimenta o CORS da API e as callback/logout
+      URLs do Cognito.
+  OwnerSubs:
+    Type: String
+    Default: ''
+    AllowedPattern: '^[A-Za-z0-9, -]*$'
+    ConstraintDescription: Lista de sub separados por vírgula.
+    Description: >-
+      sub dos donos (Cognito), separados por vírgula. Vazio nega todas as requisições.
+  CognitoDomainPrefix:
+    Type: String
+    AllowedPattern: '^(?!.*(aws|amazon|cognito))[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$'
+    ConstraintDescription: Prefixo em minúsculas, letras, dígitos e hífen; não pode conter aws, amazon ou cognito.
+    Description: Prefixo do domínio do managed login (<prefixo>.auth.<região>.amazoncognito.com).
+
+Conditions:
+  IsProd: !Equals [!Ref EnvironmentName, prod]
+
+Resources:
+  # ---------------------------------------------------------------- Cognito
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub 'llms-${EnvironmentName}-owners'
+      # Managed login (ManagedLoginVersion 2) exige o plano Essentials ou Plus.
+      UserPoolTier: ESSENTIALS
+      DeletionProtection: !If [IsProd, ACTIVE, INACTIVE]
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+      # O pool tem um único usuário, o dono: em prod a MFA por app autenticador é obrigatória.
+      MfaConfiguration: !If [IsProd, 'ON', 'OPTIONAL']
+      EnabledMfas:
+        - SOFTWARE_TOKEN_MFA
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 14
+          RequireLowercase: true
+          RequireUppercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          TemporaryPasswordValidityDays: 3
+
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      UserPoolId: !Ref UserPool
+      Domain: !Ref CognitoDomainPrefix
+      ManagedLoginVersion: 2
+
+  ApiResourceServer:
+    Type: AWS::Cognito::UserPoolResourceServer
+    Properties:
+      UserPoolId: !Ref UserPool
+      Identifier: llms-api
+      Name: !Sub 'llms-api-${EnvironmentName}'
+      Scopes:
+        - ScopeName: read
+          ScopeDescription: Leitura de dados do dono
+        - ScopeName: write
+          ScopeDescription: Comandos do dono
+
+  AppClient:
+    Type: AWS::Cognito::UserPoolClient
+    DependsOn: ApiResourceServer
+    Properties:
+      UserPoolId: !Ref UserPool
+      ClientName: !Sub 'llms-${EnvironmentName}-shell'
+      GenerateSecret: false
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthScopes:
+        - llms-api/read
+        - llms-api/write
+      SupportedIdentityProviders:
+        - COGNITO
+      CallbackURLs:
+        - !Sub '${AppOrigin}/app/auth/callback'
+      LogoutURLs:
+        - !Sub '${AppOrigin}/app/'
+      ExplicitAuthFlows:
+        - ALLOW_REFRESH_TOKEN_AUTH
+      PreventUserExistenceErrors: ENABLED
+      EnableTokenRevocation: true
+      AccessTokenValidity: 60
+      IdTokenValidity: 60
+      RefreshTokenValidity: 12
+      TokenValidityUnits:
+        AccessToken: minutes
+        IdToken: minutes
+        RefreshToken: hours
+
+  # Managed login v2 só renderiza para clients com estilo de marca associado.
+  AppClientBranding:
+    Type: AWS::Cognito::ManagedLoginBranding
+    Properties:
+      UserPoolId: !Ref UserPool
+      ClientId: !Ref AppClient
+      UseCognitoProvidedValues: true
+
+  # ---------------------------------------------------------------- Lambda
+  OwnerGateLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/llms-${EnvironmentName}-owner-gate'
+      RetentionInDays: 30
+
+  OwnerGateRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'llms-${EnvironmentName}-owner-gate-${AWS::Region}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: logs-only
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                # O Arn de AWS::Logs::LogGroup já termina em ':*' e cobre os streams.
+                Resource: !GetAtt OwnerGateLogGroup.Arn
+
+  OwnerGateFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'llms-${EnvironmentName}-owner-gate'
+      Description: GET /api/v1/whoami - confere token_use, client_id e sub contra OWNER_SUBS (AD-9)
+      Runtime: nodejs24.x
+      Architectures:
+        - arm64
+      Handler: index.handler
+      MemorySize: 128
+      Timeout: 3
+      Role: !GetAtt OwnerGateRole.Arn
+      LoggingConfig:
+        LogGroup: !Ref OwnerGateLogGroup
+        LogFormat: JSON
+      Environment:
+        Variables:
+          OWNER_SUBS: !Ref OwnerSubs
+          APP_CLIENT_ID: !Ref AppClient
+      Code:
+        # Gerado por scripts/render-auth-stack.mjs a partir de src/adapters/lambda/owner-gate.mjs.
+        ZipFile: |
+          // Lambda GET /api/v1/whoami (AD-9): prova de ponta a ponta da camada autenticada.
+          // O JWT authorizer do API Gateway já validou assinatura, emissor, audiência e escopo;
+          // aqui só se confere token_use, client_id e sub contra OWNER_SUBS. Lista vazia nega.
+          // Arquivo autossuficiente (sem import): scripts/render-auth-stack.mjs o embute inline
+          // em infra/auth-stack.yaml e troca a linha final `export {...};` por `module.exports`.
+          // Nunca registra token nem claims; a Lambda não emite cabeçalhos CORS (AD-26).
+
+          const PRIVATE_HEADERS = Object.freeze({
+            'content-type': 'application/json; charset=utf-8',
+            'cache-control': 'private, no-store',
+          });
+
+          function parseOwnerSubs(raw) {
+            if (typeof raw !== 'string') return new Set();
+            return new Set(raw.split(',').map(sub => sub.trim()).filter(sub => sub.length > 0));
+          }
+
+          function respond(statusCode, body) {
+            return {statusCode, headers: {...PRIVATE_HEADERS}, body: JSON.stringify(body)};
+          }
+
+          function denied(event) {
+            const requestId = typeof event?.requestContext?.requestId === 'string' ? event.requestContext.requestId : null;
+            return respond(403, {error: {code: 'ACCESS_DENIED', message: 'Forbidden', retryable: false}, requestId});
+          }
+
+          function ownerSub(claims, {ownerSubs, appClientId}) {
+            if (claims === null || typeof claims !== 'object') return null;
+            if (typeof appClientId !== 'string' || appClientId.length === 0) return null;
+            if (claims.token_use !== 'access') return null;
+            if (claims.client_id !== appClientId) return null;
+            const sub = claims.sub;
+            if (typeof sub !== 'string' || sub.length === 0 || !ownerSubs.has(sub)) return null;
+            return sub;
+          }
+
+          function createOwnerGate({ownerSubs, appClientId}) {
+            const allowed = parseOwnerSubs(ownerSubs);
+            return async function ownerGate(event) {
+              const claims = event?.requestContext?.authorizer?.jwt?.claims;
+              const sub = ownerSub(claims, {ownerSubs: allowed, appClientId});
+              if (sub === null) return denied(event);
+              return respond(200, {ok: true, sub});
+            };
+          }
+
+          // Lê o ambiente a cada invocação: o mesmo código serve preview e prod (AD-14).
+          async function handler(event) {
+            return createOwnerGate({ownerSubs: process.env.OWNER_SUBS, appClientId: process.env.APP_CLIENT_ID})(event);
+          }
+
+          module.exports = {handler, createOwnerGate, parseOwnerSubs};
+
+  OwnerGateInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref OwnerGateFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/GET/api/v1/whoami'
+
+  # ---------------------------------------------------------------- HTTP API
+  # CORS só no gateway (AD-26): com CorsConfiguration e sem rota OPTIONS, o API Gateway
+  # responde o preflight sem passar pelo authorizer. A Lambda não emite cabeçalhos CORS.
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub 'llms-${EnvironmentName}-api'
+      ProtocolType: HTTP
+      DisableExecuteApiEndpoint: false
+      CorsConfiguration:
+        AllowOrigins:
+          - !Ref AppOrigin
+        AllowMethods:
+          - GET
+        AllowHeaders:
+          - Authorization
+        AllowCredentials: false
+        MaxAge: 600
+
+  JwtAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      ApiId: !Ref HttpApi
+      Name: cognito-access-token
+      AuthorizerType: JWT
+      IdentitySource:
+        - $request.header.Authorization
+      JwtConfiguration:
+        Issuer: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}'
+        Audience:
+          - !Ref AppClient
+
+  OwnerGateIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt OwnerGateFunction.Arn
+      PayloadFormatVersion: '2.0'
+      TimeoutInMillis: 5000
+
+  WhoamiRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /api/v1/whoami
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      AuthorizationScopes:
+        - llms-api/read
+      Target: !Sub 'integrations/${OwnerGateIntegration}'
+
+  DefaultStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: $default
+      AutoDeploy: true
+      # Auditoria de acesso (401 do authorizer, 403 do dono): sem header Authorization nem claims.
+      AccessLogSettings:
+        DestinationArn: !GetAtt ApiAccessLogGroup.Arn
+        Format: '{"requestId":"$context.requestId","time":"$context.requestTime","route":"$context.routeKey","status":"$context.status","ip":"$context.identity.sourceIp","authorizerError":"$context.authorizer.error","integrationStatus":"$context.integrationStatus"}'
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 20
+        ThrottlingRateLimit: 10
+
+  ApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/apigateway/llms-${EnvironmentName}-api'
+      RetentionInDays: 90
+
+  # ---------------------------------------------------------------- S3
+  # Snapshots privados (AD-2/AD-9). Nada lê nem escreve aqui ainda; a leitura segue AD-27.
+  SnapshotBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub 'llms-${EnvironmentName}-snapshots-${AWS::AccountId}-${AWS::Region}'
+      # Versões antigas e uploads incompletos não se acumulam (AD-27 mantém as 3 últimas revisões legíveis).
+      LifecycleConfiguration:
+        Rules:
+          - Id: expire-noncurrent-and-abort-multipart
+            Status: Enabled
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 30
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+
+  SnapshotBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref SnapshotBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource:
+              - !GetAtt SnapshotBucket.Arn
+              - !Sub '${SnapshotBucket.Arn}/*'
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+          - Sid: DenyPresignedUrls
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource:
+              - !GetAtt SnapshotBucket.Arn
+              - !Sub '${SnapshotBucket.Arn}/*'
+            Condition:
+              StringEquals:
+                s3:authType: REST-QUERY-STRING
+
+Outputs:
+  ApiOrigin:
+    Description: Origem da HTTP API (connect-src da CSP do shell, AD-26).
+    Value: !GetAtt HttpApi.ApiEndpoint
+  CognitoDomain:
+    Description: Origem do managed login (connect-src e /oauth2/*).
+    Value: !Sub 'https://${UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com'
+  UserPoolId:
+    Description: ID do user pool (emissor do JWT).
+    Value: !Ref UserPool
+  AppClientId:
+    Description: Client id público do shell (Audience do authorizer).
+    Value: !Ref AppClient
+  SnapshotBucketName:
+    Description: Bucket privado de snapshots.
+    Value: !Ref SnapshotBucket

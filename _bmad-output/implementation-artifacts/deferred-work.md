@@ -103,3 +103,9 @@ Origem: [Review Findings da Story 4.1](spec-4-1-store-bases-preferencias.md#revi
 - source_spec: `_bmad-output/implementation-artifacts/spec-shell-build-headers.md`
   summary: Confirmar no primeiro deploy que o Amplify aplica os padrões `/app`, `/app/`, `/app/**`, `/app/**/*.mjs` e `/app/ui/fixtures/**` de `customHttp.yml` (CSP, nosniff, Content-Type, no-store).
   evidence: Verificado só localmente, com servidor que imita os headers; o casamento de padrões do Amplify não pode ser testado sem deploy.
+- source_spec: `_bmad-output/implementation-artifacts/spec-auth-stack-iac.md`
+  summary: Parâmetro opcional de callback de desenvolvimento (`http://localhost`), só para `preview`, no app client do Cognito.
+  evidence: Achado 16 (low). Entra junto com a spec do PKCE no shell (`src/ui/auth/`), quando o login de fato for exercitado pelo navegador.
+- source_spec: `_bmad-output/implementation-artifacts/spec-auth-stack-iac.md`
+  summary: Primeiro deploy real de `infra/auth-stack.yaml` em `preview` e ajuste da lista de permissões IAM do README a partir dos eventos do stack.
+  evidence: O template passou no `cfn-lint`, mas nenhuma credencial desta sessão pode aplicá-lo; a lista de permissões foi montada pela documentação.
