@@ -1,7 +1,7 @@
 import { AccessDeniedError } from '../contracts/access.mjs';
 import { createHash } from 'node:crypto';
 import { assertCatalog } from '../contracts/catalog.mjs';
-import { assertManifest, assertSnapshotData, assertCompanyMergedInto, envelopeBytes, MANIFEST_VERSION, SLICES } from '../contracts/snapshot.mjs';
+import { assertManifest, assertSnapshotData, assertCompanyMergedInto, envelopeBytes, toManifestResponse, MANIFEST_VERSION, SLICES } from '../contracts/snapshot.mjs';
 import { string, integer, utc, clone, canonicalJson, requireSynchronous } from '../contracts/primitives.mjs';
 import { applyCompanyMerges } from '../domain/company-merges.mjs';
 export const sha256Text = text => createHash('sha256').update(text).digest('hex');
@@ -84,6 +84,10 @@ export class MemorySnapshots {
     this.#authorize(this.#mayRead, context);
     if (!this.#history.has(revision)) throw new Error('SNAPSHOT_NOT_FOUND');
     return clone(this.#history.get(revision));
+  }
+  // Formato externo do AD-27 (sem objectKey): o que o SnapshotReader recebe.
+  readManifestResponse(context, revision = this.#control.read().snapshotRevision) {
+    return toManifestResponse(this.readManifest(context, revision));
   }
   readSlice(revision, slice, context) {
     const manifest = this.readManifest(context, revision);

@@ -3,11 +3,22 @@
 `auth-stack.yaml` é um template CloudFormation puro que cria, para **um** ambiente, o caminho autenticado do dono:
 
 - **Cognito**: user pool em que só o admin cria usuários, domínio de prefixo com managed login v2, resource server `llms-api` (`read`, `write`) e app client público (sem secret, só authorization code, escopos `llms-api/read` e `llms-api/write`).
-- **API Gateway HTTP API**: CORS só para `AppOrigin`, authorizer JWT (emissor do pool, `Audience` = client id) e rota `GET /api/v1/whoami`, que exige `llms-api/read`.
+- **API Gateway HTTP API**: CORS só para `AppOrigin`, authorizer JWT (emissor do pool, `Audience` = client id) e três rotas, todas com `llms-api/read`: `GET /api/v1/whoami`, `GET /api/v1/snapshot` e `GET /api/v1/snapshots/{revision}/{slice}`.
 - **Lambda** `owner-gate` (`nodejs24.x`, `arm64`): confere `token_use = access`, `client_id` e `sub` contra `OwnerSubs` e devolve `{ok:true, sub}`. Fora isso, devolve 403 genérico.
-- **S3** privado de snapshots: os quatro bloqueios de acesso público, `BucketOwnerEnforced`, SSE-S3, versionamento e política que nega transporte sem TLS e URLs presigned. Por enquanto nada lê nem escreve nele.
+- **Lambda** `snapshot-reader` (`nodejs24.x`, `arm64`, AD-27): aplica a mesma regra de dono (importa o `owner-gate`) antes de qualquer leitura no S3. `GET /api/v1/snapshot` devolve o `ManifestResponse` (manifesto sem `objectKey`) da revisão corrente; `GET /api/v1/snapshots/{revision}/{slice}` devolve os bytes gravados da slice, sem reserializar. Só as três últimas revisões são legíveis; as outras, e as inexistentes, recebem 404. Respostas com `Cache-Control: private, no-store`. O papel só tem `s3:GetObject` em `manifest/*` e `slices/*` do bucket.
+- **S3** privado de snapshots: os quatro bloqueios de acesso público, `BucketOwnerEnforced`, SSE-S3, versionamento e política que nega transporte sem TLS e URLs presigned. Só a `snapshot-reader` lê; nada escreve nele ainda.
 
-Leitura de snapshot (AD-27), persistência de controle (DynamoDB) e agendador continuam sob Q2. O shell ainda não fala com o Cognito nem com a API.
+**Layout do bucket** lido pela `snapshot-reader` (quem grava é o Publisher, sob Q2):
+
+| Chave | Conteúdo |
+| --- | --- |
+| `manifest/current.json` | ponteiro `{schemaVersion: 1, revision, readableRevisions}`: a revisão corrente e as legíveis (no máximo 3, a primeira é a corrente) |
+| `manifest/revisions/{revision}.json` | manifesto interno v2 da revisão (com `objectKey` de cada slice) |
+| `slices/…` | bytes do envelope de cada slice; o `objectKey` do manifesto aponta para cá |
+
+Sem `s3:ListBucket`, o S3 responde `AccessDenied` para chave ausente, e a Lambda trata isso como 404. Enquanto o bucket estiver vazio, `GET /api/v1/snapshot` responde 404.
+
+Publicação no bucket, persistência de controle (DynamoDB) e agendador continuam sob Q2. O shell ainda não fala com a API: a porta HTTP (`src/ui/http-snapshot-port.mjs`) existe, mas a fonte do shell continua sendo `fixture-source` até o stack existir e o login ser ligado.
 
 `prod` é outro stack criado do mesmo template, com outra origem e outro prefixo (AD-14). Os recursos levam `EnvironmentName` no nome, então os dois stacks convivem na mesma conta.
 
@@ -17,13 +28,18 @@ Leitura de snapshot (AD-27), persistência de controle (DynamoDB) e agendador co
 
 ## 1. Gerar o template
 
-`auth-stack.yaml` é **gerado**. Edite `auth-stack.template.yaml` ou `src/adapters/lambda/owner-gate.mjs` e rode:
+`auth-stack.yaml` é **gerado**. Edite `auth-stack.template.yaml`, `src/adapters/lambda/owner-gate.mjs`, `src/adapters/lambda/snapshot-reader.mjs` ou os módulos que ele importa e rode:
 
 ```sh
 node scripts/render-auth-stack.mjs
 ```
 
-O script embute o handler no `ZipFile` da Lambda. O código vai inline, então o deploy não precisa de bucket de artefatos. O CloudFormation grava esse código como `index.js` (CommonJS), por isso a última linha `export {...};` vira `module.exports = {...};`. O handler não pode ter `import`, `import()` nem `require()` e deve continuar com até 4096 caracteres; esse teto é nosso, bem abaixo do limite do `ZipFile` (zip de até 4 MB). `npm test` falha se o arquivo gerado estiver desatualizado.
+O script embute cada handler no `ZipFile` da sua Lambda. O código vai inline, então o deploy não precisa de bucket de artefatos. O CloudFormation grava esse código como `index.js` (CommonJS), por isso a última linha `export {...};` vira `module.exports = {...};`.
+
+- `owner-gate`: arquivo autossuficiente, sem `import`, `import()` nem `require()`, com até 4096 caracteres.
+- `snapshot-reader`: o script empacota o handler com seus imports locais (`owner-gate.mjs`, `src/contracts/manifest.mjs` e `primitives.mjs`), cada módulo no próprio escopo. Só a forma `import {a, b} from './x.mjs';` é aceita; o único `require` permitido é `@aws-sdk/client-s3`, que o runtime `nodejs24.x` já traz. Teto de 32 768 caracteres.
+
+Os tetos são nossos, bem abaixo do limite do `ZipFile` (zip de até 4 MB). `npm test` falha se o arquivo gerado estiver desatualizado.
 
 ## 2. Validar
 
@@ -98,6 +114,8 @@ Faça login pelo managed login (`<CognitoDomain>/oauth2/authorize` com `response
 curl -sS -H "Authorization: Bearer <access-token>" "<ApiOrigin>/api/v1/whoami"
 # {"ok":true,"sub":"<seu-sub>"}
 ```
+
+Com o mesmo token, `curl -sS -H "Authorization: Bearer <access-token>" "<ApiOrigin>/api/v1/snapshot"` responde 404 enquanto nada for publicado no bucket.
 
 Um ID token, um token sem `llms-api/read` ou um `sub` fora da lista recebem 401 (do authorizer) ou 403 (da Lambda). Não guarde tokens em arquivos nem no histórico do shell.
 

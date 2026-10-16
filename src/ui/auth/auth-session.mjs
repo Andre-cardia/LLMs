@@ -171,6 +171,8 @@ export function createAuthSession({config, ports} = {}) {
     return {status: 'authenticated'};
   }
 
+  // Último resultado de renovação: 'ok', 'network' ou 'rejected'.
+  let lastRefreshOutcome = null;
   function refresh() {
     if (refreshing !== null) return refreshing;
     const startedAt = generation;
@@ -182,12 +184,18 @@ export function createAuthSession({config, ports} = {}) {
         if (startedAt !== generation) return null;
         // O Cognito não devolve refresh token novo no refresh: o anterior continua.
         tokens = {accessToken: parsed.accessToken, refreshToken: parsed.refreshToken ?? refreshToken, expiresAt: clock() + parsed.expiresIn * 1000};
+        lastRefreshOutcome = 'ok';
         return tokens.accessToken;
       } catch (error) {
         if (startedAt !== generation) return null;
+        const network = error instanceof AuthError && error.message === 'AUTH_NETWORK_ERROR';
+        lastRefreshOutcome = network ? 'network' : 'rejected';
         // Rede instável: o token atual segue válido até expirar. Só um refresh
         // recusado pelo Cognito encerra a sessão.
-        if (error instanceof AuthError && error.message === 'AUTH_NETWORK_ERROR' && tokens !== null && tokens.expiresAt > clock()) return tokens.accessToken;
+        if (network && tokens !== null && tokens.expiresAt > clock()) return tokens.accessToken;
+        // Falha de rede numa renovação forçada pela API: a sessão continua; quem
+        // pediu decide (a porta HTTP trata como indisponibilidade, não perda de acesso).
+        if (network && forcing) return null;
         reset();
         notify();
         return null;
@@ -198,8 +206,23 @@ export function createAuthSession({config, ports} = {}) {
     return refreshing;
   }
 
-  async function accessToken() {
+  // `forceRefresh` (AD-27): a API recusou o token atual com 401. Renova pelo
+  // refresh token mesmo fora da margem; sem refresh token não há o que tentar.
+  let forcing = false;
+  async function accessToken({forceRefresh = false, rejected = null} = {}) {
     if (tokens === null) return null;
+    if (forceRefresh) {
+      if (tokens.refreshToken === null) return null;
+      // Outra requisição já renovou depois do 401 desta: usa o token novo sem
+      // outra ida ao Cognito (três slices em paralelo recebem 401 juntas).
+      if (rejected !== null && tokens.accessToken !== rejected) return tokens.accessToken;
+      forcing = true;
+      let renewed;
+      try { renewed = await refresh(); } finally { forcing = false; }
+      // Rede instável na renovação: não é perda de acesso.
+      if (lastRefreshOutcome === 'network') throw new AuthError('AUTH_NETWORK_ERROR');
+      return renewed;
+    }
     if (tokens.expiresAt - clock() >= REFRESH_MARGIN_MS) return tokens.accessToken;
     if (tokens.refreshToken === null) {
       if (tokens.expiresAt > clock()) return tokens.accessToken;

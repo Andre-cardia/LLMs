@@ -1,9 +1,10 @@
-# Gerado por scripts/render-auth-stack.mjs a partir de infra/auth-stack.template.yaml
-# e src/adapters/lambda/owner-gate.mjs. Não editar à mão.
+# Gerado por scripts/render-auth-stack.mjs a partir de infra/auth-stack.template.yaml,
+# src/adapters/lambda/owner-gate.mjs e src/adapters/lambda/snapshot-reader.mjs. Não editar à mão.
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >-
   LLMs - camada autenticada (AD-9/AD-26) de um ambiente: Cognito (managed login),
-  API Gateway HTTP API com JWT authorizer, Lambda owner-gate e S3 privado de snapshots.
+  API Gateway HTTP API com JWT authorizer, Lambdas owner-gate e snapshot-reader e S3
+  privado de snapshots (leitura AD-27).
   Um stack por ambiente (preview, prod) a partir do mesmo template (AD-14).
 
 Parameters:
@@ -239,6 +240,460 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/GET/api/v1/whoami'
 
+  # Leitura de snapshot (AD-27): mesma regra de dono, só s3:GetObject em manifest/* e slices/*.
+  SnapshotReaderLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/llms-${EnvironmentName}-snapshot-reader'
+      RetentionInDays: 30
+
+  SnapshotReaderRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'llms-${EnvironmentName}-snapshot-reader-${AWS::Region}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: logs-and-snapshot-read
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !GetAtt SnapshotReaderLogGroup.Arn
+              # Sem s3:ListBucket: chave ausente volta AccessDenied, tratado como 404.
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource:
+                  - !Sub '${SnapshotBucket.Arn}/manifest/*'
+                  - !Sub '${SnapshotBucket.Arn}/slices/*'
+
+  SnapshotReaderFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'llms-${EnvironmentName}-snapshot-reader'
+      Description: GET /api/v1/snapshot e /api/v1/snapshots/{revision}/{slice} - leitura do S3 privado (AD-27)
+      Runtime: nodejs24.x
+      Architectures:
+        - arm64
+      Handler: index.handler
+      MemorySize: 256
+      Timeout: 5
+      Role: !GetAtt SnapshotReaderRole.Arn
+      LoggingConfig:
+        LogGroup: !Ref SnapshotReaderLogGroup
+        LogFormat: JSON
+      Environment:
+        Variables:
+          OWNER_SUBS: !Ref OwnerSubs
+          APP_CLIENT_ID: !Ref AppClient
+          SNAPSHOT_BUCKET: !Ref SnapshotBucket
+      Code:
+        # Gerado por scripts/render-auth-stack.mjs a partir de src/adapters/lambda/snapshot-reader.mjs.
+        ZipFile: |
+          'use strict';
+          // Empacotado por scripts/render-auth-stack.mjs: um escopo por módulo.
+          const __modules = {};
+          // src/adapters/lambda/owner-gate.mjs
+          __modules["adapters/lambda/owner-gate.mjs"] = (() => {
+          // Lambda GET /api/v1/whoami (AD-9): prova de ponta a ponta da camada autenticada.
+          // O JWT authorizer do API Gateway já validou assinatura, emissor, audiência e escopo;
+          // aqui só se confere token_use, client_id e sub contra OWNER_SUBS. Lista vazia nega.
+          // Arquivo autossuficiente (sem import): scripts/render-auth-stack.mjs o embute inline
+          // em infra/auth-stack.yaml e troca a linha final `export {...};` por `module.exports`.
+          // Nunca registra token nem claims; a Lambda não emite cabeçalhos CORS (AD-26).
+
+          const PRIVATE_HEADERS = Object.freeze({
+            'content-type': 'application/json; charset=utf-8',
+            'cache-control': 'private, no-store',
+          });
+
+          function parseOwnerSubs(raw) {
+            if (typeof raw !== 'string') return new Set();
+            return new Set(raw.split(',').map(sub => sub.trim()).filter(sub => sub.length > 0));
+          }
+
+          function respond(statusCode, body) {
+            return {statusCode, headers: {...PRIVATE_HEADERS}, body: JSON.stringify(body)};
+          }
+
+          function denied(event) {
+            const requestId = typeof event?.requestContext?.requestId === 'string' ? event.requestContext.requestId : null;
+            return respond(403, {error: {code: 'ACCESS_DENIED', message: 'Forbidden', retryable: false}, requestId});
+          }
+
+          function ownerSub(claims, {ownerSubs, appClientId}) {
+            if (claims === null || typeof claims !== 'object') return null;
+            if (typeof appClientId !== 'string' || appClientId.length === 0) return null;
+            if (claims.token_use !== 'access') return null;
+            if (claims.client_id !== appClientId) return null;
+            const sub = claims.sub;
+            if (typeof sub !== 'string' || sub.length === 0 || !ownerSubs.has(sub)) return null;
+            return sub;
+          }
+
+          function createOwnerGate({ownerSubs, appClientId}) {
+            const allowed = parseOwnerSubs(ownerSubs);
+            return async function ownerGate(event) {
+              const claims = event?.requestContext?.authorizer?.jwt?.claims;
+              const sub = ownerSub(claims, {ownerSubs: allowed, appClientId});
+              if (sub === null) return denied(event);
+              return respond(200, {ok: true, sub});
+            };
+          }
+
+          // Lê o ambiente a cada invocação: o mesmo código serve preview e prod (AD-14).
+          async function handler(event) {
+            return createOwnerGate({ownerSubs: process.env.OWNER_SUBS, appClientId: process.env.APP_CLIENT_ID})(event);
+          }
+          return {handler, createOwnerGate, parseOwnerSubs};
+          })();
+          // src/contracts/primitives.mjs
+          __modules["contracts/primitives.mjs"] = (() => {
+          function fail(field, reason = 'formato inválido') {
+            throw new TypeError(`${field}: ${reason}`);
+          }
+          function object(value, fields, field = 'objeto') {
+            if (!value || typeof value !== 'object' || Array.isArray(value) ||
+                ![Object.prototype, null].includes(Object.getPrototypeOf(value))) fail(field);
+            const keys = Reflect.ownKeys(value);
+            if (keys.length !== fields.length || keys.some(key => !fields.includes(key))) fail(field, 'campos incompatíveis');
+            for (const key of fields) {
+              const descriptor = Object.getOwnPropertyDescriptor(value, key);
+              if (!descriptor.enumerable || !Object.hasOwn(descriptor, 'value')) fail(`${field}.${key}`, 'propriedade de dados exigida');
+            }
+            return value;
+          }
+          function string(value, field, max = 256) {
+            if (typeof value !== 'string' || !value.length || value.length > max || value.trim() !== value) fail(field);
+            return value;
+          }
+          function boolean(value, field) { if (typeof value !== 'boolean') fail(field); return value; }
+          function oneOf(value, choices, field) { if (!choices.includes(value)) fail(field); return value; }
+          function number(value, field, min = 0, max = Number.MAX_SAFE_INTEGER) {
+            if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) fail(field);
+            return value;
+          }
+          function integer(value, field, min = 0) {
+            number(value, field, min); if (!Number.isSafeInteger(value)) fail(field); return value;
+          }
+          function utc(value, field = 'timestamp') {
+            if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/.test(value)) fail(field);
+            const milliseconds = Date.parse(value);
+            if (!Number.isFinite(milliseconds) || new Date(milliseconds).toISOString() !==
+                (value.includes('.') ? value : value.replace('Z', '.000Z'))) fail(field, 'data impossível');
+            return milliseconds;
+          }
+          function https(value, field = 'URL') {
+            string(value, field, 4096);
+            if (!/^https:\/\/[^/]/.test(value) || /[\x00-\x20\x7f\\]/.test(value)) fail(field);
+            let url; try { url = new URL(value); } catch { fail(field); }
+            if (url.protocol !== 'https:' || url.username || url.password) fail(field);
+            return value;
+          }
+          function list(value, check, field, { unique = false, nonempty = false } = {}) {
+            if (!Array.isArray(value) || (nonempty && value.length === 0)) fail(field);
+            if (Reflect.ownKeys(value).length !== value.length + 1) fail(field, 'array denso sem campos extras exigido');
+            for (let i = 0; i < value.length; i += 1) {
+              const descriptor = Object.getOwnPropertyDescriptor(value, String(i));
+              if (!descriptor || !descriptor.enumerable || !Object.hasOwn(descriptor, 'value')) fail(field, 'array de dados exigido');
+              check(descriptor.value, `${field}[${i}]`);
+            }
+            if (unique && new Set(value).size !== value.length) fail(field, 'duplicatas');
+            return value;
+          }
+          function nullable(value, check, field) { if (value !== null) check(value, field); }
+          function decimal(value, field) {
+            if (typeof value !== 'string' || value.length > 256 || !/^(0|[1-9]\d*)(\.\d+)?$/.test(value)) fail(field);
+          }
+          function microUsd(value, field = 'microUSD') {
+            if (typeof value !== 'string' || value.length > 256 || !/^(0|[1-9]\d*)$/.test(value)) fail(field);
+            return BigInt(value);
+          }
+          function sourceRef(value, field = 'sourceRef') {
+            object(value, ['source', 'sourceRecordId', 'sourceUrl', 'fetchedAt', 'observedAt'], field);
+            for (const key of ['source', 'sourceRecordId']) string(value[key], `${field}.${key}`);
+            https(value.sourceUrl, `${field}.sourceUrl`); utc(value.fetchedAt, `${field}.fetchedAt`);
+            nullable(value.observedAt, utc, `${field}.observedAt`);
+          }
+          function sourceRefs(value, field = 'sourceRefs') { list(value, sourceRef, field, { nonempty: true }); }
+          function uniqueIds(items, key, field) {
+            if (new Set(items.map(item => item[key])).size !== items.length) fail(field, 'IDs duplicados');
+          }
+          function clone(value) { return structuredClone(value); }
+          function freeze(value) {
+            if (value && typeof value === 'object') {
+              for (const item of Object.values(value)) freeze(item);
+              Object.freeze(value);
+            }
+            return value;
+          }
+          function canonicalJson(value) {
+            function ordered(item) {
+              if (Array.isArray(item)) return item.map(ordered);
+              if (item && typeof item === 'object') return Object.fromEntries(Object.keys(item).sort().map(key => [key, ordered(item[key])]));
+              return item;
+            }
+            return JSON.stringify(ordered(value));
+          }
+
+          function requireSynchronous(value,code='SYNCHRONOUS_TRANSACTION_REQUIRED'){
+           if(value&&typeof value.then==='function'){Promise.resolve(value).catch(()=>{});throw new Error(code);}
+           return value;
+          }
+          return {fail, object, string, boolean, oneOf, number, integer, utc, https, list, nullable, decimal, microUsd, sourceRef, sourceRefs, uniqueIds, clone, freeze, canonicalJson, requireSynchronous};
+          })();
+          // src/contracts/manifest.mjs
+          __modules["contracts/manifest.mjs"] = (() => {
+          // Contratos do manifesto (AD-2, AD-27), num módulo folha que só depende de
+          // primitives.mjs: a Lambda de leitura (src/adapters/lambda/snapshot-reader.mjs)
+          // importa estes mesmos validadores e scripts/render-auth-stack.mjs os empacota
+          // no código inline. src/contracts/snapshot.mjs reexporta tudo daqui.
+          //
+          // PublishedManifest (interno, com objectKey) só circula entre Publisher, bucket
+          // e Lambda. ManifestResponse (externo, sem objectKey) é o que o navegador e o
+          // SnapshotReader recebem.
+          const {object, string, oneOf, nullable, list, utc, fail} = __modules["contracts/primitives.mjs"];
+
+          const SLICES = Object.freeze(['catalog', 'models', 'news']);
+          const MANIFEST_VERSION = 2;
+          const MAX_COMPANY_MERGES = 10000;
+          // Revisão endereçável por URL (AD-27). Só ".", ".." e afins também são recusados:
+          // casam o padrão, mas o navegador os normalizaria como segmentos de caminho.
+          const REVISION_PATTERN = Object.freeze(/^[A-Za-z0-9._-]{1,128}$/);
+          // As três últimas revisões continuam legíveis (AD-27).
+          const READABLE_REVISIONS = 3;
+          const POINTER_VERSION = 1;
+          const DIGEST = /^[a-f0-9]{64}$/;
+          const MERGE_FIELD = 'INVALID_MERGE_TABLE';
+
+          function assertRevision(value, field = 'revision') {
+            if (typeof value !== 'string' || !REVISION_PATTERN.test(value) || /^\.+$/.test(value)) fail(field);
+            return value;
+          }
+          // Validador único da tabela acumulada e compactada (AD-2): Publisher, SnapshotReader e reducer.
+          // Sem nextCompanyIds valida só a forma; com ele, exige from ausente e to (não nulo) presente no catálogo novo.
+          function assertCompanyMergedInto(entries, { nextCompanyIds } = {}) {
+            if (!Array.isArray(entries)) fail(MERGE_FIELD, 'array exigido');
+            if (entries.length > MAX_COMPANY_MERGES) fail(MERGE_FIELD, `mais de ${MAX_COMPANY_MERGES} entradas`);
+            const targets = new Map();
+            list(entries, (entry, field) => {
+              object(entry, ['fromCompanyId', 'toCompanyId'], field);
+              string(entry.fromCompanyId, `${field}.fromCompanyId`); nullable(entry.toCompanyId, string, `${field}.toCompanyId`);
+              if (entry.fromCompanyId === entry.toCompanyId) fail(field, 'from igual a to');
+              if (targets.has(entry.fromCompanyId)) fail(field, 'from duplicado');
+              targets.set(entry.fromCompanyId, entry.toCompanyId);
+            }, MERGE_FIELD);
+            for (const to of targets.values()) if (to !== null && targets.has(to)) fail(MERGE_FIELD, 'tabela não compactada');
+            if (nextCompanyIds !== undefined) {
+              const next = nextCompanyIds instanceof Set ? nextCompanyIds : new Set(nextCompanyIds);
+              for (const [from, to] of targets) {
+                if (next.has(from)) fail(MERGE_FIELD, 'from presente no catálogo novo');
+                if (to !== null && !next.has(to)) fail(MERGE_FIELD, 'to ausente do catálogo novo');
+              }
+            }
+            return entries;
+          }
+          const MANIFEST_FIELDS = ['schemaVersion', 'revision', 'curationRevision', 'publishedAt', 'slices', 'companyMergedInto'];
+          // PublishedManifest, interno (com objectKey). Formato inalterado.
+          function assertManifest(value) {
+            object(value, MANIFEST_FIELDS, 'Manifest');
+            // O Publisher só grava revisões que a leitura externa aceita (AD-27).
+            oneOf(value.schemaVersion, [MANIFEST_VERSION], 'schemaVersion'); assertRevision(value.revision, 'revision'); string(value.curationRevision, 'curationRevision');
+            utc(value.publishedAt, 'publishedAt'); object(value.slices, SLICES, 'slices');
+            for (const slice of SLICES) {
+              const ref = value.slices[slice]; object(ref, ['objectKey', 'digest', 'lastSuccessAt'], `slices.${slice}`);
+              string(ref.objectKey, 'objectKey'); if (!DIGEST.test(ref.digest)) fail('digest');
+              nullable(ref.lastSuccessAt, utc, 'lastSuccessAt');
+            }
+            assertCompanyMergedInto(value.companyMergedInto);
+            return value;
+          }
+          // ManifestResponse, externo (AD-27): sem objectKey; revisão endereçável por URL.
+          function assertManifestResponse(value) {
+            object(value, MANIFEST_FIELDS, 'ManifestResponse');
+            oneOf(value.schemaVersion, [MANIFEST_VERSION], 'schemaVersion'); assertRevision(value.revision, 'revision'); string(value.curationRevision, 'curationRevision');
+            utc(value.publishedAt, 'publishedAt'); object(value.slices, SLICES, 'slices');
+            for (const slice of SLICES) {
+              const ref = value.slices[slice]; object(ref, ['digest', 'lastSuccessAt'], `slices.${slice}`);
+              if (!DIGEST.test(ref.digest)) fail('digest');
+              nullable(ref.lastSuccessAt, utc, 'lastSuccessAt');
+            }
+            assertCompanyMergedInto(value.companyMergedInto);
+            return value;
+          }
+          // Projeção única do interno para o externo: cópia nova, sem objectKey, validada.
+          function toManifestResponse(manifest) {
+            assertManifest(manifest);
+            const slices = {};
+            for (const slice of SLICES) slices[slice] = { digest: manifest.slices[slice].digest, lastSuccessAt: manifest.slices[slice].lastSuccessAt };
+            return assertManifestResponse({
+              schemaVersion: manifest.schemaVersion, revision: manifest.revision, curationRevision: manifest.curationRevision,
+              publishedAt: manifest.publishedAt, slices,
+              companyMergedInto: manifest.companyMergedInto.map(entry => ({ fromCompanyId: entry.fromCompanyId, toCompanyId: entry.toCompanyId }))
+            });
+          }
+          // Ponteiro manifest/current.json do bucket: revisão corrente e as legíveis,
+          // da mais nova para a mais velha. Só o Publisher (Q2) o grava, por CAS.
+          function assertSnapshotPointer(value) {
+            object(value, ['schemaVersion', 'revision', 'readableRevisions'], 'SnapshotPointer');
+            oneOf(value.schemaVersion, [POINTER_VERSION], 'schemaVersion'); assertRevision(value.revision, 'revision');
+            list(value.readableRevisions, (revision, field) => assertRevision(revision, field), 'readableRevisions', { unique: true, nonempty: true });
+            if (value.readableRevisions.length > READABLE_REVISIONS) fail('readableRevisions', `mais de ${READABLE_REVISIONS}`);
+            if (value.readableRevisions[0] !== value.revision) fail('readableRevisions', 'primeira diferente da corrente');
+            return value;
+          }
+          return {SLICES, MANIFEST_VERSION, MAX_COMPANY_MERGES, REVISION_PATTERN, READABLE_REVISIONS, POINTER_VERSION, assertRevision, assertCompanyMergedInto, assertManifest, assertManifestResponse, toManifestResponse, assertSnapshotPointer};
+          })();
+          // src/adapters/lambda/snapshot-reader.mjs
+          // Lambda de leitura de snapshot (AD-27), atrás do mesmo JWT authorizer de /whoami.
+          //   GET /api/v1/snapshot                      → ManifestResponse da revisão corrente
+          //   GET /api/v1/snapshots/{revision}/{slice}  → bytes gravados da slice, sem tocar
+          // A regra de dono é a do owner-gate, reaproveitada por import local: quem não é
+          // dono recebe o mesmo 403 genérico, sem nenhuma leitura no S3.
+          //
+          // Layout do bucket (só leitura aqui; a publicação é Q2):
+          //   manifest/current.json               ponteiro {schemaVersion: 1, revision, readableRevisions}
+          //   manifest/revisions/{revision}.json  PublishedManifest interno (com objectKey)
+          //   slices/...                          bytes de envelope, endereçados pelo objectKey
+          // Só as revisões de `readableRevisions` (no máximo 3, AD-27) são servidas; as
+          // demais, e as inexistentes, recebem 404.
+          //
+          // scripts/render-auth-stack.mjs empacota este arquivo com os imports locais no
+          // ZipFile da Lambda. O único require fora do pacote é o SDK do S3, que o runtime
+          // nodejs24.x já traz. Nunca registra token, claims nem conteúdo.
+          const {createOwnerGate} = __modules["adapters/lambda/owner-gate.mjs"];
+          const {READABLE_REVISIONS, SLICES, assertManifest, assertRevision, assertSnapshotPointer, toManifestResponse} = __modules["contracts/manifest.mjs"];
+
+          const POINTER_KEY = 'manifest/current.json';
+          const SLICE_PREFIX = 'slices/';
+          const revisionKey = revision => `manifest/revisions/${revision}.json`;
+          const JSON_HEADERS = Object.freeze({'content-type': 'application/json; charset=utf-8', 'cache-control': 'private, no-store'});
+
+          function requestIdOf(event) {
+            return typeof event?.requestContext?.requestId === 'string' ? event.requestContext.requestId : null;
+          }
+          function failure(event, statusCode, code, message, retryable) {
+            return {statusCode, headers: {...JSON_HEADERS}, body: JSON.stringify({error: {code, message, retryable}, requestId: requestIdOf(event)})};
+          }
+          const notFound = event => failure(event, 404, 'SNAPSHOT_NOT_FOUND', 'Not found', false);
+          const unavailable = event => failure(event, 503, 'SNAPSHOT_UNAVAILABLE', 'Service unavailable', true);
+
+          function parseJson(text) {
+            if (typeof text !== 'string') throw new Error('SNAPSHOT_OBJECT_INVALID');
+            return JSON.parse(text);
+          }
+
+          // `getObject(key)` → Promise<string | null>: texto exato do objeto, ou null se
+          // ele não existe (sem s3:ListBucket, o S3 responde AccessDenied para chave ausente).
+          function createSnapshotReaderHandler({ownerSubs, appClientId, getObject}) {
+            const gate = createOwnerGate({ownerSubs, appClientId});
+            async function pointer() {
+              const text = await getObject(POINTER_KEY);
+              return text === null ? null : assertSnapshotPointer(parseJson(text));
+            }
+            async function manifestOf(revision) {
+              const text = await getObject(revisionKey(revision));
+              if (text === null) return null;
+              const manifest = assertManifest(parseJson(text));
+              if (manifest.revision !== revision) throw new Error('SNAPSHOT_REVISION_MISMATCH');
+              return manifest;
+            }
+            async function readManifest(event) {
+              const current = await pointer();
+              const manifest = current === null ? null : await manifestOf(current.revision);
+              if (manifest === null) return notFound(event);
+              return {statusCode: 200, headers: {...JSON_HEADERS}, body: JSON.stringify(toManifestResponse(manifest))};
+            }
+            async function readSlice(event, {revision, slice}) {
+              try { assertRevision(revision); } catch { return notFound(event); }
+              if (typeof slice !== 'string' || !SLICES.includes(slice)) return notFound(event);
+              const current = await pointer();
+              if (current === null || !current.readableRevisions.slice(0, READABLE_REVISIONS).includes(revision)) return notFound(event);
+              const manifest = await manifestOf(revision);
+              if (manifest === null) return notFound(event);
+              // O papel só lê manifest/* e slices/*: uma chave fora de slices/ é manifesto corrompido.
+              const key = manifest.slices[slice].objectKey;
+              if (!key.startsWith(SLICE_PREFIX) || key.includes('..')) throw new Error('SNAPSHOT_OBJECT_KEY_INVALID');
+              const bytes = await getObject(key);
+              if (bytes === null) return notFound(event);
+              if (typeof bytes !== 'string') throw new Error('SNAPSHOT_OBJECT_INVALID');
+              // Os bytes gravados, como texto: sem JSON.parse, reserialização nem base64.
+              return {statusCode: 200, headers: {...JSON_HEADERS}, body: bytes, isBase64Encoded: false};
+            }
+            return async function snapshotReader(event) {
+              const verdict = await gate(event);
+              if (verdict.statusCode !== 200) return verdict;
+              try {
+                if (event.routeKey === 'GET /api/v1/snapshot') return await readManifest(event);
+                if (event.routeKey === 'GET /api/v1/snapshots/{revision}/{slice}') return await readSlice(event, event.pathParameters ?? {});
+                return notFound(event);
+              } catch (error) {
+                // Diagnóstico sem token, claims nem conteúdo: só o código interno ou o nome do erro.
+                console.error(JSON.stringify({event: 'snapshot_read_failed', requestId: event?.requestContext?.requestId ?? null, error: error?.message?.match(/^[A-Z][A-Z0-9_]*(?=$|[:\s])/)?.[0] ?? error?.name ?? 'Error'}));
+                return unavailable(event);
+              }
+            };
+          }
+
+          // Um cliente por contêiner, criado na primeira leitura.
+          let s3 = null;
+          function s3GetObject(bucket) {
+            return async function getObject(key) {
+              if (s3 === null) {
+                const sdk = require('@aws-sdk/client-s3');
+                s3 = {client: new sdk.S3Client({}), GetObjectCommand: sdk.GetObjectCommand};
+              }
+              try {
+                const output = await s3.client.send(new s3.GetObjectCommand({Bucket: bucket, Key: key}));
+                return await output.Body.transformToString('utf-8');
+              } catch (error) {
+                // Sem s3:ListBucket, o S3 responde AccessDenied também para chave ausente: tratado
+                // como 404. O nome do erro vai ao log (sem chave nem conteúdo) para que uma falha
+                // real de permissão ou de criptografia continue visível no CloudWatch.
+                if (error?.name === 'NoSuchKey' || error?.name === 'AccessDenied') {
+                  console.warn(JSON.stringify({event: 'snapshot_object_missing', s3Error: error.name}));
+                  return null;
+                }
+                throw error;
+              }
+            };
+          }
+
+          // Lê o ambiente a cada invocação: o mesmo código serve preview e prod (AD-14).
+          async function handler(event) {
+            const bucket = process.env.SNAPSHOT_BUCKET;
+            return createSnapshotReaderHandler({ownerSubs: process.env.OWNER_SUBS, appClientId: process.env.APP_CLIENT_ID,
+              getObject: typeof bucket === 'string' && bucket !== '' ? s3GetObject(bucket) : async () => { throw new Error('SNAPSHOT_BUCKET_MISSING'); }})(event);
+          }
+
+          module.exports = {handler, createSnapshotReaderHandler, POINTER_KEY, SLICE_PREFIX, revisionKey};
+
+  SnapshotReaderManifestPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      # Uma permissão por rota, como a do whoami: nenhuma rota futura herda o acesso.
+      FunctionName: !Ref SnapshotReaderFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/GET/api/v1/snapshot'
+
+  SnapshotReaderSlicePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref SnapshotReaderFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/GET/api/v1/snapshots/*/*'
+
   # ---------------------------------------------------------------- HTTP API
   # CORS só no gateway (AD-26): com CorsConfiguration e sem rota OPTIONS, o API Gateway
   # responde o preflight sem passar pelo authorizer. A Lambda não emite cabeçalhos CORS.
@@ -291,6 +746,37 @@ Resources:
         - llms-api/read
       Target: !Sub 'integrations/${OwnerGateIntegration}'
 
+  SnapshotReaderIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt SnapshotReaderFunction.Arn
+      PayloadFormatVersion: '2.0'
+      TimeoutInMillis: 6000
+
+  SnapshotManifestRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /api/v1/snapshot
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      AuthorizationScopes:
+        - llms-api/read
+      Target: !Sub 'integrations/${SnapshotReaderIntegration}'
+
+  SnapshotSliceRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /api/v1/snapshots/{revision}/{slice}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      AuthorizationScopes:
+        - llms-api/read
+      Target: !Sub 'integrations/${SnapshotReaderIntegration}'
+
   DefaultStage:
     Type: AWS::ApiGatewayV2::Stage
     Properties:
@@ -312,7 +798,7 @@ Resources:
       RetentionInDays: 90
 
   # ---------------------------------------------------------------- S3
-  # Snapshots privados (AD-2/AD-9). Nada lê nem escreve aqui ainda; a leitura segue AD-27.
+  # Snapshots privados (AD-2/AD-9). Só a snapshot-reader lê (AD-27); nada escreve ainda (publicação é Q2).
   SnapshotBucket:
     Type: AWS::S3::Bucket
     DeletionPolicy: Retain

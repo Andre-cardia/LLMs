@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { fixture, workspace, publish } from './helpers/local-fixtures.mjs';
 import { clone, canonicalJson } from '../src/contracts/primitives.mjs';
-import { assertManifest, envelopeBytes, SLICES } from '../src/contracts/snapshot.mjs';
+import { assertManifestResponse, envelopeBytes, SLICES } from '../src/contracts/snapshot.mjs';
 import { SYNTHETIC_FIXTURE } from '../src/contracts/provenance.mjs';
 import { sha256Text } from '../src/adapters/memory-snapshots.mjs';
 import { SnapshotReader } from '../src/application/snapshot-reader.mjs';
@@ -44,9 +44,9 @@ test('leitura completa: SnapshotReader com webDigest → updated, catálogo igua
   assert.deepEqual(result.snapshot.news, fixture.news);
 });
 
-test('manifesto v2 gerado: revisão fixture-1, tabela vazia, tempos = now, objectKey = digest', async () => {
+test('manifesto v2 gerado: revisão fixture-1, tabela vazia, tempos = now, formato externo sem objectKey', async () => {
   const manifest = await createFixtureSource({ digest: webDigest }).readManifest();
-  assertManifest(manifest);
+  assertManifestResponse(manifest);
   assert.equal(manifest.schemaVersion, 2);
   assert.equal(manifest.revision, 'fixture-1');
   assert.deepEqual(manifest.companyMergedInto, []);
@@ -54,7 +54,7 @@ test('manifesto v2 gerado: revisão fixture-1, tabela vazia, tempos = now, objec
   for (const slice of SLICES) {
     const ref = manifest.slices[slice];
     assert.equal(ref.lastSuccessAt, fixture.now);
-    assert.equal(ref.objectKey, ref.digest);
+    assert.equal(Object.hasOwn(ref, 'objectKey'), false);
     assert.equal(ref.digest, sha256Text(envelopeBytes(slice, fixture[slice])));
   }
 });
@@ -193,7 +193,7 @@ test('revisão: falha da porta digest não fica memorizada; a leitura seguinte r
   fail = false;
   const before = calls;
   const manifest = await source.readManifest();
-  assert.equal(assertManifest(manifest).revision, 'fixture-1');
+  assert.equal(assertManifestResponse(manifest).revision, 'fixture-1');
   assert.ok(calls > before);
 });
 

@@ -8,7 +8,7 @@
 // bytes de envelope que o Publisher grava (envelopeBytes) e o digest calculado
 // pela porta injetada (webDigest no navegador, sha256Text em teste).
 import { SYNTHETIC_FIXTURE } from '../contracts/provenance.mjs';
-import { assertManifest, assertSnapshotData, envelopeBytes, MANIFEST_VERSION, SLICES } from '../contracts/snapshot.mjs';
+import { assertManifest, assertSnapshotData, envelopeBytes, toManifestResponse, MANIFEST_VERSION, SLICES } from '../contracts/snapshot.mjs';
 import { clone, freeze, utc } from '../contracts/primitives.mjs';
 import { SYNTHETIC_WORKSPACE } from './fixtures/synthetic-workspace.mjs';
 
@@ -46,8 +46,9 @@ export function createFixtureSource({ digest, dataset = SYNTHETIC_WORKSPACE } = 
     return manifest;
   }
 
+  // Formato externo (AD-27): a mesma projeção que a Lambda de leitura devolve.
   async function readManifest() {
-    return clone(await buildManifest());
+    return toManifestResponse(clone(await buildManifest()));
   }
   async function readSlice(revision, slice) {
     if (revision !== FIXTURE_REVISION) throw new Error('SNAPSHOT_NOT_FOUND');

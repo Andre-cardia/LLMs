@@ -10,7 +10,7 @@ export function workspace() {
   const owner = Symbol('owner-fixture'); const job = Symbol('scheduler-fixture'); const agent = Symbol('agent-fixture');
   const control = new MemoryControl(); const clock = () => now;
   const snapshots = new MemorySnapshots({ control, clock, catalog: data.catalog, authorizeRead: context => context === owner, authorizeUpdate: context => context === job });
-  const reader = new SnapshotReader({ readManifest: () => snapshots.readManifest(owner), readSlice: (revision, slice) => snapshots.readSlice(revision, slice, owner), digest: sha256Text });
+  const reader = new SnapshotReader({ readManifest: () => snapshots.readManifestResponse(owner), readSlice: (revision, slice) => snapshots.readSlice(revision, slice, owner), digest: sha256Text });
   return { data, control, snapshots, reader, owner, job, agent, clock, setClock(value) { now = value; } };
 }
 export function publish(work, runId = 'run-1', prepare = () => {}) {

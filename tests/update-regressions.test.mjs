@@ -35,8 +35,8 @@ test('fechamento exige cotação da sessão e compara instantes; falha repetida 
  const bad=clone(fixture);bad.models[0].companyId='company-3';assert.throws(()=>assertSnapshotData(bad),/Empresa ausente/);
 });
 test('leitor descarta revisão completa cujo refresh termina depois de uma intenção nova',async()=>{
- const {SnapshotReader}=await import('../src/application/snapshot-reader.mjs');const {sha256Text}=await import('../src/adapters/memory-snapshots.mjs');const w=workspace();publish(w,'first');const old=w.snapshots.readManifest(w.owner);publish(w,'new');let calls=0,release;
- const reader=new SnapshotReader({readManifest:()=>++calls===1?new Promise(resolve=>{release=()=>resolve(old);}):w.snapshots.readManifest(w.owner),readSlice:(revision,slice)=>w.snapshots.readSlice(revision,slice,w.owner),digest:sha256Text});
+ const {SnapshotReader}=await import('../src/application/snapshot-reader.mjs');const {sha256Text}=await import('../src/adapters/memory-snapshots.mjs');const w=workspace();publish(w,'first');const old=w.snapshots.readManifestResponse(w.owner);publish(w,'new');let calls=0,release;
+ const reader=new SnapshotReader({readManifest:()=>++calls===1?new Promise(resolve=>{release=()=>resolve(old);}):w.snapshots.readManifestResponse(w.owner),readSlice:(revision,slice)=>w.snapshots.readSlice(revision,slice,w.owner),digest:sha256Text});
  const delayed=reader.refresh();const fresh=await reader.refresh();release();assert.equal((await delayed).status,'superseded');assert.equal(reader.current.manifest.revision,fresh.snapshot.manifest.revision);assert.throws(()=>{reader.current.catalog.companies[0].name='mutated';},TypeError);
 });
 

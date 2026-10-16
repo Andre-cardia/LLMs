@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { evaluateCollection } from '../src/domain/collection-guard.mjs';
-import { assertSnapshotData, assertManifest, assertCompanyMergedInto } from '../src/contracts/snapshot.mjs';
+import { assertSnapshotData, assertManifest, assertManifestResponse, assertCompanyMergedInto } from '../src/contracts/snapshot.mjs';
 import { MemoryControl } from '../src/adapters/memory-control.mjs';
 import { MemorySnapshots, sha256Text } from '../src/adapters/memory-snapshots.mjs';
 import { SnapshotReader } from '../src/application/snapshot-reader.mjs';
@@ -57,7 +57,7 @@ test('referência inválida reverte a curadoria inteira antes da publicação', 
 
 test('leitor conserva conjunto inteiro em falha/schema/digest e não aceita mistura de slices', async () => {
   const work = workspace(); publish(work); await work.reader.refresh();
-  let mode = 'ok'; const manifest = work.snapshots.readManifest(work.owner);
+  let mode = 'ok'; const manifest = work.snapshots.readManifestResponse(work.owner);
   const reader = new SnapshotReader({ readManifest: () => manifest, digest: sha256Text,
     readSlice: (revision, slice) => {
       if (mode === 'fail' && slice === 'news') throw new Error('fonte caiu');
@@ -149,12 +149,16 @@ test('manifesto v2: Publisher não publica tabela incoerente e preserva o contro
 });
 
 test('manifesto v1 é rejeitado pelo contrato e pelo leitor; tabela incoerente torna o leitor indisponível', async () => {
-  const work = workspace(); publish(work); const manifest = work.snapshots.readManifest(work.owner);
-  assert.equal(assertManifest(clone(manifest)).schemaVersion, 2);
-  const v1 = clone(manifest); v1.schemaVersion = 1; delete v1.companyMergedInto;
-  const v1WithTable = { ...clone(manifest), schemaVersion: 1 };
-  const missing = clone(manifest); delete missing.companyMergedInto;
-  for (const bad of [v1, v1WithTable, missing]) assert.throws(() => assertManifest(bad), TypeError);
+  const work = workspace(); publish(work); const internal = work.snapshots.readManifest(work.owner);
+  assert.equal(assertManifest(clone(internal)).schemaVersion, 2);
+  const variants = base => { const v1 = clone(base); v1.schemaVersion = 1; delete v1.companyMergedInto;
+    const missing = clone(base); delete missing.companyMergedInto; return [v1, { ...clone(base), schemaVersion: 1 }, missing]; };
+  for (const bad of variants(internal)) assert.throws(() => assertManifest(bad), TypeError);
+  // O leitor recebe o formato externo (AD-27); o v1 é recusado nos dois contratos.
+  const manifest = work.snapshots.readManifestResponse(work.owner);
+  assert.equal(assertManifestResponse(clone(manifest)).schemaVersion, 2);
+  const [v1, v1WithTable, missing] = variants(manifest);
+  for (const bad of [v1, v1WithTable, missing]) assert.throws(() => assertManifestResponse(bad), TypeError);
   const readSlice = (revision, slice) => work.snapshots.readSlice(revision, slice, work.owner);
   for (const bad of [v1, v1WithTable]) {
     const reader = new SnapshotReader({ readManifest: () => bad, readSlice, digest: sha256Text });

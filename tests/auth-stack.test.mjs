@@ -2,11 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
-import {MARKER, PATHS, renderAuthStack, renderFromRepo, toCommonJs} from '../scripts/render-auth-stack.mjs';
+import {MARKER, PATHS, READER_MARKER, bundleReader, readReaderModules, renderAuthStack, renderFromRepo, toCommonJs} from '../scripts/render-auth-stack.mjs';
 
 const generated = await readFile(PATHS.output, 'utf8');
 const template = await readFile(PATHS.template, 'utf8');
 const source = await readFile(PATHS.source, 'utf8');
+const modules = await readReaderModules();
 
 // Sem pacote de YAML: o template usa indentação fixa de dois espaços, então cada recurso é
 // o bloco entre `  Nome:` e o próximo cabeçalho do mesmo nível.
@@ -28,16 +29,25 @@ function only(type) {
   assert.equal(found.length, 1, `exatamente um ${type}`);
   return found[0];
 }
+// Dois handlers (AD-27): recursos do mesmo tipo são achados pelo nome.
+function named(type, name) {
+  const found = typed(type).find(([resource]) => resource === name);
+  assert.ok(found, `${type} ${name}`);
+  return found;
+}
+const zipCode = fn => fn.split('ZipFile: |\n')[1].split('\n').map(line => line.replace(/^ {10}/, '')).join('\n');
 const has = (block, re, label) => assert.match(block, re, label);
 
 test('template gerado está atualizado com o template e o handler', async () => {
   assert.equal(await renderFromRepo(), generated);
-  assert.equal(renderAuthStack({template, source}), generated, 'render é determinístico');
+  assert.equal(renderAuthStack({template, source, modules}), generated, 'render é determinístico');
   assert.ok(!generated.includes(MARKER));
+  assert.ok(!generated.includes(READER_MARKER));
 });
 
 test('ZipFile contém o handler inteiro, convertido só na linha de export', () => {
-  const [, fn] = only('AWS::Lambda::Function');
+  assert.equal(typed('AWS::Lambda::Function').length, 2, 'owner-gate e snapshot-reader');
+  const [, fn] = named('AWS::Lambda::Function', 'OwnerGateFunction');
   const zip = fn.split('ZipFile: |\n')[1];
   assert.ok(zip, 'ZipFile inline');
   const code = zip.split('\n').map(line => line.replace(/^ {10}/, '')).join('\n').trim();
@@ -47,7 +57,7 @@ test('ZipFile contém o handler inteiro, convertido só na linha de export', () 
 });
 
 test('código inline roda como CommonJS e preserva a regra do dono', async () => {
-  const [, fn] = only('AWS::Lambda::Function');
+  const [, fn] = named('AWS::Lambda::Function', 'OwnerGateFunction');
   const code = fn.split('ZipFile: |\n')[1].split('\n').map(l => l.replace(/^ {10}/, '')).join('\n');
   const module = {exports: {}};
   vm.runInNewContext(code, {module, exports: module.exports, process: {env: {OWNER_SUBS: ' a , ,b ', APP_CLIENT_ID: 'cid'}}, JSON, Set, Object});
@@ -118,15 +128,23 @@ test('HTTP API: CORS só da origem, authorizer JWT com Audience = client, rota e
   has(auth, /Audience:\n\s+- !Ref AppClient\n(?!\s+- )/);
 
   const routes = typed('AWS::ApiGatewayV2::Route');
-  assert.equal(routes.length, 1, 'só /whoami; nenhuma rota OPTIONS nem de snapshot');
-  const [, route] = routes[0];
+  // /whoami e as duas rotas de leitura do AD-27; nenhuma rota OPTIONS (CORS fica no gateway).
+  assert.deepEqual(routes.map(([, b]) => b.match(/RouteKey: (.*)\n/)[1]).sort(),
+    ['GET /api/v1/snapshot', 'GET /api/v1/snapshots/{revision}/{slice}', 'GET /api/v1/whoami']);
+  assert.doesNotMatch(generated, /RouteKey: OPTIONS|RouteKey: \$default|RouteKey: ANY/);
+  const [, route] = named('AWS::ApiGatewayV2::Route', 'WhoamiRoute');
   has(route, /RouteKey: GET \/api\/v1\/whoami\n/);
-  has(route, /AuthorizationType: JWT\n/);
-  has(route, new RegExp(`AuthorizerId: !Ref ${authName}\\n`));
-  has(route, /AuthorizationScopes:\n\s+- llms-api\/read\n(?!\s+- )/);
+  for (const [, block] of routes) {
+    has(block, /AuthorizationType: JWT\n/);
+    has(block, new RegExp(`AuthorizerId: !Ref ${authName}\\n`));
+    has(block, /AuthorizationScopes:\n\s+- llms-api\/read\n(?!\s+- )/);
+  }
+  has(route, /Target: !Sub 'integrations\/\$\{OwnerGateIntegration\}'\n/);
+  for (const name of ['SnapshotManifestRoute', 'SnapshotSliceRoute']) has(named('AWS::ApiGatewayV2::Route', name)[1], /Target: !Sub 'integrations\/\$\{SnapshotReaderIntegration\}'\n/);
 
-  const [, integration] = only('AWS::ApiGatewayV2::Integration');
-  has(integration, /PayloadFormatVersion: '2\.0'\n/);
+  const integrations = typed('AWS::ApiGatewayV2::Integration');
+  assert.deepEqual(integrations.map(([name]) => name).sort(), ['OwnerGateIntegration', 'SnapshotReaderIntegration']);
+  for (const [, integration] of integrations) has(integration, /PayloadFormatVersion: '2\.0'\n/);
 
   const [, stage] = only('AWS::ApiGatewayV2::Stage');
   has(stage, /StageName: \$default\n/);
@@ -136,7 +154,7 @@ test('HTTP API: CORS só da origem, authorizer JWT com Audience = client, rota e
 });
 
 test('Lambda nodejs24.x arm64 com ambiente do dono e papel só de logs', () => {
-  const [, fn] = only('AWS::Lambda::Function');
+  const [, fn] = named('AWS::Lambda::Function', 'OwnerGateFunction');
   has(fn, /Runtime: nodejs24\.x\n/);
   has(fn, /Architectures:\n\s+- arm64\n/);
   has(fn, /Handler: index\.handler\n/);
@@ -145,7 +163,7 @@ test('Lambda nodejs24.x arm64 com ambiente do dono e papel só de logs', () => {
   const timeout = Number(fn.match(/Timeout: (\d+)\n/)[1]);
   assert.ok(timeout <= 5, 'timeout curto');
 
-  const [, role] = only('AWS::IAM::Role');
+  const [, role] = named('AWS::IAM::Role', 'OwnerGateRole');
   const actions = [...role.matchAll(/^\s+- ([a-z0-9]+:[A-Za-z*]+)$/gm)].map(m => m[1]);
   assert.deepEqual(actions.filter(a => a !== 'sts:AssumeRole'), ['logs:CreateLogStream', 'logs:PutLogEvents']);
   assert.doesNotMatch(role, /ManagedPolicyArns|s3:|dynamodb:/);
@@ -184,9 +202,15 @@ test('saídas alimentam a configuração pública do shell', () => {
   assert.deepEqual(Object.keys(outputs).sort(), ['ApiOrigin', 'AppClientId', 'CognitoDomain', 'SnapshotBucketName', 'UserPoolId']);
 });
 
-test('fora do escopo: sem DynamoDB, agendador, rotas de snapshot ou leitura do bucket', () => {
-  assert.doesNotMatch(generated, /AWS::DynamoDB|AWS::Scheduler|AWS::Events|\/snapshots/);
-  assert.doesNotMatch(generated, /s3:GetObject|s3:PutObject/);
+test('fora do escopo: sem DynamoDB, agendador nem escrita no bucket', () => {
+  assert.doesNotMatch(generated, /AWS::DynamoDB|AWS::Scheduler|AWS::Events/);
+  // Publicação é Q2: a única ação S3 concedida (Allow) em todo o stack é s3:GetObject, no papel da snapshot-reader.
+  const allowed = Object.entries(resources).filter(([, b]) => b.includes('Type: AWS::IAM::Role\n'))
+    .flatMap(([name, b]) => [...b.matchAll(/^\s+- (s3:[A-Za-z*]+)$/gm)].map(m => `${name}:${m[1]}`));
+  assert.deepEqual(allowed, ['SnapshotReaderRole:s3:GetObject']);
+  // A bucket policy só nega; nenhuma concessão por recurso.
+  const [, policy] = only('AWS::S3::BucketPolicy');
+  assert.doesNotMatch(policy, /Effect: Allow/);
 });
 
 test('sem segredo, token ou ID real no template', () => {
@@ -211,17 +235,18 @@ test('sem segredo, token ou ID real no template', () => {
 
 test('revisão: render recusa handler grande demais, com tab, import() ou require()', () => {
   const big = `const pad = '${'x'.repeat(5000)}';\n${source}`;
-  assert.throws(() => renderAuthStack({template, source: big}), /OWNER_GATE_TOO_LARGE/);
-  assert.throws(() => renderAuthStack({template, source: `\tconst t = 1;\n${source}`}), /OWNER_GATE_TAB_NOT_ALLOWED/);
-  assert.throws(() => renderAuthStack({template, source: `const m = import('x');\n${source}`}), /OWNER_GATE_IMPORT_NOT_ALLOWED/);
-  assert.throws(() => renderAuthStack({template, source: `const m = require('x');\n${source}`}), /OWNER_GATE_IMPORT_NOT_ALLOWED/);
+  assert.throws(() => renderAuthStack({template, source: big, modules}), /OWNER_GATE_TOO_LARGE/);
+  assert.throws(() => renderAuthStack({template, source: `\tconst t = 1;\n${source}`, modules}), /OWNER_GATE_TAB_NOT_ALLOWED/);
+  assert.throws(() => renderAuthStack({template, source: `const m = import('x');\n${source}`, modules}), /OWNER_GATE_IMPORT_NOT_ALLOWED/);
+  assert.throws(() => renderAuthStack({template, source: `const m = require('x');\n${source}`, modules}), /OWNER_GATE_IMPORT_NOT_ALLOWED/);
   // Comentário citando import não é import.
-  assert.doesNotThrow(() => renderAuthStack({template, source: `// import x from 'y' é proibido aqui\n${source}`}));
+  assert.doesNotThrow(() => renderAuthStack({template, source: `// import x from 'y' é proibido aqui\n${source}`, modules}));
 });
 
 test('revisão: render produz o mesmo template a partir de checkout com CRLF', () => {
   const crlf = text => text.replace(/\n/g, '\r\n');
-  assert.equal(renderAuthStack({template: crlf(template), source: crlf(source)}), generated);
+  const crlfModules = Object.fromEntries(Object.entries(modules).map(([path, text]) => [path, crlf(text)]));
+  assert.equal(renderAuthStack({template: crlf(template), source: crlf(source), modules: crlfModules}), generated);
 });
 
 test('revisão: prefixo do domínio recusa aws, amazon e cognito já na validação de parâmetros', () => {
@@ -232,7 +257,7 @@ test('revisão: prefixo do domínio recusa aws, amazon e cognito já na validaç
 });
 
 test('revisão: invocação da Lambda limitada à rota whoami desta API', () => {
-  const [, permission] = only('AWS::Lambda::Permission');
+  const [, permission] = named('AWS::Lambda::Permission', 'OwnerGateInvokePermission');
   has(permission, /Principal: apigateway\.amazonaws\.com\n/);
   has(permission, /SourceArn: !Sub 'arn:\$\{AWS::Partition\}:execute-api:\$\{AWS::Region\}:\$\{AWS::AccountId\}:\$\{HttpApi\}\/\*\/GET\/api\/v1\/whoami'\n/);
 });
@@ -258,4 +283,115 @@ test('revisão: stage registra acesso sem token nem claims', () => {
   assert.doesNotMatch(format, /authorization|claims|jwt/i);
   has(format, /\$context\.requestId/);
   has(format, /\$context\.authorizer\.error/);
+});
+
+// ---------- Leitura de snapshot (AD-27) ----------
+
+test('snapshot-reader: nodejs24.x arm64, ambiente do dono e do bucket', () => {
+  const [, fn] = named('AWS::Lambda::Function', 'SnapshotReaderFunction');
+  has(fn, /Runtime: nodejs24\.x\n/);
+  has(fn, /Architectures:\n\s+- arm64\n/);
+  has(fn, /Handler: index\.handler\n/);
+  has(fn, /Role: !GetAtt SnapshotReaderRole\.Arn\n/);
+  has(fn, /OWNER_SUBS: !Ref OwnerSubs\n/);
+  has(fn, /APP_CLIENT_ID: !Ref AppClient\n/);
+  has(fn, /SNAPSHOT_BUCKET: !Ref SnapshotBucket\n/);
+  has(fn, /LogGroup: !Ref SnapshotReaderLogGroup\n/);
+  assert.ok(Number(fn.match(/Timeout: (\d+)\n/)[1]) <= 6, 'timeout curto');
+});
+
+test('snapshot-reader: papel com logs e só s3:GetObject em manifest/* e slices/* do bucket', () => {
+  const [, role] = named('AWS::IAM::Role', 'SnapshotReaderRole');
+  const actions = [...role.matchAll(/^\s+- ([a-z0-9]+:[A-Za-z*]+)$/gm)].map(m => m[1]);
+  assert.deepEqual(actions.filter(a => a !== 'sts:AssumeRole'), ['logs:CreateLogStream', 'logs:PutLogEvents', 's3:GetObject']);
+  assert.doesNotMatch(role, /ManagedPolicyArns|dynamodb:|Resource: '?\*'?\n/);
+  has(role, /Resource: !GetAtt SnapshotReaderLogGroup\.Arn\n/);
+  const s3 = role.slice(role.indexOf('- s3:GetObject'));
+  const resourcesOf = [...s3.matchAll(/^\s+- (!Sub '.*')$/gm)].map(m => m[1]);
+  assert.deepEqual(resourcesOf, ["!Sub '${SnapshotBucket.Arn}/manifest/*'", "!Sub '${SnapshotBucket.Arn}/slices/*'"]);
+  has(role, /RoleName: !Sub 'llms-\$\{EnvironmentName\}-snapshot-reader-\$\{AWS::Region\}'\n/);
+});
+
+test('snapshot-reader: invocação limitada às duas rotas de snapshot desta API, sem curinga de sufixo', () => {
+  const prefix = "SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/GET/api/v1/";
+  for (const [name, route] of [['SnapshotReaderManifestPermission', 'snapshot'], ['SnapshotReaderSlicePermission', 'snapshots/*/*']]) {
+    const [, permission] = named('AWS::Lambda::Permission', name);
+    has(permission, /FunctionName: !Ref SnapshotReaderFunction\n/);
+    has(permission, /Principal: apigateway\.amazonaws\.com\n/);
+    assert.ok(permission.includes(`${prefix}${route}'\n`), name);
+  }
+  assert.doesNotMatch(generated, /GET\/api\/v1\/snapshot\*'/);
+});
+
+test('snapshot-reader: ZipFile é o pacote dos imports locais e roda como CommonJS com a regra do dono', async () => {
+  const [, fn] = named('AWS::Lambda::Function', 'SnapshotReaderFunction');
+  const code = zipCode(fn);
+  assert.equal(code.trim(), bundleReader(modules).trim());
+  assert.doesNotMatch(code, /^\s*(import|export)\s/m);
+  assert.deepEqual(Object.keys(modules).sort(), ['src/adapters/lambda/owner-gate.mjs', 'src/adapters/lambda/snapshot-reader.mjs', 'src/contracts/manifest.mjs', 'src/contracts/primitives.mjs']);
+  const requires = [];
+  const module = {exports: {}};
+  vm.runInNewContext(code, {module, exports: module.exports, require: name => { requires.push(name); throw new Error('sem SDK no teste'); },
+    process: {env: {OWNER_SUBS: 'owner-a', APP_CLIENT_ID: 'cid', SNAPSHOT_BUCKET: 'bucket'}}, JSON, Set, Map, Object, Array, String, Number, Date, RegExp, Reflect, TypeError, Error, BigInt, Symbol, structuredClone});
+  const ev = (c, routeKey = 'GET /api/v1/snapshot') => ({routeKey, requestContext: {requestId: 'r', authorizer: {jwt: {claims: c}}}});
+  const outsider = await module.exports.handler(ev({token_use: 'access', client_id: 'cid', sub: 'b'}));
+  assert.equal(outsider.statusCode, 403);
+  assert.deepEqual(requires, [], 'não dono não carrega o SDK nem lê o S3');
+  const owner = await module.exports.handler(ev({token_use: 'access', client_id: 'cid', sub: 'owner-a'}));
+  assert.equal(owner.statusCode, 503);
+  assert.equal(owner.headers['cache-control'], 'private, no-store');
+  assert.deepEqual(requires, ['@aws-sdk/client-s3']);
+});
+
+test('revisão: pacote inline completo com SDK S3 falso serve manifesto e bytes exatos; chave ausente é 404', async () => {
+  const {fakeBucket, mirrorPublications} = await import('./helpers/snapshot-bucket.mjs');
+  const {workspace, publish} = await import('./helpers/local-fixtures.mjs');
+  const work = workspace(); publish(work);
+  const bucket = fakeBucket();
+  const [revision] = mirrorPublications(work, bucket, [work.control.read().snapshotRevision]);
+  class GetObjectCommand { constructor(input) { this.input = input; } }
+  const sdk = {GetObjectCommand, S3Client: class {
+    async send(command) {
+      const text = bucket.objects.get(command.input.Key);
+      if (text === undefined) { const error = new Error('denied'); error.name = 'AccessDenied'; throw error; }
+      return {Body: {transformToString: async encoding => { assert.equal(encoding, 'utf-8'); return text; }}};
+    }
+  }};
+  const [, fn] = named('AWS::Lambda::Function', 'SnapshotReaderFunction');
+  const module = {exports: {}};
+  const logs = [];
+  vm.runInNewContext(zipCode(fn), {module, exports: module.exports, require: name => { assert.equal(name, '@aws-sdk/client-s3'); return sdk; },
+    console: {warn: line => logs.push(line), error: line => logs.push(line)},
+    // Só o que o runtime do Lambda injeta; os built-ins são os do próprio contexto,
+    // como num único realm (passar Object/JSON do host quebraria a checagem de protótipo).
+    process: {env: {OWNER_SUBS: 'owner-a', APP_CLIENT_ID: 'cid', SNAPSHOT_BUCKET: 'bucket'}}, structuredClone});
+  const claims = {token_use: 'access', client_id: 'cid', sub: 'owner-a'};
+  const ev = (routeKey, pathParameters) => ({routeKey, pathParameters, requestContext: {requestId: 'r', authorizer: {jwt: {claims}}}});
+  const manifest = await module.exports.handler(ev('GET /api/v1/snapshot'));
+  assert.equal(manifest.statusCode, 200, `logs: ${logs.join(' | ')}`);
+  const body = JSON.parse(manifest.body);
+  assert.equal(body.revision, revision);
+  assert.equal(Object.values(body.slices).some(ref => 'objectKey' in ref), false);
+  const slice = await module.exports.handler(ev('GET /api/v1/snapshots/{revision}/{slice}', {revision, slice: 'catalog'}));
+  assert.equal(slice.statusCode, 200);
+  assert.equal(slice.body, work.snapshots.readSlice(revision, 'catalog', work.owner));
+  bucket.objects.clear();
+  const missing = await module.exports.handler(ev('GET /api/v1/snapshot'));
+  assert.equal(missing.statusCode, 404);
+  assert.ok(logs.some(line => line.includes('AccessDenied')), 'nome do erro do S3 vai ao log');
+  assert.equal(logs.some(line => /owner-a|eyJ|catalog/.test(line)), false, 'log sem sub nem conteúdo');
+});
+
+test('render do leitor recusa import fora da forma, require não permitido, ciclo e módulo ausente', async () => {
+  const entry = 'src/adapters/lambda/snapshot-reader.mjs';
+  const withEntry = text => ({...modules, [entry]: text});
+  assert.throws(() => bundleReader(withEntry(`import x from './owner-gate.mjs';\n${modules[entry]}`)), /READER_IMPORT_NOT_ALLOWED/);
+  assert.throws(() => bundleReader(withEntry(`const m = import('./x.mjs');\n${modules[entry]}`)), /READER_IMPORT_NOT_ALLOWED/);
+  assert.throws(() => bundleReader(withEntry(`const fs = require('node:fs');\n${modules[entry]}`)), /READER_REQUIRE_NOT_ALLOWED/);
+  assert.throws(() => bundleReader(withEntry(`import {a} from './missing.mjs';\n${modules[entry]}`)), /READER_MODULE_MISSING/);
+  const cyclic = {...modules, 'src/contracts/primitives.mjs': `import {SLICES} from './manifest.mjs';\n${modules['src/contracts/primitives.mjs']}`};
+  assert.throws(() => bundleReader(cyclic), /READER_IMPORT_CYCLE/);
+  assert.throws(() => bundleReader({...modules, 'src/contracts/primitives.mjs': `export * from './x.mjs';\n`}), /READER_EXPORT_NOT_ALLOWED/);
+  const big = {...modules, 'src/contracts/primitives.mjs': `export const pad = '${'x'.repeat(40000)}';\n${modules['src/contracts/primitives.mjs']}`};
+  assert.throws(() => renderAuthStack({template, source, modules: big}), /READER_TOO_LARGE/);
 });

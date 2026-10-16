@@ -637,3 +637,61 @@ test('revisão: logout revoga o refresh token mesmo se o /oauth2/revoke falhar',
 test('revisão: callback sem portas lança AuthError tipado', () => {
   assert.throws(() => completeCallback({config: CONFIG, ports: {}}), errorCode('AUTH_PORTS_MISSING'));
 });
+
+// ---------- forceRefresh (AD-27: 401 da API) ----------
+
+test('forceRefresh: renova pelo refresh token mesmo longe da margem e devolve o token novo', async () => {
+  const now = clock();
+  const {auth, calls} = await authenticated({now, responses: [{status: 200, body: {access_token: 'access-2', expires_in: 3600, token_type: 'Bearer'}}]});
+  assert.equal(await auth.accessToken(), 'access-1');
+  assert.equal(calls.length, 1, 'sem forceRefresh, nada a renovar');
+  assert.equal(await auth.accessToken({forceRefresh: true}), 'access-2');
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[1].params, {grant_type: 'refresh_token', client_id: 'testclient123', refresh_token: 'refresh-1'});
+  assert.equal(await auth.accessToken(), 'access-2');
+  assert.equal(await auth.accessToken({forceRefresh: false}), 'access-2');
+  assert.equal(calls.length, 2);
+});
+
+test('forceRefresh: sem refresh token devolve null, sem POST', async () => {
+  const {browser} = await forwarded();
+  const made = session({browser, responses: [{status: 200, body: {access_token: 'only', expires_in: 3600, token_type: 'Bearer'}}]});
+  await made.auth.completeLogin();
+  assert.equal(await made.auth.accessToken({forceRefresh: true}), null);
+  assert.equal(made.calls.length, 1);
+  const off = session();
+  assert.equal(await off.auth.accessToken({forceRefresh: true}), null, 'sem sessão');
+  assert.equal(off.calls.length, 0);
+});
+
+test('forceRefresh: renovação recusada zera a sessão; falha de rede não devolve o token recusado', async () => {
+  const refused = await authenticated({responses: [{status: 400, body: {error: 'invalid_grant'}}]});
+  assert.equal(await refused.auth.accessToken({forceRefresh: true}), null);
+  assert.equal(refused.auth.isAuthenticated(), false);
+  const offline = await authenticated({responses: [new Error('offline')]});
+  await assert.rejects(offline.auth.accessToken({forceRefresh: true}), errorCode('AUTH_NETWORK_ERROR'));
+  assert.equal(offline.auth.isAuthenticated(), true, 'a sessão continua para a próxima tentativa');
+  assert.equal(await offline.auth.accessToken(), 'access-1');
+});
+
+test('forceRefresh: sessão desligada devolve null', async () => {
+  const auth = createAuthSession({config: AUTH_CONFIG});
+  assert.equal(await auth.accessToken({forceRefresh: true}), null);
+});
+
+test('revisão: falha de rede numa renovação forçada não encerra a sessão', async () => {
+  const made = await authenticated({responses: [new Error('offline')]});
+  await assert.rejects(made.auth.accessToken({forceRefresh: true, rejected: 'access-1'}), errorCode('AUTH_NETWORK_ERROR'));
+  assert.equal(made.auth.isAuthenticated(), true);
+});
+
+test('revisão: três 401 em paralelo fazem uma única renovação', async () => {
+  const made = await authenticated({responses: [{status: 200, body: {access_token: 'access-2', expires_in: 3600}}]});
+  const before = made.calls.length;
+  const results = await Promise.all([1, 2, 3].map(() => made.auth.accessToken({forceRefresh: true, rejected: 'access-1'})));
+  assert.deepEqual(results, ['access-2', 'access-2', 'access-2']);
+  assert.equal(made.calls.length - before, 1);
+  // Um 401 que chega depois da renovação usa o token novo, sem outra ida ao Cognito.
+  assert.equal(await made.auth.accessToken({forceRefresh: true, rejected: 'access-1'}), 'access-2');
+  assert.equal(made.calls.length - before, 1);
+});

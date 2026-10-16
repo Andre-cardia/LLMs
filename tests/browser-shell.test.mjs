@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {AccessDeniedError} from '../src/contracts/access.mjs';
+import {AccessDeniedError, RevisionSupersededError} from '../src/contracts/access.mjs';
 import {envelopeBytes} from '../src/contracts/snapshot.mjs';
 import {PREFERENCE_KEYS} from '../src/contracts/exploration.mjs';
 import {SYNTHETIC_FIXTURE} from '../src/contracts/provenance.mjs';
@@ -44,7 +44,7 @@ function controlledSource() {
       const news = envelopeBytes('news', SYNTHETIC_WORKSPACE.news.map(n => ({...n, relevantCompanyIds: n.relevantCompanyIds.filter(id => id !== control.catalogWithout), citedCompanyIds: n.citedCompanyIds.filter(id => id !== control.catalogWithout)})).filter(n => n.relevantCompanyIds.length));
       control.bytes = {catalog: bytes, models, news};
       const slices = {};
-      for (const slice of ['catalog', 'models', 'news']) { const hex = await webDigest(control.bytes[slice]); slices[slice] = {objectKey: hex, digest: hex, lastSuccessAt: manifest.publishedAt}; }
+      for (const slice of ['catalog', 'models', 'news']) { const hex = await webDigest(control.bytes[slice]); slices[slice] = {digest: hex, lastSuccessAt: manifest.publishedAt}; }
       return {...manifest, revision: control.revision, slices, companyMergedInto: control.companyMergedInto};
     },
     async readSlice(_revision, slice) {
@@ -246,6 +246,53 @@ test('snapshot vencido: reader trocou de revisão entre ler e despachar → adva
   assert.deepEqual(await first, {status:'stale'});
   assert.equal(shell.getState().snapshotRevision, 'fixture-3');
   assert.equal(shell.getState().intentToken, tokenAfter, 'nenhum dispatch do frame vencido');
+});
+
+// Fonte cuja slice da revisão anunciada já foi superada (404/410 da porta HTTP).
+function supersedingSource({failures}) {
+  const {source, control} = controlledSource();
+  const counts = {manifest: 0, superseded: 0};
+  const readManifest = source.readManifest;
+  return {control, counts, source: {...source,
+    async readManifest() { counts.manifest += 1; return readManifest(); },
+    async readSlice(revision, slice) {
+      if (slice === 'models' && counts.superseded < failures()) { counts.superseded += 1; throw new RevisionSupersededError(); }
+      return source.readSlice(revision, slice);
+    }}};
+}
+
+test('revisão superada (AD-27): a raiz faz um único novo refresh e avança', async () => {
+  let failures = 0;
+  const made = supersedingSource({failures: () => failures});
+  const {shell} = await started({source: made.source});
+  made.control.revision = 'fixture-2';
+  failures = 1;
+  const before = made.counts.manifest;
+  assert.deepEqual(await shell.refreshSnapshot(), {status:'advanced', revision:'fixture-2'});
+  assert.equal(made.counts.manifest - before, 2, 'um refresh superado e um único novo');
+  assert.equal(shell.getState().snapshotRevision, 'fixture-2');
+});
+
+test('revisão superada duas vezes: um único novo refresh, sem laço; o store fica na revisão anterior', async () => {
+  let blocked = false;
+  const made = supersedingSource({failures: () => blocked ? Infinity : 0});
+  const {shell} = await started({source: made.source});
+  blocked = true; made.control.revision = 'fixture-2';
+  const before = made.counts.manifest;
+  assert.deepEqual(await shell.refreshSnapshot(), {status:'kept-last-good', errorCode:'REVISION_SUPERSEDED'});
+  assert.equal(made.counts.manifest - before, 2, 'exatamente duas leituras de manifesto');
+  assert.equal(shell.getState().snapshotRevision, FIXTURE_REVISION);
+  assert.equal(shell.status, 'updated');
+});
+
+test('falha comum (não superada) não repete o refresh', async () => {
+  const {source, control} = controlledSource();
+  let count = 0, failing = false;
+  const {shell} = await started({source: {...source, async readManifest() { count += 1; if (failing) throw new Error('down'); return source.readManifest(); }}});
+  failing = true; control.revision = 'fixture-2';
+  const before = count;
+  assert.deepEqual(await shell.refreshSnapshot(), {status:'kept-last-good'});
+  assert.equal(count - before, 1);
 });
 
 test('refreshSnapshot: mesma revisão do store não despacha', async () => {
@@ -474,4 +521,12 @@ test('revisão: fonte sem marcador de procedência é recusada', () => {
   const base = createFixtureSource({digest: webDigest});
   const {provenance, ...rest} = base;
   assert.throws(() => createBrowserShell({history: fakeHistory(), location: {search: ''}, storage: fakeStorage(), clock: () => SYNTHETIC_WORKSPACE.now, digest: webDigest, source: rest}), TypeError);
+});
+
+test('revisão: revisão superada na carga também ganha o único novo refresh', async () => {
+  let failures = 1;
+  const made = supersedingSource({failures: () => failures});
+  const {shell} = makeShell({source: made.source});
+  assert.deepEqual(await shell.start(), {status: 'updated'});
+  assert.equal(made.counts.manifest, 2, 'um refresh superado e um único novo');
 });

@@ -111,7 +111,7 @@ export function createBrowserShell(ports, internals = {}) {
     ensureAlive();
     if (status === 'starting' || status === 'updated') throw new Error('SHELL_ALREADY_STARTED');
     status = 'starting';
-    const result = await reader.refresh();
+    const result = await readOnce(reader);
     if (disposed) return {status:'disposed'};
     if (result.status === 'access-denied') { status = 'access-denied'; return {status}; }
     if (result.status !== 'updated') { status = 'unavailable'; return {status}; }
@@ -135,12 +135,20 @@ export function createBrowserShell(ports, internals = {}) {
     return store.getState();
   }
 
+  // Revisão recém-superada (AD-27): a slice anunciada sumiu (404/410) entre o
+  // manifesto e a leitura. Um único novo refresh lê o manifesto novo; um segundo
+  // `REVISION_SUPERSEDED` volta ao chamador, sem laço. Vale na carga e em refreshSnapshot.
+  async function readOnce(currentReader) {
+    const result = await currentReader.refresh();
+    if (result.errorCode !== 'REVISION_SUPERSEDED' || disposed) return result;
+    return currentReader.refresh();
+  }
   async function refresh() {
     const currentReader = reader, currentView = view;
-    const result = await currentReader.refresh();
+    const result = await readOnce(currentReader);
     if (disposed) return {status:'disposed'};
     if (result.status === 'access-denied') { dispose('access-denied'); return {status:'access-denied'}; }
-    if (result.status !== 'updated') return {status:result.status};
+    if (result.status !== 'updated') return result.errorCode === 'REVISION_SUPERSEDED' ? {status:result.status, errorCode:result.errorCode} : {status:result.status};
     const revision = result.snapshot.manifest.revision;
     let frame;
     try { frame = await currentView.frame(); }

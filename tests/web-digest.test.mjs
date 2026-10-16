@@ -47,7 +47,7 @@ test('entrada não string lança TypeError antes de chamar crypto.subtle', async
 test('compatibilidade com SnapshotReader: refresh() aceita slices gravadas por sha256Text (MemorySnapshots) com webDigest injetado', async () => {
   const work = workspace();
   publish(work);
-  const manifest = work.snapshots.readManifest(work.owner);
+  const manifest = work.snapshots.readManifestResponse(work.owner);
   const reader = new SnapshotReader({
     readManifest: () => manifest,
     readSlice: (revision, slice) => work.snapshots.readSlice(revision, slice, work.owner),
@@ -61,7 +61,7 @@ test('compatibilidade com SnapshotReader: refresh() aceita slices gravadas por s
 test('revisão: caminho negativo -- webDigest que diverge de sha256Text faz refresh() cair em unavailable, não updated', async () => {
   const work = workspace();
   publish(work);
-  const manifest = work.snapshots.readManifest(work.owner);
+  const manifest = work.snapshots.readManifestResponse(work.owner);
   const diverging = async (bytes) => `${(await webDigest(bytes)).slice(0, 63)}0`; // último char trocado, ainda casa /^[a-f0-9]{64}$/
   const reader = new SnapshotReader({
     readManifest: () => manifest,

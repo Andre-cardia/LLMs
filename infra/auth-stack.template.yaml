@@ -1,7 +1,8 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >-
   LLMs - camada autenticada (AD-9/AD-26) de um ambiente: Cognito (managed login),
-  API Gateway HTTP API com JWT authorizer, Lambda owner-gate e S3 privado de snapshots.
+  API Gateway HTTP API com JWT authorizer, Lambdas owner-gate e snapshot-reader e S3
+  privado de snapshots (leitura AD-27).
   Um stack por ambiente (preview, prod) a partir do mesmo template (AD-14).
 
 Parameters:
@@ -186,6 +187,84 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/GET/api/v1/whoami'
 
+  # Leitura de snapshot (AD-27): mesma regra de dono, só s3:GetObject em manifest/* e slices/*.
+  SnapshotReaderLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/llms-${EnvironmentName}-snapshot-reader'
+      RetentionInDays: 30
+
+  SnapshotReaderRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'llms-${EnvironmentName}-snapshot-reader-${AWS::Region}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: logs-and-snapshot-read
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !GetAtt SnapshotReaderLogGroup.Arn
+              # Sem s3:ListBucket: chave ausente volta AccessDenied, tratado como 404.
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource:
+                  - !Sub '${SnapshotBucket.Arn}/manifest/*'
+                  - !Sub '${SnapshotBucket.Arn}/slices/*'
+
+  SnapshotReaderFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'llms-${EnvironmentName}-snapshot-reader'
+      Description: GET /api/v1/snapshot e /api/v1/snapshots/{revision}/{slice} - leitura do S3 privado (AD-27)
+      Runtime: nodejs24.x
+      Architectures:
+        - arm64
+      Handler: index.handler
+      MemorySize: 256
+      Timeout: 5
+      Role: !GetAtt SnapshotReaderRole.Arn
+      LoggingConfig:
+        LogGroup: !Ref SnapshotReaderLogGroup
+        LogFormat: JSON
+      Environment:
+        Variables:
+          OWNER_SUBS: !Ref OwnerSubs
+          APP_CLIENT_ID: !Ref AppClient
+          SNAPSHOT_BUCKET: !Ref SnapshotBucket
+      Code:
+        # Gerado por scripts/render-auth-stack.mjs a partir de src/adapters/lambda/snapshot-reader.mjs.
+        ZipFile: |
+          __SNAPSHOT_READER_SOURCE__
+
+  SnapshotReaderManifestPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      # Uma permissão por rota, como a do whoami: nenhuma rota futura herda o acesso.
+      FunctionName: !Ref SnapshotReaderFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/GET/api/v1/snapshot'
+
+  SnapshotReaderSlicePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref SnapshotReaderFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/GET/api/v1/snapshots/*/*'
+
   # ---------------------------------------------------------------- HTTP API
   # CORS só no gateway (AD-26): com CorsConfiguration e sem rota OPTIONS, o API Gateway
   # responde o preflight sem passar pelo authorizer. A Lambda não emite cabeçalhos CORS.
@@ -238,6 +317,37 @@ Resources:
         - llms-api/read
       Target: !Sub 'integrations/${OwnerGateIntegration}'
 
+  SnapshotReaderIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt SnapshotReaderFunction.Arn
+      PayloadFormatVersion: '2.0'
+      TimeoutInMillis: 6000
+
+  SnapshotManifestRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /api/v1/snapshot
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      AuthorizationScopes:
+        - llms-api/read
+      Target: !Sub 'integrations/${SnapshotReaderIntegration}'
+
+  SnapshotSliceRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /api/v1/snapshots/{revision}/{slice}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      AuthorizationScopes:
+        - llms-api/read
+      Target: !Sub 'integrations/${SnapshotReaderIntegration}'
+
   DefaultStage:
     Type: AWS::ApiGatewayV2::Stage
     Properties:
@@ -259,7 +369,7 @@ Resources:
       RetentionInDays: 90
 
   # ---------------------------------------------------------------- S3
-  # Snapshots privados (AD-2/AD-9). Nada lê nem escreve aqui ainda; a leitura segue AD-27.
+  # Snapshots privados (AD-2/AD-9). Só a snapshot-reader lê (AD-27); nada escreve ainda (publicação é Q2).
   SnapshotBucket:
     Type: AWS::S3::Bucket
     DeletionPolicy: Retain
