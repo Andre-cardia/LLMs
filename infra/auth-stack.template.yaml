@@ -1,8 +1,8 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >-
   LLMs - camada autenticada (AD-9/AD-26) de um ambiente: Cognito (managed login),
-  API Gateway HTTP API com JWT authorizer, Lambdas owner-gate e snapshot-reader e S3
-  privado de snapshots (leitura AD-27).
+  API Gateway HTTP API com JWT authorizer, Lambdas owner-gate e snapshot-reader, Lambda
+  snapshot-publisher de invocação manual (Q2) e S3 privado de snapshots (AD-27).
   Um stack por ambiente (preview, prod) a partir do mesmo template (AD-14).
 
 Parameters:
@@ -265,6 +265,78 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/GET/api/v1/snapshots/*/*'
 
+  # Publicação (Q2): só `aws lambda invoke`, sem rota HTTP, sem agendador e sem
+  # AWS::Lambda::Permission. Lease, fencing e CAS por escrita condicional no próprio bucket.
+  SnapshotPublisherLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/llms-${EnvironmentName}-snapshot-publisher'
+      RetentionInDays: 30
+
+  SnapshotPublisherRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'llms-${EnvironmentName}-snapshot-publisher-${AWS::Region}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: logs-and-snapshot-publish
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !GetAtt SnapshotPublisherLogGroup.Arn
+              # Sem s3:ListBucket: chave ausente volta AccessDenied, tratado como ausente.
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource:
+                  - !Sub '${SnapshotBucket.Arn}/slices/*'
+                  - !Sub '${SnapshotBucket.Arn}/manifest/*'
+                  - !Sub '${SnapshotBucket.Arn}/control/*'
+
+  # Invocação assíncrona não repete: sem retry automático (o CAS perdido é final).
+  SnapshotPublisherInvokeConfig:
+    Type: AWS::Lambda::EventInvokeConfig
+    Properties:
+      FunctionName: !Ref SnapshotPublisherFunction
+      Qualifier: $LATEST
+      MaximumRetryAttempts: 0
+
+  SnapshotPublisherFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'llms-${EnvironmentName}-snapshot-publisher'
+      Description: Publica o dataset sintetico no S3 privado (Q2) - so aws lambda invoke, sem rota HTTP
+      Runtime: nodejs24.x
+      Architectures:
+        - arm64
+      Handler: index.handler
+      MemorySize: 256
+      Timeout: 30
+      # Uma publicação por vez, além do lease.
+      ReservedConcurrentExecutions: 1
+      Role: !GetAtt SnapshotPublisherRole.Arn
+      LoggingConfig:
+        LogGroup: !Ref SnapshotPublisherLogGroup
+        LogFormat: JSON
+      Environment:
+        Variables:
+          SNAPSHOT_BUCKET: !Ref SnapshotBucket
+      Code:
+        # Gerado por scripts/render-auth-stack.mjs a partir de src/adapters/lambda/snapshot-publisher.mjs.
+        ZipFile: |
+          __SNAPSHOT_PUBLISHER_SOURCE__
+
   # ---------------------------------------------------------------- HTTP API
   # CORS só no gateway (AD-26): com CorsConfiguration e sem rota OPTIONS, o API Gateway
   # responde o preflight sem passar pelo authorizer. A Lambda não emite cabeçalhos CORS.
@@ -369,7 +441,7 @@ Resources:
       RetentionInDays: 90
 
   # ---------------------------------------------------------------- S3
-  # Snapshots privados (AD-2/AD-9). Só a snapshot-reader lê (AD-27); nada escreve ainda (publicação é Q2).
+  # Snapshots privados (AD-2/AD-9). A snapshot-reader lê (AD-27); só a snapshot-publisher escreve (Q2).
   SnapshotBucket:
     Type: AWS::S3::Bucket
     DeletionPolicy: Retain
@@ -427,6 +499,31 @@ Resources:
             Condition:
               StringEquals:
                 s3:authType: REST-QUERY-STRING
+          # Slices e manifestos de revisão são imutáveis: PutObject sem If-None-Match é negado
+          # (escrita condicional imposta, S3 User Guide "Enforce conditional writes").
+          - Sid: DenyUnconditionalImmutablePut
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:PutObject'
+            Resource:
+              - !Sub '${SnapshotBucket.Arn}/slices/*'
+              - !Sub '${SnapshotBucket.Arn}/manifest/revisions/*'
+            Condition:
+              'Null':
+                s3:if-none-match: 'true'
+          # Ponteiro e lease só mudam por escrita condicional (criação ou If-Match): nenhum
+          # PutObject cego troca o snapshot publicado nem o lease.
+          - Sid: DenyBlindPointerAndLeasePut
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:PutObject'
+            Resource:
+              - !Sub '${SnapshotBucket.Arn}/manifest/current.json'
+              - !Sub '${SnapshotBucket.Arn}/control/*'
+            Condition:
+              'Null':
+                s3:if-match: 'true'
+                s3:if-none-match: 'true'
 
 Outputs:
   ApiOrigin:

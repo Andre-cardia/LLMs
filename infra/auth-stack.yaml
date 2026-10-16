@@ -1,10 +1,11 @@
 # Gerado por scripts/render-auth-stack.mjs a partir de infra/auth-stack.template.yaml,
-# src/adapters/lambda/owner-gate.mjs e src/adapters/lambda/snapshot-reader.mjs. Não editar à mão.
+# src/adapters/lambda/owner-gate.mjs, src/adapters/lambda/snapshot-reader.mjs e
+# src/adapters/lambda/snapshot-publisher.mjs. Não editar à mão.
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >-
   LLMs - camada autenticada (AD-9/AD-26) de um ambiente: Cognito (managed login),
-  API Gateway HTTP API com JWT authorizer, Lambdas owner-gate e snapshot-reader e S3
-  privado de snapshots (leitura AD-27).
+  API Gateway HTTP API com JWT authorizer, Lambdas owner-gate e snapshot-reader, Lambda
+  snapshot-publisher de invocação manual (Q2) e S3 privado de snapshots (AD-27).
   Um stack por ambiente (preview, prod) a partir do mesmo template (AD-14).
 
 Parameters:
@@ -472,6 +473,17 @@ Resources:
           // As três últimas revisões continuam legíveis (AD-27).
           const READABLE_REVISIONS = 3;
           const POINTER_VERSION = 1;
+          const LEASE_VERSION = 1;
+          // Disposição do bucket privado de snapshots (AD-27, Q2), única para o Publicador
+          // S3 (src/adapters/s3-snapshots.mjs) e a Lambda de leitura:
+          //   manifest/current.json               ponteiro {schemaVersion: 1, revision, readableRevisions}
+          //   manifest/revisions/{revision}.json  PublishedManifest interno (com objectKey), imutável
+          //   slices/{digest}                     bytes de envelope, imutáveis
+          //   control/lease.json                  lease do Publicador {schemaVersion, owner, expiresAt, fencingToken}
+          const POINTER_KEY = 'manifest/current.json';
+          const SLICE_PREFIX = 'slices/';
+          const LEASE_KEY = 'control/lease.json';
+          const revisionKey = revision => `manifest/revisions/${revision}.json`;
           const DIGEST = /^[a-f0-9]{64}$/;
           const MERGE_FIELD = 'INVALID_MERGE_TABLE';
 
@@ -551,7 +563,14 @@ Resources:
             if (value.readableRevisions[0] !== value.revision) fail('readableRevisions', 'primeira diferente da corrente');
             return value;
           }
-          return {SLICES, MANIFEST_VERSION, MAX_COMPANY_MERGES, REVISION_PATTERN, READABLE_REVISIONS, POINTER_VERSION, assertRevision, assertCompanyMergedInto, assertManifest, assertManifestResponse, toManifestResponse, assertSnapshotPointer};
+          // Lease do Publicador em control/lease.json: só ele o grava, por escrita condicional.
+          function assertSnapshotLease(value) {
+            object(value, ['schemaVersion', 'owner', 'expiresAt', 'fencingToken'], 'SnapshotLease');
+            oneOf(value.schemaVersion, [LEASE_VERSION], 'schemaVersion'); string(value.owner, 'owner'); utc(value.expiresAt, 'expiresAt');
+            if (!Number.isSafeInteger(value.fencingToken) || value.fencingToken < 1) fail('fencingToken');
+            return value;
+          }
+          return {SLICES, MANIFEST_VERSION, MAX_COMPANY_MERGES, REVISION_PATTERN, READABLE_REVISIONS, POINTER_VERSION, LEASE_VERSION, POINTER_KEY, SLICE_PREFIX, LEASE_KEY, revisionKey, assertRevision, assertCompanyMergedInto, assertManifest, assertManifestResponse, toManifestResponse, assertSnapshotPointer, assertSnapshotLease};
           })();
           // src/adapters/lambda/snapshot-reader.mjs
           // Lambda de leitura de snapshot (AD-27), atrás do mesmo JWT authorizer de /whoami.
@@ -560,7 +579,8 @@ Resources:
           // A regra de dono é a do owner-gate, reaproveitada por import local: quem não é
           // dono recebe o mesmo 403 genérico, sem nenhuma leitura no S3.
           //
-          // Layout do bucket (só leitura aqui; a publicação é Q2):
+          // Layout do bucket (constantes em src/contracts/manifest.mjs; quem grava é o
+          // Publicador S3, src/adapters/s3-snapshots.mjs):
           //   manifest/current.json               ponteiro {schemaVersion: 1, revision, readableRevisions}
           //   manifest/revisions/{revision}.json  PublishedManifest interno (com objectKey)
           //   slices/...                          bytes de envelope, endereçados pelo objectKey
@@ -571,11 +591,8 @@ Resources:
           // ZipFile da Lambda. O único require fora do pacote é o SDK do S3, que o runtime
           // nodejs24.x já traz. Nunca registra token, claims nem conteúdo.
           const {createOwnerGate} = __modules["adapters/lambda/owner-gate.mjs"];
-          const {READABLE_REVISIONS, SLICES, assertManifest, assertRevision, assertSnapshotPointer, toManifestResponse} = __modules["contracts/manifest.mjs"];
+          const {POINTER_KEY, READABLE_REVISIONS, SLICES, SLICE_PREFIX, assertManifest, assertRevision, assertSnapshotPointer, revisionKey, toManifestResponse} = __modules["contracts/manifest.mjs"];
 
-          const POINTER_KEY = 'manifest/current.json';
-          const SLICE_PREFIX = 'slices/';
-          const revisionKey = revision => `manifest/revisions/${revision}.json`;
           const JSON_HEADERS = Object.freeze({'content-type': 'application/json; charset=utf-8', 'cache-control': 'private, no-store'});
 
           function requestIdOf(event) {
@@ -675,7 +692,7 @@ Resources:
               getObject: typeof bucket === 'string' && bucket !== '' ? s3GetObject(bucket) : async () => { throw new Error('SNAPSHOT_BUCKET_MISSING'); }})(event);
           }
 
-          module.exports = {handler, createSnapshotReaderHandler, POINTER_KEY, SLICE_PREFIX, revisionKey};
+          module.exports = {handler, createSnapshotReaderHandler};
 
   SnapshotReaderManifestPermission:
     Type: AWS::Lambda::Permission
@@ -693,6 +710,1314 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/GET/api/v1/snapshots/*/*'
+
+  # Publicação (Q2): só `aws lambda invoke`, sem rota HTTP, sem agendador e sem
+  # AWS::Lambda::Permission. Lease, fencing e CAS por escrita condicional no próprio bucket.
+  SnapshotPublisherLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/llms-${EnvironmentName}-snapshot-publisher'
+      RetentionInDays: 30
+
+  SnapshotPublisherRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'llms-${EnvironmentName}-snapshot-publisher-${AWS::Region}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: logs-and-snapshot-publish
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !GetAtt SnapshotPublisherLogGroup.Arn
+              # Sem s3:ListBucket: chave ausente volta AccessDenied, tratado como ausente.
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource:
+                  - !Sub '${SnapshotBucket.Arn}/slices/*'
+                  - !Sub '${SnapshotBucket.Arn}/manifest/*'
+                  - !Sub '${SnapshotBucket.Arn}/control/*'
+
+  # Invocação assíncrona não repete: sem retry automático (o CAS perdido é final).
+  SnapshotPublisherInvokeConfig:
+    Type: AWS::Lambda::EventInvokeConfig
+    Properties:
+      FunctionName: !Ref SnapshotPublisherFunction
+      Qualifier: $LATEST
+      MaximumRetryAttempts: 0
+
+  SnapshotPublisherFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'llms-${EnvironmentName}-snapshot-publisher'
+      Description: Publica o dataset sintetico no S3 privado (Q2) - so aws lambda invoke, sem rota HTTP
+      Runtime: nodejs24.x
+      Architectures:
+        - arm64
+      Handler: index.handler
+      MemorySize: 256
+      Timeout: 30
+      # Uma publicação por vez, além do lease.
+      ReservedConcurrentExecutions: 1
+      Role: !GetAtt SnapshotPublisherRole.Arn
+      LoggingConfig:
+        LogGroup: !Ref SnapshotPublisherLogGroup
+        LogFormat: JSON
+      Environment:
+        Variables:
+          SNAPSHOT_BUCKET: !Ref SnapshotBucket
+      Code:
+        # Gerado por scripts/render-auth-stack.mjs a partir de src/adapters/lambda/snapshot-publisher.mjs.
+        ZipFile: |
+          'use strict';
+          // Empacotado por scripts/render-auth-stack.mjs: um escopo por módulo.
+          const __modules = {};
+          // src/contracts/primitives.mjs
+          __modules["contracts/primitives.mjs"] = (() => {
+          function fail(field, reason = 'formato inválido') {
+            throw new TypeError(`${field}: ${reason}`);
+          }
+          function object(value, fields, field = 'objeto') {
+            if (!value || typeof value !== 'object' || Array.isArray(value) ||
+                ![Object.prototype, null].includes(Object.getPrototypeOf(value))) fail(field);
+            const keys = Reflect.ownKeys(value);
+            if (keys.length !== fields.length || keys.some(key => !fields.includes(key))) fail(field, 'campos incompatíveis');
+            for (const key of fields) {
+              const descriptor = Object.getOwnPropertyDescriptor(value, key);
+              if (!descriptor.enumerable || !Object.hasOwn(descriptor, 'value')) fail(`${field}.${key}`, 'propriedade de dados exigida');
+            }
+            return value;
+          }
+          function string(value, field, max = 256) {
+            if (typeof value !== 'string' || !value.length || value.length > max || value.trim() !== value) fail(field);
+            return value;
+          }
+          function boolean(value, field) { if (typeof value !== 'boolean') fail(field); return value; }
+          function oneOf(value, choices, field) { if (!choices.includes(value)) fail(field); return value; }
+          function number(value, field, min = 0, max = Number.MAX_SAFE_INTEGER) {
+            if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) fail(field);
+            return value;
+          }
+          function integer(value, field, min = 0) {
+            number(value, field, min); if (!Number.isSafeInteger(value)) fail(field); return value;
+          }
+          function utc(value, field = 'timestamp') {
+            if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/.test(value)) fail(field);
+            const milliseconds = Date.parse(value);
+            if (!Number.isFinite(milliseconds) || new Date(milliseconds).toISOString() !==
+                (value.includes('.') ? value : value.replace('Z', '.000Z'))) fail(field, 'data impossível');
+            return milliseconds;
+          }
+          function https(value, field = 'URL') {
+            string(value, field, 4096);
+            if (!/^https:\/\/[^/]/.test(value) || /[\x00-\x20\x7f\\]/.test(value)) fail(field);
+            let url; try { url = new URL(value); } catch { fail(field); }
+            if (url.protocol !== 'https:' || url.username || url.password) fail(field);
+            return value;
+          }
+          function list(value, check, field, { unique = false, nonempty = false } = {}) {
+            if (!Array.isArray(value) || (nonempty && value.length === 0)) fail(field);
+            if (Reflect.ownKeys(value).length !== value.length + 1) fail(field, 'array denso sem campos extras exigido');
+            for (let i = 0; i < value.length; i += 1) {
+              const descriptor = Object.getOwnPropertyDescriptor(value, String(i));
+              if (!descriptor || !descriptor.enumerable || !Object.hasOwn(descriptor, 'value')) fail(field, 'array de dados exigido');
+              check(descriptor.value, `${field}[${i}]`);
+            }
+            if (unique && new Set(value).size !== value.length) fail(field, 'duplicatas');
+            return value;
+          }
+          function nullable(value, check, field) { if (value !== null) check(value, field); }
+          function decimal(value, field) {
+            if (typeof value !== 'string' || value.length > 256 || !/^(0|[1-9]\d*)(\.\d+)?$/.test(value)) fail(field);
+          }
+          function microUsd(value, field = 'microUSD') {
+            if (typeof value !== 'string' || value.length > 256 || !/^(0|[1-9]\d*)$/.test(value)) fail(field);
+            return BigInt(value);
+          }
+          function sourceRef(value, field = 'sourceRef') {
+            object(value, ['source', 'sourceRecordId', 'sourceUrl', 'fetchedAt', 'observedAt'], field);
+            for (const key of ['source', 'sourceRecordId']) string(value[key], `${field}.${key}`);
+            https(value.sourceUrl, `${field}.sourceUrl`); utc(value.fetchedAt, `${field}.fetchedAt`);
+            nullable(value.observedAt, utc, `${field}.observedAt`);
+          }
+          function sourceRefs(value, field = 'sourceRefs') { list(value, sourceRef, field, { nonempty: true }); }
+          function uniqueIds(items, key, field) {
+            if (new Set(items.map(item => item[key])).size !== items.length) fail(field, 'IDs duplicados');
+          }
+          function clone(value) { return structuredClone(value); }
+          function freeze(value) {
+            if (value && typeof value === 'object') {
+              for (const item of Object.values(value)) freeze(item);
+              Object.freeze(value);
+            }
+            return value;
+          }
+          function canonicalJson(value) {
+            function ordered(item) {
+              if (Array.isArray(item)) return item.map(ordered);
+              if (item && typeof item === 'object') return Object.fromEntries(Object.keys(item).sort().map(key => [key, ordered(item[key])]));
+              return item;
+            }
+            return JSON.stringify(ordered(value));
+          }
+
+          function requireSynchronous(value,code='SYNCHRONOUS_TRANSACTION_REQUIRED'){
+           if(value&&typeof value.then==='function'){Promise.resolve(value).catch(()=>{});throw new Error(code);}
+           return value;
+          }
+          return {fail, object, string, boolean, oneOf, number, integer, utc, https, list, nullable, decimal, microUsd, sourceRef, sourceRefs, uniqueIds, clone, freeze, canonicalJson, requireSynchronous};
+          })();
+          // src/contracts/catalog.mjs
+          __modules["contracts/catalog.mjs"] = (() => {
+          const {object, string, number, boolean, oneOf, list, nullable, https, sourceRefs, uniqueIds, integer, fail} = __modules["contracts/primitives.mjs"];
+          const LAYERS = Object.freeze(['labs', 'chips', 'cloud', 'energy', 'software']);
+          const RELATION_TYPES = Object.freeze(['chip-manufacturing', 'cloud-infrastructure', 'investment', 'energy', 'model-partnership']);
+          function assertCompany(value) {
+            object(value, ['schemaVersion', 'id', 'name', 'primaryLayer', 'tags', 'isLab', 'region', 'location', 'website', 'contact', 'logo', 'listing', 'sourceRefs'], 'Company');
+            oneOf(value.schemaVersion, [1], 'Company.schemaVersion');
+            for (const key of ['id', 'name']) string(value[key], `Company.${key}`);
+            oneOf(value.primaryLayer, LAYERS, 'Company.primaryLayer');
+            list(value.tags, (tag, field) => oneOf(tag, LAYERS, field), 'Company.tags', { unique: true });
+            boolean(value.isLab, 'Company.isLab'); oneOf(value.region, ['US', 'CHINA', 'EUROPE', 'OTHER'], 'Company.region');
+            object(value.location, ['latitude', 'longitude'], 'Company.location');
+            number(value.location.latitude, 'latitude', -90, 90); number(value.location.longitude, 'longitude', -180, 180);
+            nullable(value.website, https, 'Company.website'); nullable(value.contact, string, 'Company.contact');
+            nullable(value.logo, string, 'Company.logo');
+            if (value.logo !== null && (!/^logos\/[a-zA-Z0-9_-]+\.(svg|png|webp)$/.test(value.logo))) fail('Company.logo', 'asset local exigido');
+            if (value.listing !== null) {
+              object(value.listing, ['symbol', 'exchange', 'currency'], 'Company.listing');
+              for (const key of ['symbol', 'exchange', 'currency']) string(value.listing[key], `listing.${key}`);
+            }
+            sourceRefs(value.sourceRefs); return value;
+          }
+          function assertRelation(value) {
+            object(value, ['schemaVersion', 'id', 'fromCompanyId', 'toCompanyId', 'type', 'sourceRefs'], 'Relation');
+            oneOf(value.schemaVersion, [1], 'Relation.schemaVersion');
+            for (const key of ['id', 'fromCompanyId', 'toCompanyId']) string(value[key], `Relation.${key}`);
+            oneOf(value.type, RELATION_TYPES, 'Relation.type'); sourceRefs(value.sourceRefs);
+            if (value.fromCompanyId === value.toCompanyId) fail('Relation', 'duas Empresas distintas exigidas');
+            return value;
+          }
+          function assertCatalog(value) {
+            object(value, ['companies', 'relations'], 'Catalog');
+            list(value.companies, assertCompany, 'companies'); list(value.relations, assertRelation, 'relations');
+            uniqueIds(value.companies, 'id', 'companies'); uniqueIds(value.relations, 'id', 'relations');
+            const ids = new Set(value.companies.map(company => company.id));
+            for (const relation of value.relations) if (!ids.has(relation.fromCompanyId) || !ids.has(relation.toCompanyId)) fail('Relation', 'referência ausente');
+            return value;
+          }
+          return {LAYERS, RELATION_TYPES, assertCompany, assertRelation, assertCatalog};
+          })();
+          // src/contracts/model-pricing.mjs
+          __modules["contracts/model-pricing.mjs"] = (() => {
+          // Autoridade compartilhada para uma cotação de preços da mesma fonte/variante.
+          const FIELDS = [
+            'schemaVersion', 'modelId', 'variantId', 'inputUsdPerMillion',
+            'outputUsdPerMillion', 'reasoning', 'source', 'sourceRecordId',
+            'sourceUrl', 'fetchedAt', 'observedAt',
+          ];
+          const DECIMAL = /^(0|[1-9]\d*)(\.\d+)?$/;
+          const UTC_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/;
+
+          function invalid(field, reason) {
+            throw new TypeError(`Preço de modelo inválido: ${field} ${reason}.`);
+          }
+
+          function text(value, field) {
+            if (typeof value !== 'string' || value.length === 0 ||
+                value.length > 256 || value.trim() !== value) {
+              invalid(field, 'deve ser uma string não vazia, sem espaços nas extremidades, com até 256 caracteres');
+            }
+          }
+
+          function timestamp(value, field) {
+            if (typeof value !== 'string' || !UTC_TIMESTAMP.test(value)) {
+              invalid(field, 'deve ser um horário ISO UTC com Z');
+            }
+            const date = new Date(value);
+            const expected = value.includes('.') ? value : value.replace('Z', '.000Z');
+            if (!Number.isFinite(date.getTime()) || date.toISOString() !== expected) {
+              invalid(field, 'contém data ou horário impossível');
+            }
+          }
+
+          /** Valida sem alterar o objeto. null é ausência; "0" é preço informado. */
+          function assertModelPricing(value) {
+            if (value === null || typeof value !== 'object' || Array.isArray(value) ||
+                ![Object.prototype, null].includes(Object.getPrototypeOf(value))) {
+              invalid('registro', 'deve ser um objeto simples');
+            }
+            const keys = Reflect.ownKeys(value);
+            if (keys.length !== FIELDS.length || keys.some(key => !FIELDS.includes(key))) {
+              invalid('campos', 'devem corresponder exatamente ao contrato v1');
+            }
+            for (const field of FIELDS) {
+              const descriptor = Object.getOwnPropertyDescriptor(value, field);
+              if (!descriptor.enumerable || !Object.hasOwn(descriptor, 'value')) {
+                invalid(field, 'deve ser uma propriedade própria, enumerável e de dados');
+              }
+            }
+            if (value.schemaVersion !== 1) invalid('schemaVersion', 'deve ser 1');
+            for (const field of ['modelId', 'variantId', 'source', 'sourceRecordId']) {
+              text(value[field], field);
+            }
+            for (const field of ['inputUsdPerMillion', 'outputUsdPerMillion']) {
+              const amount = value[field];
+              if (amount !== null && (typeof amount !== 'string' || amount.length > 256 || !DECIMAL.test(amount))) {
+                invalid(field, 'deve ser null ou decimal não negativo em USD por milhão de tokens');
+              }
+            }
+            if (typeof value.reasoning !== 'boolean') invalid('reasoning', 'deve ser booleano');
+            if (typeof value.sourceUrl !== 'string' || value.sourceUrl.length > 4096 ||
+                !/^https:\/\/[^/]/.test(value.sourceUrl) || /[\x00-\x20\x7f\\]/.test(value.sourceUrl)) {
+              invalid('sourceUrl', 'deve ser uma URL HTTPS');
+            }
+            let sourceUrl;
+            try { sourceUrl = new URL(value.sourceUrl); }
+            catch { invalid('sourceUrl', 'deve ser uma URL HTTPS'); }
+            if (sourceUrl.protocol !== 'https:' || sourceUrl.username || sourceUrl.password ||
+                value.sourceUrl.trim() !== value.sourceUrl) {
+              invalid('sourceUrl', 'deve usar HTTPS sem credenciais');
+            }
+            timestamp(value.fetchedAt, 'fetchedAt');
+            if (value.observedAt !== null) timestamp(value.observedAt, 'observedAt');
+            return value;
+          }
+          return {assertModelPricing};
+          })();
+          // src/contracts/models.mjs
+          __modules["contracts/models.mjs"] = (() => {
+          const {assertModelPricing} = __modules["contracts/model-pricing.mjs"];
+          const {object, string, boolean, oneOf, list, nullable, number, integer, utc, decimal, sourceRefs, uniqueIds, fail} = __modules["contracts/primitives.mjs"];
+          const NUMERIC_MODEL_FIELDS = Object.freeze(['intelligence', 'programming', 'math', 'contextTokens', 'ttftSeconds', 'tokensPerSecond']);
+          const MODALITIES = Object.freeze(['text', 'image', 'video', 'audio', 'file']);
+          function assertVariant(value) {
+            object(value, ['variantId', 'name', 'pricing', ...NUMERIC_MODEL_FIELDS, 'cacheReadUsdPerMillion', 'cacheWriteUsdPerMillion', 'inputModalities', 'outputModalities', 'openWeights', 'license', 'reasoning', 'benchmarks', 'sourceRefs'], 'Variant');
+            string(value.variantId, 'variantId'); string(value.name, 'Variant.name');
+            nullable(value.pricing, assertModelPricing, 'Variant.pricing');
+            for (const key of NUMERIC_MODEL_FIELDS) nullable(value[key], key === 'contextTokens' ? integer : number, key);
+            for (const key of ['cacheReadUsdPerMillion', 'cacheWriteUsdPerMillion']) nullable(value[key], decimal, key);
+            for (const key of ['inputModalities', 'outputModalities']) list(value[key], (item, field) => oneOf(item, MODALITIES, field), key, { unique: true });
+            nullable(value.openWeights, boolean, 'openWeights'); nullable(value.license, string, 'license'); boolean(value.reasoning, 'reasoning');
+            list(value.benchmarks, (item, field) => {
+              object(item, ['name', 'value', 'sourceRefs'], field); string(item.name, 'benchmark.name');
+              number(item.value, 'benchmark.value'); sourceRefs(item.sourceRefs);
+            }, 'benchmarks'); sourceRefs(value.sourceRefs);
+            if (value.pricing && (value.pricing.variantId !== value.variantId || value.pricing.reasoning !== value.reasoning)) fail('Variant.pricing', 'identidade/raciocínio divergentes');
+            return value;
+          }
+          function assertModel(value) {
+            object(value, ['schemaVersion', 'modelId', 'companyId', 'name', 'releaseDates', 'variants', 'sourceRefs'], 'Model');
+            oneOf(value.schemaVersion, [1], 'Model.schemaVersion');
+            for (const key of ['modelId', 'companyId', 'name']) string(value[key], `Model.${key}`);
+            object(value.releaseDates, ['artificialAnalysis', 'huggingFace', 'openRouter'], 'releaseDates');
+            for (const key of Object.keys(value.releaseDates)) nullable(value.releaseDates[key], utc, key);
+            list(value.variants, assertVariant, 'variants', { nonempty: true }); uniqueIds(value.variants, 'variantId', 'variants');
+            for (const variant of value.variants) if (variant.pricing && variant.pricing.modelId !== value.modelId) fail('pricing.modelId', 'família divergente');
+            sourceRefs(value.sourceRefs); return value;
+          }
+          function assertModels(value) {
+            list(value, assertModel, 'models'); uniqueIds(value, 'modelId', 'models');
+            uniqueIds(value.flatMap(model => model.variants), 'variantId', 'variants globais'); return value;
+          }
+          return {NUMERIC_MODEL_FIELDS, MODALITIES, assertVariant, assertModel, assertModels};
+          })();
+          // src/contracts/news.mjs
+          __modules["contracts/news.mjs"] = (() => {
+          const {object, string, oneOf, list, utc, https, sourceRefs, uniqueIds, fail} = __modules["contracts/primitives.mjs"];
+          function assertNewsItem(value) {
+            object(value, ['schemaVersion', 'newsId', 'originalUrl', 'titleOriginal', 'language', 'publishedAt', 'fetchedAt', 'relevantCompanyIds', 'citedCompanyIds', 'summary', 'sourceRefs'], 'News');
+            oneOf(value.schemaVersion, [1], 'News.schemaVersion'); string(value.newsId, 'newsId');
+            https(value.originalUrl, 'originalUrl'); string(value.titleOriginal, 'titleOriginal', 4096); string(value.language, 'language');
+            utc(value.publishedAt, 'publishedAt'); utc(value.fetchedAt, 'fetchedAt');
+            for (const key of ['relevantCompanyIds', 'citedCompanyIds']) list(value[key], string, key, { unique: true });
+            sourceRefs(value.sourceRefs);
+            if (!value.sourceRefs.some(ref => ref.sourceUrl === value.originalUrl)) fail('originalUrl', 'deve constar das fontes consultadas');
+            if (value.summary !== null) {
+              object(value.summary, ['summaryPt', 'extendedSummaryPt', 'keyPoints', 'generatedByAi'], 'summary');
+              for (const key of ['summaryPt', 'extendedSummaryPt']) string(value.summary[key], key, 100000);
+              list(value.summary.keyPoints, (item, field) => string(item, field, 10000), 'keyPoints');
+              oneOf(value.summary.generatedByAi, [true], 'generatedByAi');
+            }
+            return value;
+          }
+          function assertNews(value) { list(value, assertNewsItem, 'news'); uniqueIds(value, 'newsId', 'news'); return value; }
+          return {assertNewsItem, assertNews};
+          })();
+          // src/contracts/manifest.mjs
+          __modules["contracts/manifest.mjs"] = (() => {
+          // Contratos do manifesto (AD-2, AD-27), num módulo folha que só depende de
+          // primitives.mjs: a Lambda de leitura (src/adapters/lambda/snapshot-reader.mjs)
+          // importa estes mesmos validadores e scripts/render-auth-stack.mjs os empacota
+          // no código inline. src/contracts/snapshot.mjs reexporta tudo daqui.
+          //
+          // PublishedManifest (interno, com objectKey) só circula entre Publisher, bucket
+          // e Lambda. ManifestResponse (externo, sem objectKey) é o que o navegador e o
+          // SnapshotReader recebem.
+          const {object, string, oneOf, nullable, list, utc, fail} = __modules["contracts/primitives.mjs"];
+
+          const SLICES = Object.freeze(['catalog', 'models', 'news']);
+          const MANIFEST_VERSION = 2;
+          const MAX_COMPANY_MERGES = 10000;
+          // Revisão endereçável por URL (AD-27). Só ".", ".." e afins também são recusados:
+          // casam o padrão, mas o navegador os normalizaria como segmentos de caminho.
+          const REVISION_PATTERN = Object.freeze(/^[A-Za-z0-9._-]{1,128}$/);
+          // As três últimas revisões continuam legíveis (AD-27).
+          const READABLE_REVISIONS = 3;
+          const POINTER_VERSION = 1;
+          const LEASE_VERSION = 1;
+          // Disposição do bucket privado de snapshots (AD-27, Q2), única para o Publicador
+          // S3 (src/adapters/s3-snapshots.mjs) e a Lambda de leitura:
+          //   manifest/current.json               ponteiro {schemaVersion: 1, revision, readableRevisions}
+          //   manifest/revisions/{revision}.json  PublishedManifest interno (com objectKey), imutável
+          //   slices/{digest}                     bytes de envelope, imutáveis
+          //   control/lease.json                  lease do Publicador {schemaVersion, owner, expiresAt, fencingToken}
+          const POINTER_KEY = 'manifest/current.json';
+          const SLICE_PREFIX = 'slices/';
+          const LEASE_KEY = 'control/lease.json';
+          const revisionKey = revision => `manifest/revisions/${revision}.json`;
+          const DIGEST = /^[a-f0-9]{64}$/;
+          const MERGE_FIELD = 'INVALID_MERGE_TABLE';
+
+          function assertRevision(value, field = 'revision') {
+            if (typeof value !== 'string' || !REVISION_PATTERN.test(value) || /^\.+$/.test(value)) fail(field);
+            return value;
+          }
+          // Validador único da tabela acumulada e compactada (AD-2): Publisher, SnapshotReader e reducer.
+          // Sem nextCompanyIds valida só a forma; com ele, exige from ausente e to (não nulo) presente no catálogo novo.
+          function assertCompanyMergedInto(entries, { nextCompanyIds } = {}) {
+            if (!Array.isArray(entries)) fail(MERGE_FIELD, 'array exigido');
+            if (entries.length > MAX_COMPANY_MERGES) fail(MERGE_FIELD, `mais de ${MAX_COMPANY_MERGES} entradas`);
+            const targets = new Map();
+            list(entries, (entry, field) => {
+              object(entry, ['fromCompanyId', 'toCompanyId'], field);
+              string(entry.fromCompanyId, `${field}.fromCompanyId`); nullable(entry.toCompanyId, string, `${field}.toCompanyId`);
+              if (entry.fromCompanyId === entry.toCompanyId) fail(field, 'from igual a to');
+              if (targets.has(entry.fromCompanyId)) fail(field, 'from duplicado');
+              targets.set(entry.fromCompanyId, entry.toCompanyId);
+            }, MERGE_FIELD);
+            for (const to of targets.values()) if (to !== null && targets.has(to)) fail(MERGE_FIELD, 'tabela não compactada');
+            if (nextCompanyIds !== undefined) {
+              const next = nextCompanyIds instanceof Set ? nextCompanyIds : new Set(nextCompanyIds);
+              for (const [from, to] of targets) {
+                if (next.has(from)) fail(MERGE_FIELD, 'from presente no catálogo novo');
+                if (to !== null && !next.has(to)) fail(MERGE_FIELD, 'to ausente do catálogo novo');
+              }
+            }
+            return entries;
+          }
+          const MANIFEST_FIELDS = ['schemaVersion', 'revision', 'curationRevision', 'publishedAt', 'slices', 'companyMergedInto'];
+          // PublishedManifest, interno (com objectKey). Formato inalterado.
+          function assertManifest(value) {
+            object(value, MANIFEST_FIELDS, 'Manifest');
+            // O Publisher só grava revisões que a leitura externa aceita (AD-27).
+            oneOf(value.schemaVersion, [MANIFEST_VERSION], 'schemaVersion'); assertRevision(value.revision, 'revision'); string(value.curationRevision, 'curationRevision');
+            utc(value.publishedAt, 'publishedAt'); object(value.slices, SLICES, 'slices');
+            for (const slice of SLICES) {
+              const ref = value.slices[slice]; object(ref, ['objectKey', 'digest', 'lastSuccessAt'], `slices.${slice}`);
+              string(ref.objectKey, 'objectKey'); if (!DIGEST.test(ref.digest)) fail('digest');
+              nullable(ref.lastSuccessAt, utc, 'lastSuccessAt');
+            }
+            assertCompanyMergedInto(value.companyMergedInto);
+            return value;
+          }
+          // ManifestResponse, externo (AD-27): sem objectKey; revisão endereçável por URL.
+          function assertManifestResponse(value) {
+            object(value, MANIFEST_FIELDS, 'ManifestResponse');
+            oneOf(value.schemaVersion, [MANIFEST_VERSION], 'schemaVersion'); assertRevision(value.revision, 'revision'); string(value.curationRevision, 'curationRevision');
+            utc(value.publishedAt, 'publishedAt'); object(value.slices, SLICES, 'slices');
+            for (const slice of SLICES) {
+              const ref = value.slices[slice]; object(ref, ['digest', 'lastSuccessAt'], `slices.${slice}`);
+              if (!DIGEST.test(ref.digest)) fail('digest');
+              nullable(ref.lastSuccessAt, utc, 'lastSuccessAt');
+            }
+            assertCompanyMergedInto(value.companyMergedInto);
+            return value;
+          }
+          // Projeção única do interno para o externo: cópia nova, sem objectKey, validada.
+          function toManifestResponse(manifest) {
+            assertManifest(manifest);
+            const slices = {};
+            for (const slice of SLICES) slices[slice] = { digest: manifest.slices[slice].digest, lastSuccessAt: manifest.slices[slice].lastSuccessAt };
+            return assertManifestResponse({
+              schemaVersion: manifest.schemaVersion, revision: manifest.revision, curationRevision: manifest.curationRevision,
+              publishedAt: manifest.publishedAt, slices,
+              companyMergedInto: manifest.companyMergedInto.map(entry => ({ fromCompanyId: entry.fromCompanyId, toCompanyId: entry.toCompanyId }))
+            });
+          }
+          // Ponteiro manifest/current.json do bucket: revisão corrente e as legíveis,
+          // da mais nova para a mais velha. Só o Publisher (Q2) o grava, por CAS.
+          function assertSnapshotPointer(value) {
+            object(value, ['schemaVersion', 'revision', 'readableRevisions'], 'SnapshotPointer');
+            oneOf(value.schemaVersion, [POINTER_VERSION], 'schemaVersion'); assertRevision(value.revision, 'revision');
+            list(value.readableRevisions, (revision, field) => assertRevision(revision, field), 'readableRevisions', { unique: true, nonempty: true });
+            if (value.readableRevisions.length > READABLE_REVISIONS) fail('readableRevisions', `mais de ${READABLE_REVISIONS}`);
+            if (value.readableRevisions[0] !== value.revision) fail('readableRevisions', 'primeira diferente da corrente');
+            return value;
+          }
+          // Lease do Publicador em control/lease.json: só ele o grava, por escrita condicional.
+          function assertSnapshotLease(value) {
+            object(value, ['schemaVersion', 'owner', 'expiresAt', 'fencingToken'], 'SnapshotLease');
+            oneOf(value.schemaVersion, [LEASE_VERSION], 'schemaVersion'); string(value.owner, 'owner'); utc(value.expiresAt, 'expiresAt');
+            if (!Number.isSafeInteger(value.fencingToken) || value.fencingToken < 1) fail('fencingToken');
+            return value;
+          }
+          return {SLICES, MANIFEST_VERSION, MAX_COMPANY_MERGES, REVISION_PATTERN, READABLE_REVISIONS, POINTER_VERSION, LEASE_VERSION, POINTER_KEY, SLICE_PREFIX, LEASE_KEY, revisionKey, assertRevision, assertCompanyMergedInto, assertManifest, assertManifestResponse, toManifestResponse, assertSnapshotPointer, assertSnapshotLease};
+          })();
+          // src/contracts/snapshot.mjs
+          __modules["contracts/snapshot.mjs"] = (() => {
+          const {assertCatalog} = __modules["contracts/catalog.mjs"];
+          const {assertModels} = __modules["contracts/models.mjs"];
+          const {assertNews} = __modules["contracts/news.mjs"];
+          const {object, oneOf, fail, canonicalJson} = __modules["contracts/primitives.mjs"];
+          // Manifesto interno/externo, revisão, tabela de merges e disposição do bucket moram no
+          // módulo folha manifest.mjs (a Lambda de leitura o empacota sem os validadores de slice).
+          // Reexportados por import + `export {...};` numa linha cada: a forma que
+          // scripts/render-auth-stack.mjs aceita ao empacotar a Lambda de publicação.
+          const {SLICES, MANIFEST_VERSION, MAX_COMPANY_MERGES, REVISION_PATTERN, READABLE_REVISIONS, POINTER_VERSION, LEASE_VERSION, POINTER_KEY, SLICE_PREFIX, LEASE_KEY, revisionKey, assertRevision, assertCompanyMergedInto, assertManifest, assertManifestResponse, toManifestResponse, assertSnapshotPointer, assertSnapshotLease} = __modules["contracts/manifest.mjs"];
+
+          const SLICE_VALIDATORS = Object.freeze({ catalog: assertCatalog, models: assertModels, news: assertNews });
+          if (Object.keys(SLICE_VALIDATORS).join() !== SLICES.join()) throw new Error('SLICES divergente de SLICE_VALIDATORS');
+          const ENVELOPE_VERSION = 1;
+          // Helper único dos bytes de envelope de slice: Publisher (MemorySnapshots) e
+          // fonte sintética do navegador (src/ui/fixture-source.mjs) gravam/servem
+          // exatamente esta saída, e o digest do manifesto é calculado sobre ela.
+          function envelopeBytes(slice, data) {
+            return canonicalJson({ schemaVersion: ENVELOPE_VERSION, slice, data });
+          }
+          function assertEnvelope(value, expectedSlice) {
+            object(value, ['schemaVersion', 'slice', 'data'], 'Envelope');
+            oneOf(value.schemaVersion, [ENVELOPE_VERSION], 'schemaVersion'); oneOf(value.slice, SLICES, 'slice');
+            if (value.slice !== expectedSlice) fail('slice', 'fronteira divergente');
+            SLICE_VALIDATORS[expectedSlice](value.data); return value;
+          }
+          function assertSnapshotData({ catalog, models, news }) {
+            assertCatalog(catalog); assertModels(models); assertNews(news);
+            const companies = new Set(catalog.companies.map(company => company.id));
+            for (const model of models) if (!catalog.companies.some(company => company.id === model.companyId && company.isLab)) fail('models', 'Empresa ausente');
+            for (const item of news) for (const id of [...item.relevantCompanyIds, ...item.citedCompanyIds]) if (!companies.has(id)) fail('news', 'Empresa ausente');
+          }
+          return {SLICE_VALIDATORS, ENVELOPE_VERSION, envelopeBytes, assertEnvelope, assertSnapshotData, SLICES, MANIFEST_VERSION, MAX_COMPANY_MERGES, REVISION_PATTERN, READABLE_REVISIONS, POINTER_VERSION, LEASE_VERSION, POINTER_KEY, SLICE_PREFIX, LEASE_KEY, revisionKey, assertRevision, assertCompanyMergedInto, assertManifest, assertManifestResponse, toManifestResponse, assertSnapshotPointer, assertSnapshotLease};
+          })();
+          // src/adapters/s3-snapshots.mjs
+          __modules["adapters/s3-snapshots.mjs"] = (() => {
+          // Publicador S3 (Q2, AD-2, AD-6): lease, fencing e CAS do manifesto só com
+          // escrita condicional do S3, na disposição que a Lambda de leitura já lê
+          // (constantes em src/contracts/manifest.mjs).
+          //
+          // Porta de objetos injetada:
+          //   get(key)                         → {text, etag} | null
+          //   put(key, text, {ifNoneMatch?, ifMatch?}) → {etag}
+          //   delete(key, {ifMatch})           (opcional; só o release do lease usa)
+          // Um put condicional que perde falha com PreconditionFailedError (412) ou
+          // ConflictError (409). createMemoryObjectStore é a implementação fiel em memória
+          // (inclusive 412 em corrida); createS3ObjectStore fala com o S3 pelo SDK
+          // injetado (`IfNoneMatch: '*'`, `IfMatch: etag`).
+          //
+          // Slices e manifestos de revisão são imutáveis: sempre If-None-Match, nunca
+          // apagados nem sobrescritos. O ponteiro só muda por If-Match no ETag lido no
+          // início da publicação. Sem retry automático: quem perde o CAS falha.
+          //
+          // scripts/render-auth-stack.mjs empacota este arquivo no código inline da
+          // Lambda snapshot-publisher: só imports relativos na forma de uma linha, sem
+          // require (o SDK do S3 entra pela porta).
+          const {LEASE_KEY, LEASE_VERSION, MANIFEST_VERSION, POINTER_KEY, POINTER_VERSION, READABLE_REVISIONS, SLICES, SLICE_PREFIX, assertCompanyMergedInto, assertManifest, assertRevision, assertSnapshotData, assertSnapshotLease, assertSnapshotPointer, envelopeBytes, revisionKey} = __modules["contracts/snapshot.mjs"];
+          const {integer, string, utc} = __modules["contracts/primitives.mjs"];
+
+          class PreconditionFailedError extends Error { constructor(key) { super('PRECONDITION_FAILED'); this.name = 'PreconditionFailedError'; this.code = 'PRECONDITION_FAILED'; this.status = 412; this.key = key; } }
+          class ConflictError extends Error { constructor(key) { super('CONFLICT'); this.name = 'ConflictError'; this.code = 'CONFLICT'; this.status = 409; this.key = key; } }
+          const lost = error => error instanceof PreconditionFailedError || error instanceof ConflictError;
+          function publishError(code, cause) {
+            const error = new Error(code); error.code = code;
+            if (cause !== undefined) error.cause = cause;
+            return error;
+          }
+          const DEFAULT_CURATION_REVISION = 'curation-0';
+          const JSON_TYPE = 'application/json; charset=utf-8';
+
+          function conditions(options) {
+            const {ifNoneMatch, ifMatch} = options ?? {};
+            if (ifNoneMatch !== undefined && ifNoneMatch !== '*') throw new TypeError('ifNoneMatch: só "*"');
+            if (ifMatch !== undefined && (typeof ifMatch !== 'string' || ifMatch === '')) throw new TypeError('ifMatch: ETag exigido');
+            if (ifNoneMatch !== undefined && ifMatch !== undefined) throw new TypeError('ifNoneMatch e ifMatch são exclusivos');
+            return {ifNoneMatch, ifMatch};
+          }
+
+          // Bucket em memória fiel às regras de escrita condicional: a condição é avaliada
+          // e a escrita aplicada no mesmo passo síncrono, antes de qualquer await, então
+          // duas escritas concorrentes com a mesma condição nunca vencem juntas.
+          function createMemoryObjectStore() {
+            const objects = new Map(); const calls = []; let version = 0;
+            const etagOf = () => `"m${(version += 1).toString(16)}"`;
+            return {
+              objects, calls,
+              async get(key) {
+                calls.push({op: 'get', key});
+                const found = objects.get(key);
+                return found === undefined ? null : {text: found.text, etag: found.etag};
+              },
+              async put(key, text, options) {
+                const {ifNoneMatch, ifMatch} = conditions(options);
+                if (typeof text !== 'string') throw new TypeError('text deve ser string');
+                calls.push({op: 'put', key, ifNoneMatch, ifMatch});
+                const found = objects.get(key);
+                if (ifNoneMatch === '*' && found !== undefined) throw new PreconditionFailedError(key);
+                if (ifMatch !== undefined && found?.etag !== ifMatch) throw new PreconditionFailedError(key);
+                const etag = etagOf(); objects.set(key, {text, etag});
+                return {etag};
+              },
+              async delete(key, options) {
+                const {ifMatch} = conditions(options);
+                calls.push({op: 'delete', key, ifMatch});
+                const found = objects.get(key);
+                if (ifMatch !== undefined && found?.etag !== ifMatch) throw new PreconditionFailedError(key);
+                objects.delete(key);
+              }
+            };
+          }
+
+          // Porta S3 sobre o SDK injetado ({S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand}).
+          // Sem s3:ListBucket, chave ausente volta AccessDenied: tratada como ausente. Isso é
+          // seguro aqui porque toda escrita que segue a leitura é condicional: um objeto que
+          // existe e não pôde ser lido faz o If-None-Match falhar com 412, nunca sobrescreve.
+          function createS3ObjectStore({bucket, sdk, client = new sdk.S3Client({})}) {
+            string(bucket, 'bucket');
+            const statusOf = error => error?.$metadata?.httpStatusCode;
+            const translate = (error, key) => {
+              if (error?.name === 'PreconditionFailed' || statusOf(error) === 412) return new PreconditionFailedError(key);
+              if (error?.name === 'ConditionalRequestConflict' || statusOf(error) === 409) return new ConflictError(key);
+              return error;
+            };
+            return {
+              async get(key) {
+                try {
+                  const output = await client.send(new sdk.GetObjectCommand({Bucket: bucket, Key: key}));
+                  return {text: await output.Body.transformToString('utf-8'), etag: output.ETag};
+                } catch (error) {
+                  if (error?.name === 'NoSuchKey' || error?.name === 'AccessDenied') return null;
+                  throw error;
+                }
+              },
+              async put(key, text, options) {
+                const {ifNoneMatch, ifMatch} = conditions(options);
+                const input = {Bucket: bucket, Key: key, Body: text, ContentType: JSON_TYPE};
+                if (ifNoneMatch !== undefined) input.IfNoneMatch = ifNoneMatch;
+                if (ifMatch !== undefined) input.IfMatch = ifMatch;
+                try { return {etag: (await client.send(new sdk.PutObjectCommand(input))).ETag}; }
+                catch (error) { throw translate(error, key); }
+              },
+              async delete(key, options) {
+                const {ifMatch} = conditions(options);
+                const input = {Bucket: bucket, Key: key};
+                if (ifMatch !== undefined) input.IfMatch = ifMatch;
+                try { await client.send(new sdk.DeleteObjectCommand(input)); }
+                catch (error) { throw translate(error, key); }
+              }
+            };
+          }
+
+          // SHA-256 em hex por crypto.subtle (Node e runtime da Lambda), o mesmo hex de
+          // sha256Text e webDigest para os mesmos bytes.
+          async function sha256Hex(text) {
+            const buffer = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+            return Array.from(new Uint8Array(buffer), byte => byte.toString(16).padStart(2, '0')).join('');
+          }
+          const randomSuffix = () => globalThis.crypto.randomUUID().slice(0, 8);
+          // Revisão única, endereçável por URL (REVISION_PATTERN): instante, token de fencing e sufixo aleatório.
+          const revisionFor = (now, fencingToken, suffix) => assertRevision(`r${now.replace(/[-:]/g, '').replace('.', '')}-${fencingToken}-${suffix}`);
+          // Estado gravado ilegível (JSON inválido ou fora do contrato) é um problema do bucket,
+          // não do dataset: vira SNAPSHOT_STATE_INVALID, com código próprio para o operador.
+          const parse = (text, assert) => {
+            try { return assert(JSON.parse(text)); } catch (error) { throw publishError('SNAPSHOT_STATE_INVALID', error); }
+          };
+
+          class S3SnapshotPublisher {
+            #store; #digest; #clock; #random;
+            // clock: instante da conferência de fencing logo antes da troca do ponteiro;
+            // sem clock, vale o `now` da publicação.
+            constructor({store, digest = sha256Hex, clock = null, random = randomSuffix}) {
+              for (const name of ['get', 'put']) if (typeof store?.[name] !== 'function') throw new TypeError(`store.${name} deve ser função`);
+              this.#store = store; this.#digest = digest; this.#clock = clock; this.#random = random;
+            }
+
+            async #readLease() {
+              const found = await this.#store.get(LEASE_KEY);
+              return found === null ? null : {lease: parse(found.text, assertSnapshotLease), etag: found.etag};
+            }
+
+            // Cria control/lease.json com If-None-Match; se existe e venceu, substitui com
+            // If-Match no ETag lido. O token cresce a cada aquisição: o anterior + 1, ou 1.
+            async acquire(owner, ttlMs, now) {
+              string(owner, 'owner'); integer(ttlMs, 'ttlMs', 1); const at = utc(now, 'now');
+              const prior = await this.#readLease();
+              if (prior !== null && utc(prior.lease.expiresAt) > at) throw publishError('LEASE_BUSY');
+              const lease = {schemaVersion: LEASE_VERSION, owner, expiresAt: new Date(at + ttlMs).toISOString(), fencingToken: (prior?.lease.fencingToken ?? 0) + 1};
+              try {
+                const {etag} = await this.#store.put(LEASE_KEY, JSON.stringify(lease), prior === null ? {ifNoneMatch: '*'} : {ifMatch: prior.etag});
+                return Object.freeze({...lease, etag});
+              } catch (error) {
+                if (lost(error)) throw publishError('LEASE_BUSY', error);
+                throw error;
+              }
+            }
+
+            // Só apaga, com If-Match, se o dono e o token ainda forem os seus.
+            // Liberar = gravar o próprio lease já vencido, com If-Match: o objeto continua e o
+            // fencingToken segue crescendo entre publicações (e o papel não precisa de DeleteObject).
+            async release(lease, now) {
+              const current = await this.#readLease();
+              if (current === null || current.lease.owner !== lease?.owner || current.lease.fencingToken !== lease?.fencingToken) return false;
+              // Já liberado (ou vencido): nada a fazer.
+              if (utc(current.lease.expiresAt) <= utc(now ?? new Date().toISOString())) return false;
+              const expired = {...current.lease, expiresAt: new Date(0).toISOString()};
+              try { await this.#store.put(LEASE_KEY, JSON.stringify(expired), {ifMatch: current.etag}); return true; }
+              catch (error) { if (lost(error) || error?.name === 'NoSuchKey') return false; throw error; }
+            }
+
+            async #assertHolds(lease, at) {
+              const current = await this.#readLease();
+              if (current === null || current.etag !== lease.etag || current.lease.owner !== lease.owner
+                || current.lease.fencingToken !== lease.fencingToken || utc(current.lease.expiresAt) <= at) throw publishError('LEASE_EXPIRED_OR_FENCED');
+            }
+
+            async #writeSlice(slice, data) {
+              const bytes = envelopeBytes(slice, data);
+              const digest = await this.#digest(bytes);
+              const key = `${SLICE_PREFIX}${digest}`;
+              try { await this.#store.put(key, bytes, {ifNoneMatch: '*'}); }
+              catch (error) {
+                if (!lost(error)) throw error;
+                // Chave endereçada pelo digest: 412 (ou 409 de escrita concorrente igual) é o mesmo
+                // conteúdo já gravado, aceito sem sobrescrever, desde que a releitura confira o digest.
+                const existing = await this.#store.get(key);
+                if (existing === null || await this.#digest(existing.text) !== digest) throw publishError('SNAPSHOT_SLICE_CORRUPT');
+              }
+              return {objectKey: key, digest};
+            }
+
+            async publish({data, now, lease, curationRevision}) {
+              // Nada é lido nem gravado antes de o dataset e os parâmetros validarem.
+              assertSnapshotData(data); const at = utc(now, 'now');
+              if (!lease || typeof lease !== 'object') throw new TypeError('lease exigido');
+              string(lease.owner, 'lease.owner'); string(lease.etag, 'lease.etag'); integer(lease.fencingToken, 'lease.fencingToken', 1);
+              if (curationRevision !== undefined) string(curationRevision, 'curationRevision');
+              if (utc(lease.expiresAt, 'lease.expiresAt') <= at) throw publishError('LEASE_EXPIRED_OR_FENCED');
+
+              // Conferência barata antes de gravar: um lease alheio ou vencido não deixa órfãos.
+              await this.#assertHolds(lease, at);
+              const pointerObject = await this.#store.get(POINTER_KEY);
+              const pointer = pointerObject === null ? null : parse(pointerObject.text, assertSnapshotPointer);
+              let previous = null;
+              if (pointer !== null) {
+                const found = await this.#store.get(revisionKey(pointer.revision));
+                if (found === null) throw publishError('SNAPSHOT_STATE_INVALID');
+                previous = parse(found.text, assertManifest);
+                if (previous.revision !== pointer.revision) throw publishError('SNAPSHOT_STATE_INVALID');
+              }
+              // A tabela acumulada vem do manifesto atual e vale contra o catálogo novo (AD-2).
+              const companyMergedInto = (previous?.companyMergedInto ?? []).map(entry => ({fromCompanyId: entry.fromCompanyId, toCompanyId: entry.toCompanyId}));
+              assertCompanyMergedInto(companyMergedInto, {nextCompanyIds: data.catalog.companies.map(company => company.id)});
+
+              const slices = {};
+              for (const slice of SLICES) slices[slice] = {...await this.#writeSlice(slice, data[slice]), lastSuccessAt: now};
+              const revision = revisionFor(now, lease.fencingToken, this.#random());
+              if (pointer?.readableRevisions.includes(revision)) throw publishError('SNAPSHOT_REVISION_EXISTS');
+              const manifest = assertManifest({schemaVersion: MANIFEST_VERSION, revision,
+                curationRevision: curationRevision ?? previous?.curationRevision ?? DEFAULT_CURATION_REVISION, publishedAt: now, slices, companyMergedInto});
+              try { await this.#store.put(revisionKey(revision), JSON.stringify(manifest), {ifNoneMatch: '*'}); }
+              catch (error) { if (lost(error)) throw publishError('SNAPSHOT_REVISION_EXISTS', error); throw error; }
+
+              // Fencing: o lease ainda é deste dono, com o mesmo token e o mesmo ETag, e não venceu.
+              await this.#assertHolds(lease, this.#clock === null ? at : utc(this.#clock(), 'clock'));
+
+              const next = assertSnapshotPointer({schemaVersion: POINTER_VERSION, revision,
+                readableRevisions: [revision, ...(pointer?.readableRevisions ?? [])].slice(0, READABLE_REVISIONS)});
+              try { await this.#store.put(POINTER_KEY, JSON.stringify(next), pointerObject === null ? {ifNoneMatch: '*'} : {ifMatch: pointerObject.etag}); }
+              catch (error) {
+                // Revisão órfã fica privada: nunca entra no ponteiro e não é apagada.
+                if (lost(error)) throw publishError('SNAPSHOT_CAS_LOST', error);
+                throw error;
+              }
+              return {manifest, pointer: next};
+            }
+          }
+          return {PreconditionFailedError, ConflictError, createMemoryObjectStore, createS3ObjectStore, sha256Hex, S3SnapshotPublisher};
+          })();
+          // src/contracts/provenance.mjs
+          __modules["contracts/provenance.mjs"] = (() => {
+          // Marcador único de procedência (AD-9 do pai, AD-21 do Epic 7). Todo dataset
+          // empacotado para o navegador antes de Q2 declara este valor, e a fonte que o
+          // serve (src/ui/fixture-source.mjs) o exporta como `provenance`; a raiz de
+          // composição o repassa à interface. Manifesto e slices não o carregam.
+          const SYNTHETIC_FIXTURE = 'synthetic-fixture';
+          return {SYNTHETIC_FIXTURE};
+          })();
+          // src/contracts/synthetic-workspace.mjs
+          __modules["contracts/synthetic-workspace.mjs"] = (() => {
+          // Gerado por scripts/gen-synthetic-workspace.mjs a partir de tests/fixtures/local-workspace.json.
+          // Dataset sintético (Empresas fictícias, URLs só em example.invalid). Não editar à mão.
+          // Fonte única do shell (src/ui/fixtures/synthetic-workspace.mjs reexporta) e do Publicador S3.
+          const {SYNTHETIC_FIXTURE} = __modules["contracts/provenance.mjs"];
+          const {freeze} = __modules["contracts/primitives.mjs"];
+
+          const SYNTHETIC_WORKSPACE = freeze({provenance: SYNTHETIC_FIXTURE, ...{
+            "catalog": {
+              "companies": [
+                {
+                  "schemaVersion": 1,
+                  "id": "company-1",
+                  "name": "Laboratório fictício A",
+                  "primaryLayer": "labs",
+                  "tags": [],
+                  "isLab": true,
+                  "region": "US",
+                  "location": {
+                    "latitude": 10,
+                    "longitude": 20
+                  },
+                  "website": null,
+                  "contact": null,
+                  "logo": null,
+                  "listing": null,
+                  "sourceRefs": [
+                    {
+                      "source": "Fixture sintética",
+                      "sourceRecordId": "company-1",
+                      "sourceUrl": "https://example.invalid/company-1",
+                      "fetchedAt": "2026-10-10T12:00:00Z",
+                      "observedAt": null
+                    }
+                  ]
+                },
+                {
+                  "schemaVersion": 1,
+                  "id": "company-2",
+                  "name": "Nuvem fictícia B",
+                  "primaryLayer": "cloud",
+                  "tags": [
+                    "labs",
+                    "chips"
+                  ],
+                  "isLab": true,
+                  "region": "CHINA",
+                  "location": {
+                    "latitude": 20,
+                    "longitude": 40
+                  },
+                  "website": null,
+                  "contact": null,
+                  "logo": null,
+                  "listing": null,
+                  "sourceRefs": [
+                    {
+                      "source": "Fixture sintética",
+                      "sourceRecordId": "company-2",
+                      "sourceUrl": "https://example.invalid/company-2",
+                      "fetchedAt": "2026-10-10T12:00:00Z",
+                      "observedAt": null
+                    }
+                  ]
+                },
+                {
+                  "schemaVersion": 1,
+                  "id": "company-3",
+                  "name": "Chip fictício C",
+                  "primaryLayer": "chips",
+                  "tags": [],
+                  "isLab": false,
+                  "region": "OTHER",
+                  "location": {
+                    "latitude": 30,
+                    "longitude": 60
+                  },
+                  "website": null,
+                  "contact": null,
+                  "logo": null,
+                  "listing": {
+                    "symbol": "FAKE",
+                    "exchange": "SIMULATED",
+                    "currency": "USD"
+                  },
+                  "sourceRefs": [
+                    {
+                      "source": "Fixture sintética",
+                      "sourceRecordId": "company-3",
+                      "sourceUrl": "https://example.invalid/company-3",
+                      "fetchedAt": "2026-10-10T12:00:00Z",
+                      "observedAt": null
+                    }
+                  ]
+                }
+              ],
+              "relations": [
+                {
+                  "schemaVersion": 1,
+                  "id": "relation-1",
+                  "fromCompanyId": "company-3",
+                  "toCompanyId": "company-1",
+                  "type": "chip-manufacturing",
+                  "sourceRefs": [
+                    {
+                      "source": "Fixture sintética",
+                      "sourceRecordId": "relation-1",
+                      "sourceUrl": "https://example.invalid/relation-1",
+                      "fetchedAt": "2026-10-10T12:00:00Z",
+                      "observedAt": null
+                    }
+                  ]
+                }
+              ]
+            },
+            "models": [
+              {
+                "schemaVersion": 1,
+                "modelId": "modelo-ficticio-a",
+                "companyId": "company-1",
+                "name": "Modelo fictício 0",
+                "releaseDates": {
+                  "artificialAnalysis": "2026-10-09T12:00:00Z",
+                  "huggingFace": null,
+                  "openRouter": null
+                },
+                "variants": [
+                  {
+                    "variantId": "variante-ficticia-a",
+                    "name": "Variante fictícia 0",
+                    "pricing": {
+                      "schemaVersion": 1,
+                      "modelId": "modelo-ficticio-a",
+                      "variantId": "variante-ficticia-a",
+                      "inputUsdPerMillion": "2",
+                      "outputUsdPerMillion": "6",
+                      "reasoning": false,
+                      "source": "Fixture sintética — não é cotação comercial",
+                      "sourceRecordId": "fixture-a",
+                      "sourceUrl": "https://example.invalid/precos/a",
+                      "fetchedAt": "2026-10-10T00:00:00Z",
+                      "observedAt": "2026-10-09T00:00:00Z"
+                    },
+                    "intelligence": 70,
+                    "programming": null,
+                    "math": null,
+                    "contextTokens": 200000,
+                    "ttftSeconds": null,
+                    "tokensPerSecond": null,
+                    "cacheReadUsdPerMillion": null,
+                    "cacheWriteUsdPerMillion": null,
+                    "inputModalities": [
+                      "text",
+                      "image"
+                    ],
+                    "outputModalities": [
+                      "text"
+                    ],
+                    "openWeights": true,
+                    "license": null,
+                    "reasoning": false,
+                    "benchmarks": [],
+                    "sourceRefs": [
+                      {
+                        "source": "Fixture sintética",
+                        "sourceRecordId": "variant-0",
+                        "sourceUrl": "https://example.invalid/variant-0",
+                        "fetchedAt": "2026-10-10T12:00:00Z",
+                        "observedAt": null
+                      }
+                    ]
+                  }
+                ],
+                "sourceRefs": [
+                  {
+                    "source": "Fixture sintética",
+                    "sourceRecordId": "model-0",
+                    "sourceUrl": "https://example.invalid/model-0",
+                    "fetchedAt": "2026-10-10T12:00:00Z",
+                    "observedAt": null
+                  }
+                ]
+              },
+              {
+                "schemaVersion": 1,
+                "modelId": "modelo-ficticio-b",
+                "companyId": "company-1",
+                "name": "Modelo fictício 1",
+                "releaseDates": {
+                  "artificialAnalysis": "2026-09-01T00:00:00Z",
+                  "huggingFace": null,
+                  "openRouter": null
+                },
+                "variants": [
+                  {
+                    "variantId": "variante-ficticia-b",
+                    "name": "Variante fictícia 1",
+                    "pricing": {
+                      "schemaVersion": 1,
+                      "modelId": "modelo-ficticio-b",
+                      "variantId": "variante-ficticia-b",
+                      "inputUsdPerMillion": "0",
+                      "outputUsdPerMillion": "0.00",
+                      "reasoning": false,
+                      "source": "Fixture sintética — não é cotação comercial",
+                      "sourceRecordId": "fixture-b",
+                      "sourceUrl": "https://example.invalid/precos/b",
+                      "fetchedAt": "2026-10-10T00:00:00Z",
+                      "observedAt": null
+                    },
+                    "intelligence": null,
+                    "programming": null,
+                    "math": null,
+                    "contextTokens": 200000,
+                    "ttftSeconds": null,
+                    "tokensPerSecond": null,
+                    "cacheReadUsdPerMillion": null,
+                    "cacheWriteUsdPerMillion": null,
+                    "inputModalities": [
+                      "text"
+                    ],
+                    "outputModalities": [
+                      "text"
+                    ],
+                    "openWeights": false,
+                    "license": null,
+                    "reasoning": false,
+                    "benchmarks": [],
+                    "sourceRefs": [
+                      {
+                        "source": "Fixture sintética",
+                        "sourceRecordId": "variant-1",
+                        "sourceUrl": "https://example.invalid/variant-1",
+                        "fetchedAt": "2026-10-10T12:00:00Z",
+                        "observedAt": null
+                      }
+                    ]
+                  }
+                ],
+                "sourceRefs": [
+                  {
+                    "source": "Fixture sintética",
+                    "sourceRecordId": "model-1",
+                    "sourceUrl": "https://example.invalid/model-1",
+                    "fetchedAt": "2026-10-10T12:00:00Z",
+                    "observedAt": null
+                  }
+                ]
+              },
+              {
+                "schemaVersion": 1,
+                "modelId": "modelo-ficticio-c",
+                "companyId": "company-2",
+                "name": "Modelo fictício 2",
+                "releaseDates": {
+                  "artificialAnalysis": null,
+                  "huggingFace": "2026-10-08T12:00:00Z",
+                  "openRouter": null
+                },
+                "variants": [
+                  {
+                    "variantId": "variante-ficticia-c",
+                    "name": "Variante fictícia 2",
+                    "pricing": {
+                      "schemaVersion": 1,
+                      "modelId": "modelo-ficticio-c",
+                      "variantId": "variante-ficticia-c",
+                      "inputUsdPerMillion": null,
+                      "outputUsdPerMillion": "1.5",
+                      "reasoning": false,
+                      "source": "Fixture sintética — não é cotação comercial",
+                      "sourceRecordId": "fixture-c",
+                      "sourceUrl": "https://example.invalid/precos/c",
+                      "fetchedAt": "2026-10-10T00:00:00Z",
+                      "observedAt": null
+                    },
+                    "intelligence": 10,
+                    "programming": null,
+                    "math": null,
+                    "contextTokens": 200000,
+                    "ttftSeconds": null,
+                    "tokensPerSecond": null,
+                    "cacheReadUsdPerMillion": null,
+                    "cacheWriteUsdPerMillion": null,
+                    "inputModalities": [
+                      "text",
+                      "image"
+                    ],
+                    "outputModalities": [
+                      "text"
+                    ],
+                    "openWeights": true,
+                    "license": null,
+                    "reasoning": false,
+                    "benchmarks": [],
+                    "sourceRefs": [
+                      {
+                        "source": "Fixture sintética",
+                        "sourceRecordId": "variant-2",
+                        "sourceUrl": "https://example.invalid/variant-2",
+                        "fetchedAt": "2026-10-10T12:00:00Z",
+                        "observedAt": null
+                      }
+                    ]
+                  }
+                ],
+                "sourceRefs": [
+                  {
+                    "source": "Fixture sintética",
+                    "sourceRecordId": "model-2",
+                    "sourceUrl": "https://example.invalid/model-2",
+                    "fetchedAt": "2026-10-10T12:00:00Z",
+                    "observedAt": null
+                  }
+                ]
+              },
+              {
+                "schemaVersion": 1,
+                "modelId": "modelo-ficticio-d",
+                "companyId": "company-2",
+                "name": "Modelo fictício 3",
+                "releaseDates": {
+                  "artificialAnalysis": "2026-10-11T00:00:00Z",
+                  "huggingFace": null,
+                  "openRouter": null
+                },
+                "variants": [
+                  {
+                    "variantId": "variante-ficticia-d",
+                    "name": "Variante fictícia 3",
+                    "pricing": {
+                      "schemaVersion": 1,
+                      "modelId": "modelo-ficticio-d",
+                      "variantId": "variante-ficticia-d",
+                      "inputUsdPerMillion": "0.25",
+                      "outputUsdPerMillion": "1.75",
+                      "reasoning": true,
+                      "source": "Fixture sintética — não é cotação comercial",
+                      "sourceRecordId": "fixture-d",
+                      "sourceUrl": "https://example.invalid/precos/d",
+                      "fetchedAt": "2026-10-10T00:00:00Z",
+                      "observedAt": null
+                    },
+                    "intelligence": 80,
+                    "programming": null,
+                    "math": null,
+                    "contextTokens": 200000,
+                    "ttftSeconds": null,
+                    "tokensPerSecond": null,
+                    "cacheReadUsdPerMillion": null,
+                    "cacheWriteUsdPerMillion": null,
+                    "inputModalities": [
+                      "text"
+                    ],
+                    "outputModalities": [
+                      "text"
+                    ],
+                    "openWeights": false,
+                    "license": null,
+                    "reasoning": true,
+                    "benchmarks": [],
+                    "sourceRefs": [
+                      {
+                        "source": "Fixture sintética",
+                        "sourceRecordId": "variant-3",
+                        "sourceUrl": "https://example.invalid/variant-3",
+                        "fetchedAt": "2026-10-10T12:00:00Z",
+                        "observedAt": null
+                      }
+                    ]
+                  }
+                ],
+                "sourceRefs": [
+                  {
+                    "source": "Fixture sintética",
+                    "sourceRecordId": "model-3",
+                    "sourceUrl": "https://example.invalid/model-3",
+                    "fetchedAt": "2026-10-10T12:00:00Z",
+                    "observedAt": null
+                  }
+                ]
+              }
+            ],
+            "news": [
+              {
+                "schemaVersion": 1,
+                "newsId": "news-1",
+                "originalUrl": "https://example.invalid/news/1",
+                "titleOriginal": "Notícia fictícia 1",
+                "language": "en",
+                "publishedAt": "2026-10-10T10:00:00Z",
+                "fetchedAt": "2026-10-10T12:00:00Z",
+                "relevantCompanyIds": [
+                  "company-1"
+                ],
+                "citedCompanyIds": [
+                  "company-3"
+                ],
+                "summary": null,
+                "sourceRefs": [
+                  {
+                    "source": "Fixture sintética",
+                    "sourceRecordId": "news-1",
+                    "sourceUrl": "https://example.invalid/news/1",
+                    "fetchedAt": "2026-10-10T12:00:00Z",
+                    "observedAt": null
+                  }
+                ]
+              },
+              {
+                "schemaVersion": 1,
+                "newsId": "news-2",
+                "originalUrl": "https://example.invalid/news/2",
+                "titleOriginal": "Notícia fictícia 2",
+                "language": "en",
+                "publishedAt": "2026-10-10T11:00:00Z",
+                "fetchedAt": "2026-10-10T12:00:00Z",
+                "relevantCompanyIds": [
+                  "company-3"
+                ],
+                "citedCompanyIds": [
+                  "company-1"
+                ],
+                "summary": null,
+                "sourceRefs": [
+                  {
+                    "source": "Fixture sintética",
+                    "sourceRecordId": "news-2",
+                    "sourceUrl": "https://example.invalid/news/2",
+                    "fetchedAt": "2026-10-10T12:00:00Z",
+                    "observedAt": null
+                  }
+                ]
+              },
+              {
+                "schemaVersion": 1,
+                "newsId": "news-3",
+                "originalUrl": "https://example.invalid/news/3",
+                "titleOriginal": "Notícia fictícia 3",
+                "language": "en",
+                "publishedAt": "2026-09-01T00:00:00Z",
+                "fetchedAt": "2026-10-10T12:00:00Z",
+                "relevantCompanyIds": [
+                  "company-2"
+                ],
+                "citedCompanyIds": [],
+                "summary": null,
+                "sourceRefs": [
+                  {
+                    "source": "Fixture sintética",
+                    "sourceRecordId": "news-3",
+                    "sourceUrl": "https://example.invalid/news/3",
+                    "fetchedAt": "2026-10-10T12:00:00Z",
+                    "observedAt": null
+                  }
+                ]
+              }
+            ],
+            "now": "2026-10-10T12:00:00Z"
+          }});
+          return {SYNTHETIC_WORKSPACE};
+          })();
+          // src/adapters/lambda/snapshot-publisher.mjs
+          // Lambda snapshot-publisher (Q2): publica o dataset sintético no bucket privado
+          // pelo Publicador S3 (lease, fencing e CAS por escrita condicional). Sem rota
+          // HTTP e sem agendador: só `aws lambda invoke`, com credencial IAM humana. O
+          // payload da invocação é ignorado; nenhum dado entra pelo evento, e um evento
+          // com cara de API Gateway é recusado.
+          //
+          // O dataset vem de src/contracts/synthetic-workspace.mjs (provenance
+          // 'synthetic-fixture'), o mesmo módulo de dados que o shell reexporta; nenhuma
+          // fonte real nem chamada externa além do S3.
+          //
+          // scripts/render-auth-stack.mjs empacota este arquivo com os imports locais no
+          // ZipFile da Lambda. O único require é o SDK do S3, que o runtime nodejs24.x já
+          // traz. O resultado e o log levam só revisões e códigos, sem conteúdo.
+          const {S3SnapshotPublisher, createS3ObjectStore} = __modules["adapters/s3-snapshots.mjs"];
+          const {SYNTHETIC_WORKSPACE} = __modules["contracts/synthetic-workspace.mjs"];
+          const {SYNTHETIC_FIXTURE} = __modules["contracts/provenance.mjs"];
+
+          // Bem abaixo do Timeout de 30 s da função: o lease vence antes de a função ser cortada.
+          const LEASE_TTL_MS = 25000;
+          const KNOWN_ERRORS = Object.freeze(['LEASE_BUSY', 'LEASE_EXPIRED_OR_FENCED', 'SNAPSHOT_CAS_LOST', 'SNAPSHOT_REVISION_EXISTS', 'SNAPSHOT_SLICE_CORRUPT', 'SNAPSHOT_STATE_INVALID', 'SNAPSHOT_BUCKET_MISSING', 'PUBLISH_EVENT_NOT_ALLOWED', 'SNAPSHOT_DATA_NOT_SYNTHETIC']);
+
+          function errorCode(error) {
+            if (KNOWN_ERRORS.includes(error?.code)) return error.code;
+            if (KNOWN_ERRORS.includes(error?.message)) return error.message;
+            if (error instanceof TypeError) return 'SNAPSHOT_DATA_INVALID';
+            return 'SNAPSHOT_PUBLISH_FAILED';
+          }
+          const isHttpEvent = event => event !== null && typeof event === 'object' && ('requestContext' in event || 'routeKey' in event || 'httpMethod' in event);
+
+          function syntheticData() {
+            if (SYNTHETIC_WORKSPACE.provenance !== SYNTHETIC_FIXTURE) throw new Error('SNAPSHOT_DATA_NOT_SYNTHETIC');
+            return {catalog: SYNTHETIC_WORKSPACE.catalog, models: SYNTHETIC_WORKSPACE.models, news: SYNTHETIC_WORKSPACE.news};
+          }
+
+          // `store`: porta de objetos; `clock()` → ISO UTC; `owner`: dono do lease (o requestId da invocação);
+          // `remainingMs()`: tempo restante da invocação. O lease vence antes de a função ser cortada,
+          // medido a partir do momento da aquisição (depois do cold start), com folga de 5 s.
+          const LEASE_MARGIN_MS = 5000;
+          function createSnapshotPublisherHandler({store, clock, owner, remainingMs = () => LEASE_TTL_MS + LEASE_MARGIN_MS}) {
+            return async function snapshotPublisher(event) {
+              let lease = null; let publisher = null; let result; let diagnostic = {};
+              try {
+                if (isHttpEvent(event)) throw new Error('PUBLISH_EVENT_NOT_ALLOWED');
+                if (store === null) throw new Error('SNAPSHOT_BUCKET_MISSING');
+                publisher = new S3SnapshotPublisher({store, clock});
+                const data = syntheticData();
+                const ttl = Math.min(LEASE_TTL_MS, Math.max(1, remainingMs() - LEASE_MARGIN_MS));
+                lease = await publisher.acquire(owner, ttl, clock());
+                const {manifest, pointer} = await publisher.publish({data, now: clock(), lease});
+                result = {ok: true, revision: manifest.revision, readableRevisions: pointer.readableRevisions, fencingToken: lease.fencingToken, provenance: SYNTHETIC_FIXTURE};
+              } catch (error) {
+                result = {ok: false, error: errorCode(error)};
+                // Diagnóstico sem dados: o nome do erro de origem e o status HTTP do S3, se houver.
+                const cause = error?.cause ?? error;
+                diagnostic = {cause: typeof cause?.name === 'string' ? cause.name : 'Error', httpStatus: cause?.$metadata?.httpStatusCode ?? null};
+              }
+              if (lease !== null) {
+                try { await publisher.release(lease, clock()); } catch { /* o lease vence sozinho */ }
+              }
+              console.log(JSON.stringify({event: 'snapshot_publish', ...(result.ok ? {ok: true, revision: result.revision, fencingToken: result.fencingToken} : {...result, ...diagnostic})}));
+              return result;
+            };
+          }
+
+          // Um cliente por contêiner, criado na primeira invocação.
+          let s3 = null;
+          function s3Store(bucket) {
+            if (s3 === null) {
+              const sdk = require('@aws-sdk/client-s3');
+              s3 = {sdk, client: new sdk.S3Client({})};
+            }
+            return createS3ObjectStore({bucket, sdk: s3.sdk, client: s3.client});
+          }
+
+          // Lê o ambiente a cada invocação: o mesmo código serve preview e prod (AD-14).
+          async function handler(event, context) {
+            const bucket = process.env.SNAPSHOT_BUCKET;
+            let store;
+            try { store = typeof bucket === 'string' && bucket !== '' ? s3Store(bucket) : null; }
+            catch (error) {
+              const result = {ok: false, error: 'SNAPSHOT_PUBLISH_FAILED'};
+              console.log(JSON.stringify({event: 'snapshot_publish', ...result, cause: typeof error?.name === 'string' ? error.name : 'Error'}));
+              return result;
+            }
+            const owner = typeof context?.awsRequestId === 'string' && context.awsRequestId !== '' ? context.awsRequestId : 'manual-invoke';
+            const remainingMs = typeof context?.getRemainingTimeInMillis === 'function' ? () => context.getRemainingTimeInMillis() : undefined;
+            return createSnapshotPublisherHandler({store, clock: () => new Date().toISOString(), owner, remainingMs})(event);
+          }
+
+          module.exports = {handler, createSnapshotPublisherHandler, LEASE_TTL_MS};
 
   # ---------------------------------------------------------------- HTTP API
   # CORS só no gateway (AD-26): com CorsConfiguration e sem rota OPTIONS, o API Gateway
@@ -798,7 +2123,7 @@ Resources:
       RetentionInDays: 90
 
   # ---------------------------------------------------------------- S3
-  # Snapshots privados (AD-2/AD-9). Só a snapshot-reader lê (AD-27); nada escreve ainda (publicação é Q2).
+  # Snapshots privados (AD-2/AD-9). A snapshot-reader lê (AD-27); só a snapshot-publisher escreve (Q2).
   SnapshotBucket:
     Type: AWS::S3::Bucket
     DeletionPolicy: Retain
@@ -856,6 +2181,31 @@ Resources:
             Condition:
               StringEquals:
                 s3:authType: REST-QUERY-STRING
+          # Slices e manifestos de revisão são imutáveis: PutObject sem If-None-Match é negado
+          # (escrita condicional imposta, S3 User Guide "Enforce conditional writes").
+          - Sid: DenyUnconditionalImmutablePut
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:PutObject'
+            Resource:
+              - !Sub '${SnapshotBucket.Arn}/slices/*'
+              - !Sub '${SnapshotBucket.Arn}/manifest/revisions/*'
+            Condition:
+              'Null':
+                s3:if-none-match: 'true'
+          # Ponteiro e lease só mudam por escrita condicional (criação ou If-Match): nenhum
+          # PutObject cego troca o snapshot publicado nem o lease.
+          - Sid: DenyBlindPointerAndLeasePut
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:PutObject'
+            Resource:
+              - !Sub '${SnapshotBucket.Arn}/manifest/current.json'
+              - !Sub '${SnapshotBucket.Arn}/control/*'
+            Condition:
+              'Null':
+                s3:if-match: 'true'
+                s3:if-none-match: 'true'
 
 Outputs:
   ApiOrigin:

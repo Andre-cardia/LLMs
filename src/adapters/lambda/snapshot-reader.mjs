@@ -4,7 +4,8 @@
 // A regra de dono é a do owner-gate, reaproveitada por import local: quem não é
 // dono recebe o mesmo 403 genérico, sem nenhuma leitura no S3.
 //
-// Layout do bucket (só leitura aqui; a publicação é Q2):
+// Layout do bucket (constantes em src/contracts/manifest.mjs; quem grava é o
+// Publicador S3, src/adapters/s3-snapshots.mjs):
 //   manifest/current.json               ponteiro {schemaVersion: 1, revision, readableRevisions}
 //   manifest/revisions/{revision}.json  PublishedManifest interno (com objectKey)
 //   slices/...                          bytes de envelope, endereçados pelo objectKey
@@ -15,11 +16,8 @@
 // ZipFile da Lambda. O único require fora do pacote é o SDK do S3, que o runtime
 // nodejs24.x já traz. Nunca registra token, claims nem conteúdo.
 import {createOwnerGate} from './owner-gate.mjs';
-import {READABLE_REVISIONS, SLICES, assertManifest, assertRevision, assertSnapshotPointer, toManifestResponse} from '../../contracts/manifest.mjs';
+import {POINTER_KEY, READABLE_REVISIONS, SLICES, SLICE_PREFIX, assertManifest, assertRevision, assertSnapshotPointer, revisionKey, toManifestResponse} from '../../contracts/manifest.mjs';
 
-const POINTER_KEY = 'manifest/current.json';
-const SLICE_PREFIX = 'slices/';
-const revisionKey = revision => `manifest/revisions/${revision}.json`;
 const JSON_HEADERS = Object.freeze({'content-type': 'application/json; charset=utf-8', 'cache-control': 'private, no-store'});
 
 function requestIdOf(event) {
@@ -119,4 +117,4 @@ async function handler(event) {
     getObject: typeof bucket === 'string' && bucket !== '' ? s3GetObject(bucket) : async () => { throw new Error('SNAPSHOT_BUCKET_MISSING'); }})(event);
 }
 
-export {handler, createSnapshotReaderHandler, POINTER_KEY, SLICE_PREFIX, revisionKey};
+export {handler, createSnapshotReaderHandler};

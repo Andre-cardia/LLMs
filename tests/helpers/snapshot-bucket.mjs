@@ -1,8 +1,10 @@
 // Bucket privado falso no layout do AD-27, alimentado pelo Publisher de memória:
 //   manifest/current.json, manifest/revisions/{revision}.json e slices/{digest}.
+// As chaves são as de src/contracts/manifest.mjs, as mesmas que o Publicador S3
+// (src/adapters/s3-snapshots.mjs) grava; tests/s3-snapshots.test.mjs prova o formato
+// gravado por ele contra a Lambda de leitura.
 // `getObject` devolve o texto exato do objeto ou null, como a porta da Lambda espera.
-import { POINTER_VERSION, READABLE_REVISIONS } from '../../src/contracts/snapshot.mjs';
-import { POINTER_KEY, SLICE_PREFIX, revisionKey } from '../../src/adapters/lambda/snapshot-reader.mjs';
+import { POINTER_KEY, POINTER_VERSION, READABLE_REVISIONS, SLICE_PREFIX, revisionKey } from '../../src/contracts/snapshot.mjs';
 
 export const OWNER_SUB = 'owner-a';
 export const CLIENT_ID = 'test-client-id';

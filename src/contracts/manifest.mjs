@@ -17,6 +17,17 @@ export const REVISION_PATTERN = Object.freeze(/^[A-Za-z0-9._-]{1,128}$/);
 // As três últimas revisões continuam legíveis (AD-27).
 export const READABLE_REVISIONS = 3;
 export const POINTER_VERSION = 1;
+export const LEASE_VERSION = 1;
+// Disposição do bucket privado de snapshots (AD-27, Q2), única para o Publicador
+// S3 (src/adapters/s3-snapshots.mjs) e a Lambda de leitura:
+//   manifest/current.json               ponteiro {schemaVersion: 1, revision, readableRevisions}
+//   manifest/revisions/{revision}.json  PublishedManifest interno (com objectKey), imutável
+//   slices/{digest}                     bytes de envelope, imutáveis
+//   control/lease.json                  lease do Publicador {schemaVersion, owner, expiresAt, fencingToken}
+export const POINTER_KEY = 'manifest/current.json';
+export const SLICE_PREFIX = 'slices/';
+export const LEASE_KEY = 'control/lease.json';
+export const revisionKey = revision => `manifest/revisions/${revision}.json`;
 const DIGEST = /^[a-f0-9]{64}$/;
 const MERGE_FIELD = 'INVALID_MERGE_TABLE';
 
@@ -94,5 +105,12 @@ export function assertSnapshotPointer(value) {
   list(value.readableRevisions, (revision, field) => assertRevision(revision, field), 'readableRevisions', { unique: true, nonempty: true });
   if (value.readableRevisions.length > READABLE_REVISIONS) fail('readableRevisions', `mais de ${READABLE_REVISIONS}`);
   if (value.readableRevisions[0] !== value.revision) fail('readableRevisions', 'primeira diferente da corrente');
+  return value;
+}
+// Lease do Publicador em control/lease.json: só ele o grava, por escrita condicional.
+export function assertSnapshotLease(value) {
+  object(value, ['schemaVersion', 'owner', 'expiresAt', 'fencingToken'], 'SnapshotLease');
+  oneOf(value.schemaVersion, [LEASE_VERSION], 'schemaVersion'); string(value.owner, 'owner'); utc(value.expiresAt, 'expiresAt');
+  if (!Number.isSafeInteger(value.fencingToken) || value.fencingToken < 1) fail('fencingToken');
   return value;
 }

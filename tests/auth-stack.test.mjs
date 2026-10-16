@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
-import {MARKER, PATHS, READER_MARKER, bundleReader, readReaderModules, renderAuthStack, renderFromRepo, toCommonJs} from '../scripts/render-auth-stack.mjs';
+import {MARKER, PATHS, PUBLISHER_ENTRY, PUBLISHER_MARKER, READER_MARKER, bundleReader, readReaderModules, readerModuleOrder, renderAuthStack, renderFromRepo, toCommonJs} from '../scripts/render-auth-stack.mjs';
 
 const generated = await readFile(PATHS.output, 'utf8');
 const template = await readFile(PATHS.template, 'utf8');
@@ -35,7 +35,10 @@ function named(type, name) {
   assert.ok(found, `${type} ${name}`);
   return found;
 }
-const zipCode = fn => fn.split('ZipFile: |\n')[1].split('\n').map(line => line.replace(/^ {10}/, '')).join('\n');
+// Bloco literal do ZipFile: termina na primeira linha não vazia com menos de 10 espaços
+// (um comentário de seção depois do recurso não faz parte do código).
+const zipCode = fn => { const lines = fn.split('ZipFile: |\n')[1].split('\n'); const end = lines.findIndex(line => line !== '' && !line.startsWith(' '.repeat(10)));
+  return (end === -1 ? lines : lines.slice(0, end)).map(line => line.replace(/^ {10}/, '')).join('\n'); };
 const has = (block, re, label) => assert.match(block, re, label);
 
 test('template gerado está atualizado com o template e o handler', async () => {
@@ -43,10 +46,11 @@ test('template gerado está atualizado com o template e o handler', async () => 
   assert.equal(renderAuthStack({template, source, modules}), generated, 'render é determinístico');
   assert.ok(!generated.includes(MARKER));
   assert.ok(!generated.includes(READER_MARKER));
+  assert.ok(!generated.includes(PUBLISHER_MARKER));
 });
 
 test('ZipFile contém o handler inteiro, convertido só na linha de export', () => {
-  assert.equal(typed('AWS::Lambda::Function').length, 2, 'owner-gate e snapshot-reader');
+  assert.deepEqual(typed('AWS::Lambda::Function').map(([name]) => name).sort(), ['OwnerGateFunction', 'SnapshotPublisherFunction', 'SnapshotReaderFunction']);
   const [, fn] = named('AWS::Lambda::Function', 'OwnerGateFunction');
   const zip = fn.split('ZipFile: |\n')[1];
   assert.ok(zip, 'ZipFile inline');
@@ -183,7 +187,7 @@ test('S3: bloqueio público total, BucketOwnerEnforced, SSE-S3, versionamento, n
   const [, policy] = only('AWS::S3::BucketPolicy');
   has(policy, new RegExp(`Bucket: !Ref ${bucketName}\\n`));
   const statements = policy.split(/\n\s+- Sid: /).slice(1).map(s => `${s.trimEnd()}\n`);
-  assert.equal(statements.length, 2);
+  assert.equal(statements.length, 4);
   const tls = statements.find(s => s.includes('aws:SecureTransport'));
   const presigned = statements.find(s => s.includes('s3:authType'));
   for (const s of [tls, presigned]) {
@@ -195,6 +199,24 @@ test('S3: bloqueio público total, BucketOwnerEnforced, SSE-S3, versionamento, n
   }
   has(tls, /Bool:\n\s+aws:SecureTransport: 'false'\n/);
   has(presigned, /StringEquals:\n\s+s3:authType: REST-QUERY-STRING\n/);
+  // Escrita condicional imposta (Q2): PutObject sem If-None-Match em slices/* e manifest/revisions/* é negado.
+  const conditional = statements.find(s => s.startsWith('DenyUnconditionalImmutablePut'));
+  assert.ok(conditional, 'nega PutObject incondicional');
+  has(conditional, /Effect: Deny\n/);
+  has(conditional, /Principal: '\*'\n/);
+  has(conditional, /Action: 's3:PutObject'\n/);
+  assert.deepEqual([...conditional.matchAll(/^\s+- (!Sub '.*')$/gm)].map(m => m[1]),
+    [`!Sub '\${${bucketName}.Arn}/slices/*'`, `!Sub '\${${bucketName}.Arn}/manifest/revisions/*'`]);
+  has(conditional, /'Null':\n\s+s3:if-none-match: 'true'\n/);
+  // Ponteiro e lease só mudam por escrita condicional: nega quando faltam If-Match e If-None-Match.
+  const blind = statements.find(s => s.startsWith('DenyBlindPointerAndLeasePut'));
+  assert.ok(blind, 'nega PutObject cego no ponteiro e no lease');
+  has(blind, /Effect: Deny\n/);
+  has(blind, /Action: 's3:PutObject'\n/);
+  assert.deepEqual([...blind.matchAll(/^\s+- (!Sub '.*')$/gm)].map(m => m[1]),
+    [`!Sub '\${${bucketName}.Arn}/manifest/current.json'`, `!Sub '\${${bucketName}.Arn}/control/*'`]);
+  has(blind, /'Null':\n\s+s3:if-match: 'true'\n\s+s3:if-none-match: 'true'\n/);
+  assert.doesNotMatch(conditional, /current\.json|control\//, 'ponteiro e lease usam If-Match, fora da negação');
 });
 
 test('saídas alimentam a configuração pública do shell', () => {
@@ -202,12 +224,13 @@ test('saídas alimentam a configuração pública do shell', () => {
   assert.deepEqual(Object.keys(outputs).sort(), ['ApiOrigin', 'AppClientId', 'CognitoDomain', 'SnapshotBucketName', 'UserPoolId']);
 });
 
-test('fora do escopo: sem DynamoDB, agendador nem escrita no bucket', () => {
+test('fora do escopo: sem DynamoDB nem agendador; só a snapshot-publisher escreve no bucket', () => {
   assert.doesNotMatch(generated, /AWS::DynamoDB|AWS::Scheduler|AWS::Events/);
-  // Publicação é Q2: a única ação S3 concedida (Allow) em todo o stack é s3:GetObject, no papel da snapshot-reader.
+  // As únicas ações S3 concedidas (Allow) em todo o stack: leitura na snapshot-reader e publicação na snapshot-publisher.
   const allowed = Object.entries(resources).filter(([, b]) => b.includes('Type: AWS::IAM::Role\n'))
     .flatMap(([name, b]) => [...b.matchAll(/^\s+- (s3:[A-Za-z*]+)$/gm)].map(m => `${name}:${m[1]}`));
-  assert.deepEqual(allowed, ['SnapshotReaderRole:s3:GetObject']);
+  // Nenhum papel apaga objetos: o release do lease é uma escrita condicional (vence o lease).
+  assert.deepEqual(allowed.sort(), ['SnapshotPublisherRole:s3:GetObject', 'SnapshotPublisherRole:s3:PutObject', 'SnapshotReaderRole:s3:GetObject']);
   // A bucket policy só nega; nenhuma concessão por recurso.
   const [, policy] = only('AWS::S3::BucketPolicy');
   assert.doesNotMatch(policy, /Effect: Allow/);
@@ -328,7 +351,8 @@ test('snapshot-reader: ZipFile é o pacote dos imports locais e roda como Common
   const code = zipCode(fn);
   assert.equal(code.trim(), bundleReader(modules).trim());
   assert.doesNotMatch(code, /^\s*(import|export)\s/m);
-  assert.deepEqual(Object.keys(modules).sort(), ['src/adapters/lambda/owner-gate.mjs', 'src/adapters/lambda/snapshot-reader.mjs', 'src/contracts/manifest.mjs', 'src/contracts/primitives.mjs']);
+  // O pacote do leitor leva só o que ele alcança, sem o Publicador nem o dataset.
+  assert.deepEqual(readerModuleOrder(modules).sort(), ['src/adapters/lambda/owner-gate.mjs', 'src/adapters/lambda/snapshot-reader.mjs', 'src/contracts/manifest.mjs', 'src/contracts/primitives.mjs']);
   const requires = [];
   const module = {exports: {}};
   vm.runInNewContext(code, {module, exports: module.exports, require: name => { requires.push(name); throw new Error('sem SDK no teste'); },
@@ -394,4 +418,135 @@ test('render do leitor recusa import fora da forma, require não permitido, cicl
   assert.throws(() => bundleReader({...modules, 'src/contracts/primitives.mjs': `export * from './x.mjs';\n`}), /READER_EXPORT_NOT_ALLOWED/);
   const big = {...modules, 'src/contracts/primitives.mjs': `export const pad = '${'x'.repeat(40000)}';\n${modules['src/contracts/primitives.mjs']}`};
   assert.throws(() => renderAuthStack({template, source, modules: big}), /READER_TOO_LARGE/);
+});
+
+// ---------- Publicação no S3 (Q2) ----------
+
+test('snapshot-publisher: nodejs24.x arm64, timeout 30 s, só o bucket no ambiente', () => {
+  const [, fn] = named('AWS::Lambda::Function', 'SnapshotPublisherFunction');
+  has(fn, /Runtime: nodejs24\.x\n/);
+  has(fn, /Architectures:\n\s+- arm64\n/);
+  has(fn, /Handler: index\.handler\n/);
+  has(fn, /Timeout: 30\n/);
+  has(fn, /Role: !GetAtt SnapshotPublisherRole\.Arn\n/);
+  has(fn, /LogGroup: !Ref SnapshotPublisherLogGroup\n/);
+  has(fn, /SNAPSHOT_BUCKET: !Ref SnapshotBucket\n/);
+  assert.doesNotMatch(fn, /OWNER_SUBS|APP_CLIENT_ID/, 'sem regra de dono: não há requisição HTTP');
+});
+
+test('snapshot-publisher: papel com Get/Put em slices/*, manifest/* e control/*, sem DeleteObject', () => {
+  const [, role] = named('AWS::IAM::Role', 'SnapshotPublisherRole');
+  const actions = [...role.matchAll(/^\s+- ([a-z0-9]+:[A-Za-z*]+)$/gm)].map(m => m[1]);
+  assert.deepEqual(actions.filter(a => a !== 'sts:AssumeRole'), ['logs:CreateLogStream', 'logs:PutLogEvents', 's3:GetObject', 's3:PutObject']);
+  assert.doesNotMatch(role, /s3:DeleteObject/);
+  assert.doesNotMatch(role, /ManagedPolicyArns|dynamodb:|- s3:ListBucket|s3:\*|Resource: '?\*'?\n/);
+  has(role, /Resource: !GetAtt SnapshotPublisherLogGroup\.Arn\n/);
+  const resourcesAfter = marker => { const rest = role.slice(role.indexOf(marker)); const end = rest.indexOf('- Effect:', 1); return [...(end === -1 ? rest : rest.slice(0, end)).matchAll(/^\s+- (!Sub '.*')$/gm)].map(m => m[1]); };
+  assert.deepEqual(resourcesAfter('- s3:GetObject'), ["!Sub '${SnapshotBucket.Arn}/slices/*'", "!Sub '${SnapshotBucket.Arn}/manifest/*'", "!Sub '${SnapshotBucket.Arn}/control/*'"]);
+  has(role, /RoleName: !Sub 'llms-\$\{EnvironmentName\}-snapshot-publisher-\$\{AWS::Region\}'\n/);
+});
+
+test('snapshot-publisher: sem rota HTTP, integração nem permissão de invocação', () => {
+  assert.equal(typed('AWS::Lambda::Permission').some(([, b]) => b.includes('SnapshotPublisherFunction')), false);
+  assert.equal(typed('AWS::ApiGatewayV2::Integration').some(([, b]) => b.includes('SnapshotPublisherFunction')), false);
+  assert.doesNotMatch(generated, /RouteKey: (POST|PUT|PATCH|DELETE)/);
+});
+
+// SDK S3 falso, fiel à escrita condicional: If-None-Match '*' e If-Match <etag> → 412.
+function fakeS3Sdk() {
+  const objects = new Map(); const sent = []; let version = 0;
+  const commands = Object.fromEntries(['GetObjectCommand', 'PutObjectCommand', 'DeleteObjectCommand'].map(name => [name, class { constructor(input) { this.name = name; this.input = input; } }]));
+  const failed = (name, status) => Object.assign(new Error(name), {name, $metadata: {httpStatusCode: status}});
+  class S3Client {
+    async send(command) {
+      const {Key, IfNoneMatch, IfMatch, Body} = command.input; sent.push({command: command.name, ...command.input});
+      const found = objects.get(Key);
+      if (command.name === 'GetObjectCommand') {
+        if (!found) throw failed('AccessDenied', 403);
+        return {ETag: found.etag, Body: {transformToString: async encoding => { assert.equal(encoding, 'utf-8'); return found.text; }}};
+      }
+      if ((IfNoneMatch === '*' && found) || (IfMatch !== undefined && found?.etag !== IfMatch)) throw failed('PreconditionFailed', 412);
+      if (command.name === 'DeleteObjectCommand') { objects.delete(Key); return {}; }
+      const etag = `"e${version += 1}"`; objects.set(Key, {text: Body, etag}); return {ETag: etag};
+    }
+  }
+  return {sdk: {S3Client, ...commands}, objects, sent};
+}
+
+function loadPublisher(sdkFake, env = {SNAPSHOT_BUCKET: 'bucket'}) {
+  const [, fn] = named('AWS::Lambda::Function', 'SnapshotPublisherFunction');
+  const module = {exports: {}}; const logs = []; const requires = [];
+  vm.runInNewContext(zipCode(fn), {module, exports: module.exports, require: name => { requires.push(name); assert.equal(name, '@aws-sdk/client-s3'); return sdkFake.sdk; },
+    console: {log: line => logs.push(line), warn: line => logs.push(line), error: line => logs.push(line)},
+    // Só o que o runtime nodejs24.x oferece como global; os built-ins são os do próprio contexto.
+    process: {env}, structuredClone, crypto: globalThis.crypto, TextEncoder, URL});
+  return {handler: module.exports.handler, logs, requires};
+}
+
+test('aceite: pacote inline da publicação, num contexto limpo com SDK S3 falso, grava slices, manifesto e ponteiro com os cabeçalhos condicionais', async () => {
+  const {SYNTHETIC_WORKSPACE} = await import('../src/contracts/synthetic-workspace.mjs');
+  const {envelopeBytes, SLICES: NAMES} = await import('../src/contracts/snapshot.mjs');
+  const {sha256Text} = await import('../src/adapters/memory-snapshots.mjs');
+  const fake = fakeS3Sdk();
+  const {handler, logs, requires} = loadPublisher(fake);
+  const result = await handler({}, {awsRequestId: 'req-pub-1'});
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.deepEqual(requires, ['@aws-sdk/client-s3']);
+  const puts = fake.sent.filter(c => c.command === 'PutObjectCommand');
+  const putOf = key => puts.find(c => c.Key === key);
+  for (const slice of NAMES) {
+    const bytes = envelopeBytes(slice, SYNTHETIC_WORKSPACE[slice]);
+    const put = putOf(`slices/${sha256Text(bytes)}`);
+    assert.ok(put, slice); assert.equal(put.IfNoneMatch, '*'); assert.equal(put.IfMatch, undefined); assert.equal(put.Body, bytes);
+    assert.equal(put.Bucket, 'bucket');
+  }
+  const manifestPut = putOf(`manifest/revisions/${result.revision}.json`);
+  assert.equal(manifestPut.IfNoneMatch, '*'); assert.equal(manifestPut.IfMatch, undefined);
+  const pointerPut = putOf('manifest/current.json');
+  assert.equal(pointerPut.IfNoneMatch, '*', 'primeira publicação: ponteiro criado com If-None-Match');
+  assert.deepEqual(JSON.parse(pointerPut.Body), {schemaVersion: 1, revision: result.revision, readableRevisions: [result.revision]});
+  const leasePut = putOf('control/lease.json');
+  assert.equal(leasePut.IfNoneMatch, '*');
+  assert.equal(JSON.parse(leasePut.Body).owner, 'req-pub-1');
+  // Ordem do AD-6: lease, slices, manifesto, ponteiro; o release regrava o próprio lease vencido com If-Match.
+  assert.deepEqual(puts.map(c => c.Key.split('/')[0] === 'slices' ? 'slices' : c.Key), ['control/lease.json', 'slices', 'slices', 'slices', `manifest/revisions/${result.revision}.json`, 'manifest/current.json', 'control/lease.json']);
+  assert.equal(fake.sent.some(c => c.command === 'DeleteObjectCommand'), false, 'nada é apagado');
+  const release = puts.at(-1);
+  assert.equal(release.IfMatch, '"e1"', 'release com If-Match no ETag do próprio lease');
+  assert.ok(Date.parse(JSON.parse(release.Body).expiresAt) <= Date.now(), 'lease liberado = vencido');
+
+  // Segunda invocação: slices repetidas (412 aceito, sem sobrescrita) e ponteiro por If-Match no ETag lido.
+  const pointerEtag = fake.objects.get('manifest/current.json').etag;
+  const sliceEtags = [...fake.objects].filter(([k]) => k.startsWith('slices/')).map(([k, v]) => [k, v.etag]);
+  fake.sent.length = 0;
+  const second = await handler({}, {awsRequestId: 'req-pub-2'});
+  assert.equal(second.ok, true, JSON.stringify(second));
+  assert.equal(second.fencingToken, 2, 'lease liberado continua no bucket: o fencing cresce entre publicações');
+  assert.equal(fake.sent.find(c => c.command === 'PutObjectCommand' && c.Key === 'manifest/current.json').IfMatch, pointerEtag);
+  for (const [key, etag] of sliceEtags) assert.equal(fake.objects.get(key).etag, etag, 'slice não sobrescrita');
+  assert.deepEqual([...second.readableRevisions], [second.revision, result.revision]);
+  assert.equal(logs.some(line => /Laborat|example\.invalid/.test(line)), false, 'log sem conteúdo');
+});
+
+test('snapshot-publisher inline: evento HTTP recusado sem tocar o S3; sem bucket → erro', async () => {
+  const fake = fakeS3Sdk();
+  const {handler} = loadPublisher(fake);
+  const plain = value => JSON.parse(JSON.stringify(value));
+  assert.deepEqual(plain(await handler({routeKey: 'POST /x', requestContext: {}}, {awsRequestId: 'r'})), {ok: false, error: 'PUBLISH_EVENT_NOT_ALLOWED'});
+  assert.deepEqual(fake.sent, []);
+  const none = loadPublisher(fake, {});
+  assert.deepEqual(plain(await none.handler({}, {awsRequestId: 'r'})), {ok: false, error: 'SNAPSHOT_BUCKET_MISSING'});
+  assert.deepEqual(none.requires, []);
+});
+
+test('render do publicador: pacote leva o Publicador, os contratos e o dataset, sem src/ui nem módulos node:', () => {
+  const order = readerModuleOrder(modules, PUBLISHER_ENTRY);
+  assert.ok(order.includes('src/adapters/s3-snapshots.mjs'));
+  assert.ok(order.includes('src/contracts/synthetic-workspace.mjs'));
+  assert.equal(order.some(path => path.startsWith('src/ui/') || path.includes('memory-')), false);
+  const [, fn] = named('AWS::Lambda::Function', 'SnapshotPublisherFunction');
+  assert.equal(zipCode(fn).trim(), bundleReader(modules, PUBLISHER_ENTRY).trim());
+  assert.doesNotMatch(zipCode(fn), /^\s*(import|export)\s/m);
+  const big = {...modules, 'src/contracts/provenance.mjs': `export const pad = '${'x'.repeat(100000)}';\n${modules['src/contracts/provenance.mjs']}`};
+  assert.throws(() => renderAuthStack({template, source, modules: big}), /PUBLISHER_TOO_LARGE/);
 });

@@ -2,11 +2,12 @@ import { assertCatalog } from './catalog.mjs';
 import { assertModels } from './models.mjs';
 import { assertNews } from './news.mjs';
 import { object, oneOf, fail, canonicalJson } from './primitives.mjs';
-import { SLICES } from './manifest.mjs';
-// Manifesto interno/externo, revisão e tabela de merges moram no módulo folha
-// manifest.mjs (a Lambda de leitura o empacota sem os validadores de slice).
-export { SLICES, MANIFEST_VERSION, MAX_COMPANY_MERGES, REVISION_PATTERN, READABLE_REVISIONS, POINTER_VERSION,
-  assertRevision, assertCompanyMergedInto, assertManifest, assertManifestResponse, toManifestResponse, assertSnapshotPointer } from './manifest.mjs';
+// Manifesto interno/externo, revisão, tabela de merges e disposição do bucket moram no
+// módulo folha manifest.mjs (a Lambda de leitura o empacota sem os validadores de slice).
+// Reexportados por import + `export {...};` numa linha cada: a forma que
+// scripts/render-auth-stack.mjs aceita ao empacotar a Lambda de publicação.
+import { SLICES, MANIFEST_VERSION, MAX_COMPANY_MERGES, REVISION_PATTERN, READABLE_REVISIONS, POINTER_VERSION, LEASE_VERSION, POINTER_KEY, SLICE_PREFIX, LEASE_KEY, revisionKey, assertRevision, assertCompanyMergedInto, assertManifest, assertManifestResponse, toManifestResponse, assertSnapshotPointer, assertSnapshotLease } from './manifest.mjs';
+export { SLICES, MANIFEST_VERSION, MAX_COMPANY_MERGES, REVISION_PATTERN, READABLE_REVISIONS, POINTER_VERSION, LEASE_VERSION, POINTER_KEY, SLICE_PREFIX, LEASE_KEY, revisionKey, assertRevision, assertCompanyMergedInto, assertManifest, assertManifestResponse, toManifestResponse, assertSnapshotPointer, assertSnapshotLease };
 export const SLICE_VALIDATORS = Object.freeze({ catalog: assertCatalog, models: assertModels, news: assertNews });
 if (Object.keys(SLICE_VALIDATORS).join() !== SLICES.join()) throw new Error('SLICES divergente de SLICE_VALIDATORS');
 export const ENVELOPE_VERSION = 1;

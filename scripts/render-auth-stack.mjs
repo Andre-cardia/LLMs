@@ -2,17 +2,22 @@ import {realpathSync} from 'node:fs';
 import {readFile, writeFile} from 'node:fs/promises';
 import {posix} from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
-// Gera infra/auth-stack.yaml a partir de infra/auth-stack.template.yaml, embutindo os dois
+// Gera infra/auth-stack.yaml a partir de infra/auth-stack.template.yaml, embutindo os três
 // handlers no ZipFile de cada Lambda. Única forma de gerar o template aplicável; o teste
 // "template gerado está atualizado" falha quando divergem.
 // O CloudFormation grava o ZipFile como index.js (CommonJS no nodejs24.x).
 //  - owner-gate: arquivo autossuficiente; só a linha final `export {...};` vira `module.exports`.
 //  - snapshot-reader: empacotado com seus imports locais (owner-gate e src/contracts/manifest.mjs),
 //    cada módulo no próprio escopo; o único require permitido é o SDK do S3 do runtime.
+//  - snapshot-publisher: mesmo empacotador, com o Publicador S3, os contratos do snapshot e o
+//    dataset sintético de src/contracts/synthetic-workspace.mjs.
 
 export const MARKER = '__OWNER_GATE_SOURCE__';
 export const READER_MARKER = '__SNAPSHOT_READER_SOURCE__';
 export const READER_ENTRY = 'src/adapters/lambda/snapshot-reader.mjs';
+export const PUBLISHER_MARKER = '__SNAPSHOT_PUBLISHER_SOURCE__';
+export const PUBLISHER_ENTRY = 'src/adapters/lambda/snapshot-publisher.mjs';
+export const LAMBDA_ENTRIES = Object.freeze([READER_ENTRY, PUBLISHER_ENTRY]);
 const markerLine = marker => new RegExp(`^( *)${marker}$`, 'm');
 const EXPORT_LINE = /^export \{([A-Za-z0-9_$, ]+)\};$/m;
 // Teto próprio, bem abaixo do limite do ZipFile inline (zip de até 4 MB, segundo a referência
@@ -20,6 +25,8 @@ const EXPORT_LINE = /^export \{([A-Za-z0-9_$, ]+)\};$/m;
 export const ZIPFILE_MAX_CHARS = 4096;
 // O leitor leva os validadores de src/contracts/ junto: teto próprio, ainda longe dos 4 MB.
 export const READER_MAX_CHARS = 32768;
+// O publicador leva todos os validadores do snapshot e o dataset sintético (~13 KB).
+export const PUBLISHER_MAX_CHARS = 98304;
 export const READER_REQUIRES = Object.freeze(['@aws-sdk/client-s3']);
 
 const stripComments = source => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
@@ -110,8 +117,10 @@ export function renderAuthStack({template: rawTemplate, source: rawSource, modul
   let out = embed(template, MARKER, toCommonJs(source), {max: ZIPFILE_MAX_CHARS, label: 'OWNER_GATE'});
   const modules = Object.fromEntries(Object.entries(rawModules ?? {}).map(([path, text]) => [path, lf(text)]));
   out = embed(out, READER_MARKER, bundleReader(modules), {max: READER_MAX_CHARS, label: 'READER'});
+  out = embed(out, PUBLISHER_MARKER, bundleReader(modules, PUBLISHER_ENTRY), {max: PUBLISHER_MAX_CHARS, label: 'PUBLISHER'});
   const header = '# Gerado por scripts/render-auth-stack.mjs a partir de infra/auth-stack.template.yaml,\n'
-    + '# src/adapters/lambda/owner-gate.mjs e src/adapters/lambda/snapshot-reader.mjs. Não editar à mão.\n';
+    + '# src/adapters/lambda/owner-gate.mjs, src/adapters/lambda/snapshot-reader.mjs e\n'
+    + '# src/adapters/lambda/snapshot-publisher.mjs. Não editar à mão.\n';
   return header + out;
 }
 
@@ -123,15 +132,16 @@ export const PATHS = Object.freeze({
   output: `${root}infra/auth-stack.yaml`,
 });
 
-// Lê a entrada do leitor e tudo o que ela importa, por caminho relativo à raiz.
-export async function readReaderModules(entry = READER_ENTRY) {
+// Lê as entradas do leitor e do publicador e tudo o que elas importam, por caminho
+// relativo à raiz, num único mapa (cada pacote leva só o que a sua entrada alcança).
+export async function readReaderModules(entries = LAMBDA_ENTRIES) {
   const modules = {};
   async function load(path) {
     if (Object.hasOwn(modules, path)) return;
     modules[path] = await readFile(`${root}${path}`, 'utf8');
     for (const dependency of importsOf(path, lf(modules[path]))) await load(dependency.path);
   }
-  await load(entry);
+  for (const entry of [entries].flat()) await load(entry);
   return modules;
 }
 

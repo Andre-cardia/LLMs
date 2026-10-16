@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assertManifestResponse, toManifestResponse, SLICES } from '../src/contracts/snapshot.mjs';
+import { assertManifestResponse, toManifestResponse, SLICES, POINTER_KEY, revisionKey } from '../src/contracts/snapshot.mjs';
 import { sha256Text } from '../src/adapters/memory-snapshots.mjs';
-import { createSnapshotReaderHandler, handler, POINTER_KEY, revisionKey } from '../src/adapters/lambda/snapshot-reader.mjs';
+import { createSnapshotReaderHandler, handler } from '../src/adapters/lambda/snapshot-reader.mjs';
 import { webDigest } from '../src/ui/web-digest.mjs';
 import { workspace, publish } from './helpers/local-fixtures.mjs';
 import { CLIENT_ID, OWNER_SUB, fakeBucket, lambdaEvent, mirrorPublications, ownerClaims } from './helpers/snapshot-bucket.mjs';
